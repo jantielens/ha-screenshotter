@@ -80,20 +80,20 @@ jobs:
         echo "Checking for generated screenshots..."
         ls -la test-share/screenshots/
         
-        if [ -f "test-share/screenshots/0.jpg" ]; then
+        if [ -f "test-share/screenshots/0.png" ]; then
           echo "✅ Screenshot generated successfully!"
           
           # Get image info
-          file test-share/screenshots/0.jpg
+          file test-share/screenshots/0.png
           
           # Check if we can get basic image dimensions (requires imagemagick)
           if command -v identify &> /dev/null; then
             echo "Image details:"
-            identify test-share/screenshots/0.jpg
+            identify test-share/screenshots/0.png
           fi
           
           # Check file size (should be > 0)
-          size=$(stat -c%s test-share/screenshots/0.jpg)
+          size=$(stat -c%s test-share/screenshots/0.png)
           echo "Screenshot file size: $size bytes"
           
           if [ "$size" -gt 1000 ]; then
@@ -133,8 +133,8 @@ jobs:
         echo "- **Grayscale**: ${{ github.event.inputs.grayscale || true }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Bit Depth**: ${{ github.event.inputs.bit_depth || 4 }}" >> $GITHUB_STEP_SUMMARY
         
-        if [ -f "test-share/screenshots/0.jpg" ]; then
-          size=$(stat -c%s test-share/screenshots/0.jpg)
+        if [ -f "test-share/screenshots/0.png" ]; then
+          size=$(stat -c%s test-share/screenshots/0.png)
           echo "- **Screenshot**: ✅ Generated (${size} bytes)" >> $GITHUB_STEP_SUMMARY
         else
           echo "- **Screenshot**: ❌ Not generated" >> $GITHUB_STEP_SUMMARY
