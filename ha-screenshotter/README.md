@@ -1,71 +1,86 @@
-# HA Screenshotter Add-on
+# HA Screenshotter
 
-Takes screenshots of web pages on a configurable schedule and serves them via a web interface.
+📸 Automated web page screenshots with advanced image processing for e-ink displays and dashboards.
 
-## About
+## ✨ Features
 
-This is a Home Assistant add-on that automates web page screenshots. Currently in Step 1 of development - this version provides a basic "Hello World" implementation to verify the add-on infrastructure works correctly.
+- **📱 Multiple URLs** - Screenshot multiple web pages simultaneously
+- **⏰ Cron Scheduling** - Flexible timing with full cron expression support
+- **🎨 Image Processing** - Rotation, grayscale, and bit depth reduction with dithering
+- **🖥️ E-ink Optimized** - Perfect for Inkplate and e-paper displays
+- **🔄 Auto-Naming** - Predictable file naming (0.jpg, 1.jpg, etc.)
+- **📁 Shared Storage** - Screenshots saved to `/share/screenshots/`
 
-## Current Features (Step 3)
+## ⚙️ Configuration
 
-- ✅ Basic Home Assistant add-on structure
-- ✅ Node.js runtime environment with Puppeteer
-- ✅ Web page screenshot capability using Chromium
-- ✅ **Configurable URLs** via Home Assistant UI
-- ✅ **Cron-based scheduling** (default: every minute)
-- ✅ **Multiple URL support** with index-based naming (0.jpg, 1.jpg, etc.)
-- ✅ Screenshots saved to `/share/screenshots/` directory
-- ✅ Comprehensive logging and error handling
-- ✅ **Configuration validation** and error handling
-- ✅ Graceful shutdown handling
-- ✅ Access to Home Assistant shared storage
+Configure through the add-on **Configuration** tab:
 
-## Planned Features
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `schedule` | `"* * * * *"` | Cron expression (every minute) |
+| `urls` | `'["https://google.com"]'` | JSON array of URLs to screenshot |
+| `resolution_width` | `1920` | Screenshot width in pixels |
+| `resolution_height` | `1080` | Screenshot height in pixels |
+| `rotation_degrees` | `0` | Rotate: 0°, 90°, 180°, or 270° |
+| `grayscale` | `false` | Convert to black & white |
+| `bit_depth` | `24` | Color depth: 1, 4, 8, 16, or 24 bits |
 
-- **Step 4**: Web server to access and serve screenshots
+### 📋 Quick Examples
 
-## Installation
+**E-ink Display (1-bit B&W):**
+```yaml
+schedule: "*/5 * * * *"
+urls: '["http://homeassistant.local:8123/dashboard"]'
+resolution_width: 800
+resolution_height: 600
+grayscale: true
+bit_depth: 1
+```
 
-1. Add the repository to Home Assistant: `https://github.com/jantielens/ha-screenshotter`
-2. Install the "HA Screenshotter" add-on
-3. Start the add-on
-4. Check the logs to see the "Hello World" message
+**4-bit Color with Dithering:**
+```yaml
+schedule: "0 * * * *"
+urls: '["https://weather.com", "https://status.page"]'
+bit_depth: 4
+rotation_degrees: 90
+```
 
-## Configuration
+### ⏰ Cron Schedule Examples
 
-The add-on can be configured through the Home Assistant UI:
+- `"* * * * *"` - Every minute
+- `"*/5 * * * *"` - Every 5 minutes  
+- `"0 * * * *"` - Every hour
+- `"0 8,20 * * *"` - 8 AM and 8 PM daily
+- `"0 0 * * 0"` - Weekly on Sunday
 
-### Schedule
-- **Format**: Cron format (minute hour day month weekday)
-- **Default**: `* * * * *` (every minute)
-- **Examples**: 
-  - `*/5 * * * *` - Every 5 minutes
-  - `0 */6 * * *` - Every 6 hours
-  - `0 9 * * *` - Daily at 9 AM
+## 🚀 Getting Started
 
-### URLs
-- **Format**: JSON string containing array of URLs
-- **Default**: `["https://google.com", "https://time.now/"]`
-- **Naming**: Screenshots saved as `0.jpg`, `1.jpg`, `2.jpg`, etc.
-- **Example**:
-  ```json
-  ["https://google.com", "https://github.com", "https://news.ycombinator.com"]
-  ```
+1. **Configure** your URLs and schedule in the Configuration tab
+2. **Start** the add-on
+3. **Check Logs** for screenshot status
+4. **Access** screenshots in `/share/screenshots/` (numbered 0.jpg, 1.jpg, etc.)
 
-## Support
+## 📊 Monitoring
 
-Check the add-on logs for any issues. The current implementation should show:
-- Startup messages
-- "Hello World from HA Screenshotter!" message
-- Heartbeat messages every 5 minutes
-- Configuration status
+Monitor the add-on through:
+- **Logs Tab** - Detailed execution logs with emoji indicators
+- **File Browser** - View generated screenshots in `/share/screenshots/`
+- **Configuration** - Validate settings and see error messages
 
-## Development Status
+## 🔧 Troubleshooting
 
-This add-on is being developed incrementally. The current version (Step 1) focuses on establishing the basic add-on infrastructure and Home Assistant integration.
+- Check **Logs** for error messages
+- Verify **URLs** are accessible from your network
+- Ensure **resolution** settings are reasonable for your system
+- Test with **24-bit** depth first, then optimize for your display
 
-## Version History
+## 💡 Use Cases
 
-- **0.3.0**: Added configurable URLs and cron scheduling (Step 3)
-- **0.2.0**: Added basic screenshot functionality (Step 2)
-- **0.1.0**: Initial "Hello World" implementation (Step 1)
+- **E-ink Displays** - Dashboards for Inkplate, Waveshare displays
+- **Digital Photo Frames** - Automated content updates
+- **Status Monitoring** - Regular screenshots of status pages
+- **Dashboard Archiving** - Historical snapshots of Home Assistant dashboards
+
+## 🆘 Support
+
+For issues and feature requests, visit the [GitHub repository](https://github.com/jantielens/ha-screenshotter/issues).
