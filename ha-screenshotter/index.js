@@ -24,7 +24,23 @@ async function takeScreenshot(url, filename) {
   
   let browser = null;
   try {
-    // Launch Puppeteer with Alpine/Chromium specific configuration
+    // Check if Chromium is available
+    const fs = require('fs');
+    if (!fs.existsSync('/usr/bin/chromium-browser')) {
+      throw new Error('Chromium browser not found at /usr/bin/chromium-browser');
+    }
+    console.log('✅ Chromium browser found');
+    
+    // Log system info for debugging
+    console.log('🖥️  System info:', {
+      platform: process.platform,
+      arch: process.arch,
+      nodeVersion: process.version,
+      memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB'
+    });
+    
+    // Launch Puppeteer with minimal configuration first
+    console.log('🚀 Launching browser...');
     browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'new',
@@ -32,13 +48,12 @@ async function takeScreenshot(url, filename) {
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
-        '--disable-gpu'
+        '--disable-gpu',
+        '--no-first-run'
       ]
     });
+    
+    console.log('✅ Browser launched successfully');
 
     const page = await browser.newPage();
     
@@ -113,7 +128,17 @@ async function init() {
       console.log('🎊 Screenshot test successful!');
     } catch (screenshotError) {
       console.error('⚠️  Screenshot test failed:', screenshotError.message);
-      // Don't exit on screenshot failure, just log it
+      console.log('🔄 Trying with simpler URL...');
+      
+      // Try a simpler fallback URL
+      try {
+        const fallbackFilename = `example-${timestamp}.png`;
+        await takeScreenshot('https://example.com', fallbackFilename);
+        console.log('🎊 Fallback screenshot test successful!');
+      } catch (fallbackError) {
+        console.error('⚠️  Fallback screenshot also failed:', fallbackError.message);
+        console.log('ℹ️  This might be due to container restrictions, but the add-on will continue running');
+      }
     }
     
     console.log('✨ Add-on is running successfully');
