@@ -46,11 +46,14 @@ This document outlines the step-by-step plan for creating a Home Assistant add-o
 
 **Tasks**:
 - Update `config.yaml` to define configuration schema:
-  - `schedule`: string (cron format, default: "0 */6 * * *" - every 6 hours)
+  - `schedule`: string (cron format, default: "* * * * *" - every minute)
   - `urls`: array of strings (default: ["https://google.com"])
 - Modify Node.js code to read configuration from `/data/options.json`
 - Add cron scheduler (using `node-cron` package)
-- Update screenshot logic to handle multiple URLs
+- Update screenshot logic to handle multiple URLs with index-based naming:
+  - First URL (index 0) → `0.jpg`
+  - Second URL (index 1) → `1.jpg`
+  - And so on...
 - Test configuration changes through Home Assistant UI
 
 **Deliverables**: Configurable add-on that takes screenshots on schedule
