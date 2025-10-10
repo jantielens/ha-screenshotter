@@ -16,6 +16,19 @@ on:
         description: 'Screenshot height'
         required: false
         default: '768'
+      rotation:
+        description: 'Rotation degrees'
+        required: false
+        default: '90'
+      grayscale:
+        description: 'Enable grayscale'
+        required: false
+        default: 'true'
+        type: boolean
+      bit_depth:
+        description: 'Bit depth'
+        required: false
+        default: '4'
 
 jobs:
   build-and-test:
@@ -37,9 +50,9 @@ jobs:
           "urls": "[\"${{ github.event.inputs.test_url || 'https://github.com/jantielens/ha-screenshotter/' }}\"]",
           "resolution_width": ${{ github.event.inputs.resolution_width || 1366 }},
           "resolution_height": ${{ github.event.inputs.resolution_height || 768 }},
-          "rotation_degrees": 0,
-          "grayscale": false,
-          "bit_depth": 24
+          "rotation_degrees": ${{ github.event.inputs.rotation || 90 }},
+          "grayscale": ${{ github.event.inputs.grayscale || true }},
+          "bit_depth": ${{ github.event.inputs.bit_depth || 4 }}
         }
         EOF
         echo "Test configuration:"
@@ -97,6 +110,19 @@ jobs:
           exit 1
         fi
         
+    - name: Display screenshot in summary
+      if: success()
+      run: |
+        if [ -f "test-share/screenshots/0.jpg" ]; then
+          echo "## Screenshot Preview" >> $GITHUB_STEP_SUMMARY
+          echo "Generated screenshot as base64 for preview:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "data:image/jpeg;base64,$(base64 -w 0 test-share/screenshots/0.jpg)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Note**: Full image also available in artifacts below." >> $GITHUB_STEP_SUMMARY
+        fi
+        
     - name: Upload test artifacts
       uses: actions/upload-artifact@v4
       if: always()
@@ -116,6 +142,9 @@ jobs:
         fi
         echo "- **Test URL**: ${{ github.event.inputs.test_url || 'https://github.com/jantielens/ha-screenshotter/' }}" >> $GITHUB_STEP_SUMMARY
         echo "- **Resolution**: ${{ github.event.inputs.resolution_width || 1366 }}x${{ github.event.inputs.resolution_height || 768 }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Rotation**: ${{ github.event.inputs.rotation || 90 }}°" >> $GITHUB_STEP_SUMMARY
+        echo "- **Grayscale**: ${{ github.event.inputs.grayscale || true }}" >> $GITHUB_STEP_SUMMARY
+        echo "- **Bit Depth**: ${{ github.event.inputs.bit_depth || 4 }}" >> $GITHUB_STEP_SUMMARY
         
         if [ -f "test-share/screenshots/0.jpg" ]; then
           size=$(stat -c%s test-share/screenshots/0.jpg)
