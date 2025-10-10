@@ -117,30 +117,6 @@ async function init() {
     }
     
     console.log('🎉 Hello World from HA Screenshotter!');
-    console.log('📸 Starting screenshot functionality test...');
-    
-    // Take a test screenshot of Google.com
-    const timestamp = new Date().toISOString().replace(/[:.TZ]/g, '-').replace(/-$/, '');
-    const filename = `google-${timestamp}.png`;
-    
-    try {
-      await takeScreenshot('https://google.com', filename);
-      console.log('🎊 Screenshot test successful!');
-    } catch (screenshotError) {
-      console.error('⚠️  Screenshot test failed:', screenshotError.message);
-      console.log('🔄 Trying with simpler URL...');
-      
-      // Try a simpler fallback URL
-      try {
-        const fallbackFilename = `example-${timestamp}.png`;
-        await takeScreenshot('https://example.com', fallbackFilename);
-        console.log('🎊 Fallback screenshot test successful!');
-      } catch (fallbackError) {
-        console.error('⚠️  Fallback screenshot also failed:', fallbackError.message);
-        console.log('ℹ️  This might be due to container restrictions, but the add-on will continue running');
-      }
-    }
-    
     console.log('✨ Add-on is running successfully');
     
   } catch (error) {
