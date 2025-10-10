@@ -6,18 +6,20 @@ Takes screenshots of web pages on a configurable schedule and serves them via a 
 
 This is a Home Assistant add-on that automates web page screenshots. Currently in Step 1 of development - this version provides a basic "Hello World" implementation to verify the add-on infrastructure works correctly.
 
-## Current Features (Step 1)
+## Current Features (Step 2)
 
 - ✅ Basic Home Assistant add-on structure
-- ✅ Node.js runtime environment
-- ✅ Logging and monitoring
+- ✅ Node.js runtime environment with Puppeteer
+- ✅ Web page screenshot capability using Chromium
+- ✅ Automatic screenshot of Google.com on startup
+- ✅ Screenshots saved to `/share/screenshots/` directory
+- ✅ Comprehensive logging and error handling
 - ✅ Configuration support framework
 - ✅ Graceful shutdown handling
 - ✅ Access to Home Assistant shared storage
 
 ## Planned Features
 
-- **Step 2**: Web page screenshot capability using Puppeteer
 - **Step 3**: Configurable URLs and scheduling via Home Assistant UI
 - **Step 4**: Web server to access and serve screenshots
 
@@ -46,4 +48,5 @@ This add-on is being developed incrementally. The current version (Step 1) focus
 
 ## Version History
 
+- **0.2.0**: Added basic screenshot functionality (Step 2)
 - **0.1.0**: Initial "Hello World" implementation (Step 1)
