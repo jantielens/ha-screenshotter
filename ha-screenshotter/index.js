@@ -55,8 +55,8 @@ async function convertToGrayscale(imagePath) {
 }
 
 /**
- * Reduce image bit depth using Sharp - saves as PNG for true bit depth control
- * @param {string} imagePath - Path to the image file
+ * Reduce image bit depth using Sharp - processes PNG files for true bit depth control
+ * @param {string} imagePath - Path to the PNG image file
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
  */
 async function reduceBitDepth(imagePath, bitDepth) {
@@ -65,39 +65,38 @@ async function reduceBitDepth(imagePath, bitDepth) {
   }
   
   try {
-    console.log(`🎨 Reducing image bit depth to ${bitDepth}-bit (converting to PNG): ${imagePath}`);
+    console.log(`🎨 Reducing image bit depth to ${bitDepth}-bit: ${imagePath}`);
     
-    // Generate PNG filename
-    const pngPath = imagePath.replace('.jpg', '.png');
+    let processedBuffer;
     
     switch (bitDepth) {
       case 1:
         // 1-bit: Convert to pure black and white with palette
-        await sharp(imagePath)
+        processedBuffer = await sharp(imagePath)
           .threshold(128)
           .png({ palette: true, colors: 2, dither: 1.0 })
-          .toFile(pngPath);
+          .toBuffer();
         break;
         
       case 4:
         // 4-bit: 16 colors with dithering
-        await sharp(imagePath)
+        processedBuffer = await sharp(imagePath)
           .png({ palette: true, colors: 16, dither: 1.0 })
-          .toFile(pngPath);
+          .toBuffer();
         break;
         
       case 8:
         // 8-bit: 256 colors with dithering
-        await sharp(imagePath)
+        processedBuffer = await sharp(imagePath)
           .png({ palette: true, colors: 256, dither: 1.0 })
-          .toFile(pngPath);
+          .toBuffer();
         break;
         
       case 16:
         // 16-bit: Save as 16-bit PNG
-        await sharp(imagePath)
+        processedBuffer = await sharp(imagePath)
           .png({ compressionLevel: 6 })
-          .toFile(pngPath);
+          .toBuffer();
         break;
         
       default:
@@ -105,13 +104,9 @@ async function reduceBitDepth(imagePath, bitDepth) {
         return;
     }
     
-    // Remove original JPEG and keep PNG for true bit depth
-    if (imagePath.endsWith('.jpg') && pngPath !== imagePath) {
-      await fs.unlink(imagePath);
-      console.log(`✅ Image converted to ${bitDepth}-bit PNG: ${pngPath}`);
-    } else {
-      console.log(`✅ Image bit depth reduced to ${bitDepth}-bit successfully`);
-    }
+    // Write the processed buffer back to the original file
+    await fs.writeFile(imagePath, processedBuffer);
+    console.log(`✅ Image bit depth reduced to ${bitDepth}-bit successfully`);
     
   } catch (error) {
     console.error(`❌ Error reducing image bit depth:`, error.message);
@@ -310,13 +305,12 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     await page.waitForFunction('document.readyState === "complete"');
     
     // Take the screenshot
-    const filename = `${index}.jpg`;
+    const filename = `${index}.png`;
     let screenshotPath = path.join(SCREENSHOTS_PATH, filename);
     await page.screenshot({ 
       path: screenshotPath,
       fullPage: false,
-      type: 'jpeg',
-      quality: 90
+      type: 'png'
     });
     
     console.log(`✅ Screenshot saved: ${screenshotPath}`);
@@ -331,16 +325,9 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       await convertToGrayscale(screenshotPath);
     }
     
-    // Apply bit depth reduction if needed (may change file extension to PNG)
+    // Apply bit depth reduction if needed
     if (bitDepth !== 24) {
       await reduceBitDepth(screenshotPath, bitDepth);
-      // Update path to PNG if bit depth was reduced
-      if (screenshotPath.endsWith('.jpg')) {
-        const pngPath = screenshotPath.replace('.jpg', '.png');
-        if (fs.existsSync(pngPath)) {
-          screenshotPath = pngPath;
-        }
-      }
     }
     
     return screenshotPath;
@@ -376,7 +363,7 @@ async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, gray
       const rotationNote = rotationDegrees > 0 ? ` (rotated ${rotationDegrees}°)` : '';
       const grayscaleNote = grayscale ? ' (grayscale)' : '';
       const bitDepthNote = bitDepth !== 24 ? ` (${bitDepth}-bit)` : '';
-      console.log(`✅ Screenshot ${i}.jpg completed for: ${urls[i]}${rotationNote}${grayscaleNote}${bitDepthNote}`);
+      console.log(`✅ Screenshot ${i}.png completed for: ${urls[i]}${rotationNote}${grayscaleNote}${bitDepthNote}`);
     } catch (error) {
       console.error(`❌ Failed to screenshot ${urls[i]}:`, error.message);
     }
