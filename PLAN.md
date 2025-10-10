@@ -65,7 +65,7 @@ This document outlines the step-by-step plan for creating a Home Assistant add-o
 - [x] **Configurable screen resolution** - Allow users to specify custom width and height (e.g., 1920x1080, 1366x768, 800x600) for viewport size before taking screenshots. Add configuration options like `resolution_width` and `resolution_height` with sensible defaults.
 - [x] **Screenshot rotation** - Add ability to rotate screenshots by specified degrees (0, 90, 180, 270). Useful for displays that are mounted in different orientations. Add `rotation_degrees` configuration option with validation.
 - [x] **Grayscale conversion** - Optional conversion of screenshots to grayscale to reduce file size and for aesthetic purposes. Add boolean `grayscale` configuration option (default: false).
-- [ ] **Configurable bit depth** - Allow adjustment of image bit depth/quality to balance file size vs image quality. Add `bit_depth` or `quality` configuration option with values like 1, 8, 24 bits or quality percentage.
+- [x] **Configurable bit depth** - Allow adjustment of image bit depth to create limited color palettes (1-bit = black/white, 4-bit = 16 colors, 8-bit = 256 colors, etc.). Add `bit_depth` configuration option with values 1, 4, 8, 16, 24 bits.
 
 ## Technical Architecture
 

@@ -54,6 +54,64 @@ async function convertToGrayscale(imagePath) {
 }
 
 /**
+ * Reduce image bit depth using Jimp's built-in quantization and dithering
+ * @param {string} imagePath - Path to the image file
+ * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
+ */
+async function reduceBitDepth(imagePath, bitDepth) {
+  if (bitDepth === 24) {
+    return; // No reduction needed for 24-bit
+  }
+  
+  try {
+    console.log(`🎨 Reducing image bit depth to ${bitDepth}-bit with dithering: ${imagePath}`);
+    const image = await Jimp.read(imagePath);
+    
+    // Calculate number of colors based on bit depth
+    let colors;
+    switch (bitDepth) {
+      case 1:
+        // Pure black and white (2 colors total)
+        colors = 2;
+        break;
+      case 4:
+        // 16 colors total
+        colors = 16;
+        break;
+      case 8:
+        // 256 colors total
+        colors = 256;
+        break;
+      case 16:
+        // For 16-bit, use 65536 colors (though Jimp may limit this)
+        colors = 65536;
+        break;
+      default:
+        console.log(`⚠️  Unsupported bit depth ${bitDepth}, skipping reduction`);
+        return;
+    }
+    
+    if (bitDepth === 1) {
+      // For 1-bit (black and white), use threshold instead of quantization
+      // This gives cleaner results for pure B&W
+      await image.threshold({ max: 128 }).writeAsync(imagePath);
+    } else {
+      // Use Jimp's built-in quantization with Floyd-Steinberg dithering
+      await image.quantize({
+        colors: colors,
+        imageQuantization: 'floyd-steinberg', // Use Floyd-Steinberg dithering
+        paletteQuantization: 'wuquant'        // Use Wu's color quantization algorithm
+      }).writeAsync(imagePath);
+    }
+    
+    console.log(`✅ Image bit depth reduced to ${bitDepth}-bit with dithering successfully`);
+  } catch (error) {
+    console.error(`❌ Error reducing image bit depth:`, error.message);
+    throw error;
+  }
+}
+
+/**
  * Load configuration from Home Assistant
  * @returns {Object} Configuration object with schedule and urls
  */
@@ -67,7 +125,8 @@ async function loadConfiguration() {
     resolution_width: 1920,
     resolution_height: 1080,
     rotation_degrees: 0,
-    grayscale: false
+    grayscale: false,
+    bit_depth: 24
   };
   
   try {
@@ -136,13 +195,26 @@ async function loadConfiguration() {
         }
       }
       
+      // Handle bit depth configuration
+      let bit_depth = defaultConfig.bit_depth;
+      if (config.bit_depth !== undefined) {
+        const validBitDepths = [1, 4, 8, 16, 24];
+        if (Number.isInteger(config.bit_depth) && validBitDepths.includes(config.bit_depth)) {
+          bit_depth = config.bit_depth;
+          console.log('✅ Bit depth setting from configuration:', bit_depth);
+        } else {
+          console.error('⚠️  Invalid bit_depth setting (must be 1, 4, 8, 16, or 24), using default:', defaultConfig.bit_depth);
+        }
+      }
+      
       return {
         schedule: config.schedule || defaultConfig.schedule,
         urls: urls,
         resolution_width: resolution_width,
         resolution_height: resolution_height,
         rotation_degrees: rotation_degrees,
-        grayscale: grayscale
+        grayscale: grayscale,
+        bit_depth: bit_depth
       };
     }
   } catch (error) {
@@ -161,8 +233,9 @@ async function loadConfiguration() {
  * @param {number} height - The viewport height for the screenshot
  * @param {number} rotationDegrees - Degrees to rotate the screenshot (0, 90, 180, 270)
  * @param {boolean} grayscale - Whether to convert the screenshot to grayscale
+ * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
  */
-async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false) {
+async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24) {
   console.log(`📸 Taking screenshot of: ${url}`);
   
   let browser = null;
@@ -236,6 +309,11 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       await convertToGrayscale(screenshotPath);
     }
     
+    // Apply bit depth reduction if needed
+    if (bitDepth !== 24) {
+      await reduceBitDepth(screenshotPath, bitDepth);
+    }
+    
     return screenshotPath;
     
   } catch (error) {
@@ -255,18 +333,21 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
  * @param {number} height - The viewport height for the screenshots
  * @param {number} rotationDegrees - Degrees to rotate the screenshots (0, 90, 180, 270)
  * @param {boolean} grayscale - Whether to convert the screenshots to grayscale
+ * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
  */
-async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, grayscale = false) {
+async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24) {
   const rotationText = rotationDegrees > 0 ? ` with ${rotationDegrees}° rotation` : '';
   const grayscaleText = grayscale ? ' in grayscale' : '';
-  console.log(`📸 Taking screenshots of ${urls.length} URL(s) at ${width}x${height}${rotationText}${grayscaleText}...`);
+  const bitDepthText = bitDepth !== 24 ? ` at ${bitDepth}-bit depth` : '';
+  console.log(`📸 Taking screenshots of ${urls.length} URL(s) at ${width}x${height}${rotationText}${grayscaleText}${bitDepthText}...`);
   
   for (let i = 0; i < urls.length; i++) {
     try {
-      await takeScreenshot(urls[i], i, width, height, rotationDegrees, grayscale);
+      await takeScreenshot(urls[i], i, width, height, rotationDegrees, grayscale, bitDepth);
       const rotationNote = rotationDegrees > 0 ? ` (rotated ${rotationDegrees}°)` : '';
       const grayscaleNote = grayscale ? ' (grayscale)' : '';
-      console.log(`✅ Screenshot ${i}.jpg completed for: ${urls[i]}${rotationNote}${grayscaleNote}`);
+      const bitDepthNote = bitDepth !== 24 ? ` (${bitDepth}-bit)` : '';
+      console.log(`✅ Screenshot ${i}.jpg completed for: ${urls[i]}${rotationNote}${grayscaleNote}${bitDepthNote}`);
     } catch (error) {
       console.error(`❌ Failed to screenshot ${urls[i]}:`, error.message);
     }
@@ -297,7 +378,8 @@ async function init() {
       urlCount: config.urls.length,
       resolution: `${config.resolution_width}x${config.resolution_height}`,
       rotation: `${config.rotation_degrees}°`,
-      grayscale: config.grayscale
+      grayscale: config.grayscale,
+      bitDepth: `${config.bit_depth}-bit`
     });
     
     // Validate cron schedule
@@ -308,13 +390,13 @@ async function init() {
     
     // Take initial screenshots
     console.log('📸 Taking initial screenshots...');
-    await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale);
+    await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale, config.bit_depth);
     
     // Set up cron scheduler
     console.log(`⏰ Setting up scheduler with pattern: ${config.schedule}`);
     cron.schedule(config.schedule, async () => {
       console.log('⏰ Scheduled screenshot execution started');
-      await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale);
+      await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale, config.bit_depth);
     });
     
     console.log('🎉 HA Screenshotter configured and scheduled!');
