@@ -172,7 +172,7 @@ async function init() {
     console.log('✅ Cron schedule is valid:', config.schedule);
     
     // Take initial screenshots
-    console.log('� Taking initial screenshots...');
+    console.log('📸 Taking initial screenshots...');
     await takeAllScreenshots(config.urls);
     
     // Set up cron scheduler
