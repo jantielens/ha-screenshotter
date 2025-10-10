@@ -12,14 +12,15 @@ A Home Assistant add-on that takes screenshots of web pages on a configurable sc
 
 ## Current Status
 
-### ✅ Step 1: "Hello World" Add-on (Current)
-- Basic Home Assistant add-on structure
-- Simple Node.js application that logs "Hello World"
-- Repository structure for Home Assistant add-on store
-- Ready for installation and testing
+### ✅ Step 2: Basic Screenshot Functionality (Current)
+- Full Home Assistant add-on structure
+- Puppeteer-based web page screenshots
+- Automatic screenshot of Google.com on startup
+- Screenshots saved to accessible `/share/screenshots/` directory
+- Comprehensive error handling and logging
+- Ready for testing screenshot capability
 
 ### 🔄 Planned Features
-- **Step 2**: Basic screenshot functionality using Puppeteer
 - **Step 3**: Configurable URLs and schedule via Home Assistant UI
 - **Step 4**: Web server to serve and access screenshots
 
@@ -28,9 +29,13 @@ A Home Assistant add-on that takes screenshots of web pages on a configurable sc
 This add-on is being developed incrementally following a step-by-step plan. Check the [PLAN.md](PLAN.md) file for detailed development roadmap.
 
 ### Current Implementation
-- Simple "Hello World" Node.js application
+- Node.js application with Puppeteer screenshot capability
+- Chromium-based headless browser integration
+- Automatic screenshot generation on startup
 - Proper Home Assistant add-on structure
-- Logging and configuration support
+- Screenshots saved to `/share/screenshots/` directory
+- Comprehensive logging and error handling
+- Configuration support framework
 - Graceful shutdown handling
 
 ## Support
