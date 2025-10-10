@@ -1,6 +1,6 @@
 # Home Assistant Add-on Configuration
 name: "HA Screenshotter"
-version: "0.2.1"
+version: "0.3.0"
 slug: "ha-screenshotter"
 description: "Takes screenshots of web pages on a configurable schedule"
 url: "https://github.com/jantielens/ha-screenshotter"
@@ -15,5 +15,21 @@ boot: auto
 init: false
 map:
   - "share:rw"
-options: {}
-schema: {}
+options:
+  schedule: "* * * * *"
+  urls:
+    - "https://google.com"
+    - "https://time.now/"
+schema:
+  schedule:
+    type: str
+    required: false
+    default: "* * * * *"
+    description: "Cron schedule for taking screenshots (format: minute hour day month weekday)"
+  urls:
+    type: array
+    required: false
+    default:
+      - "https://google.com"
+      - "https://time.now/"
+    description: "List of URLs to take screenshots of"

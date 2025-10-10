@@ -1,6 +1,6 @@
 {
   "name": "ha-screenshotter",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Home Assistant add-on that takes screenshots of web pages on a configurable schedule",
   "main": "index.js",
   "scripts": {
@@ -16,7 +16,8 @@
   "license": "MIT",
   "dependencies": {
     "fs-extra": "^11.0.0",
-    "puppeteer": "^21.0.0"
+    "puppeteer": "^21.0.0",
+    "node-cron": "^3.0.3"
   },
   "engines": {
     "node": ">=18.0.0"
