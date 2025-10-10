@@ -10,6 +10,7 @@ const path = require('path');
 const puppeteer = require('puppeteer');
 const cron = require('node-cron');
 const Jimp = require('jimp');
+const sharp = require('sharp');
 
 // Configuration paths (Home Assistant standard paths)
 const CONFIG_PATH = '/data/options.json';
@@ -54,7 +55,7 @@ async function convertToGrayscale(imagePath) {
 }
 
 /**
- * Reduce image bit depth using Jimp's built-in methods
+ * Reduce image bit depth using Sharp - saves as PNG for true bit depth control
  * @param {string} imagePath - Path to the image file
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
  */
@@ -64,45 +65,54 @@ async function reduceBitDepth(imagePath, bitDepth) {
   }
   
   try {
-    console.log(`🎨 Reducing image bit depth to ${bitDepth}-bit: ${imagePath}`);
-    const image = await Jimp.read(imagePath);
+    console.log(`🎨 Reducing image bit depth to ${bitDepth}-bit (converting to PNG): ${imagePath}`);
     
-    // Calculate number of colors based on bit depth
-    let colors;
+    // Generate PNG filename
+    const pngPath = imagePath.replace('.jpg', '.png');
+    
     switch (bitDepth) {
       case 1:
-        // Pure black and white (2 colors total)
-        colors = 2;
+        // 1-bit: Convert to pure black and white with palette
+        await sharp(imagePath)
+          .threshold(128)
+          .png({ palette: true, colors: 2, dither: 1.0 })
+          .toFile(pngPath);
         break;
+        
       case 4:
-        // 16 colors total
-        colors = 16;
+        // 4-bit: 16 colors with dithering
+        await sharp(imagePath)
+          .png({ palette: true, colors: 16, dither: 1.0 })
+          .toFile(pngPath);
         break;
+        
       case 8:
-        // 256 colors total
-        colors = 256;
+        // 8-bit: 256 colors with dithering
+        await sharp(imagePath)
+          .png({ palette: true, colors: 256, dither: 1.0 })
+          .toFile(pngPath);
         break;
+        
       case 16:
-        // For 16-bit, use 65536 colors (though Jimp may limit this)
-        colors = 65536;
+        // 16-bit: Save as 16-bit PNG
+        await sharp(imagePath)
+          .png({ compressionLevel: 6 })
+          .toFile(pngPath);
         break;
+        
       default:
         console.log(`⚠️  Unsupported bit depth ${bitDepth}, skipping reduction`);
         return;
     }
     
-    if (bitDepth === 1) {
-      // For 1-bit (black and white), use threshold instead of quantization
-      // This gives cleaner results for pure B&W
-      await image.threshold({ max: 128 }).writeAsync(imagePath);
+    // Remove original JPEG and keep PNG for true bit depth
+    if (imagePath.endsWith('.jpg') && pngPath !== imagePath) {
+      await fs.unlink(imagePath);
+      console.log(`✅ Image converted to ${bitDepth}-bit PNG: ${pngPath}`);
     } else {
-      // Use Jimp's posterize method for bit depth reduction
-      // This is more compatible across different Jimp versions
-      const levels = Math.min(colors, 256); // Ensure we don't exceed Jimp's limits
-      await image.posterize(levels).writeAsync(imagePath);
+      console.log(`✅ Image bit depth reduced to ${bitDepth}-bit successfully`);
     }
     
-    console.log(`✅ Image bit depth reduced to ${bitDepth}-bit successfully`);
   } catch (error) {
     console.error(`❌ Error reducing image bit depth:`, error.message);
     // If bit depth reduction fails, just log the error but don't crash
@@ -288,7 +298,7 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     
     // Take the screenshot
     const filename = `${index}.jpg`;
-    const screenshotPath = path.join(SCREENSHOTS_PATH, filename);
+    let screenshotPath = path.join(SCREENSHOTS_PATH, filename);
     await page.screenshot({ 
       path: screenshotPath,
       fullPage: false,
@@ -308,9 +318,16 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       await convertToGrayscale(screenshotPath);
     }
     
-    // Apply bit depth reduction if needed
+    // Apply bit depth reduction if needed (may change file extension to PNG)
     if (bitDepth !== 24) {
       await reduceBitDepth(screenshotPath, bitDepth);
+      // Update path to PNG if bit depth was reduced
+      if (screenshotPath.endsWith('.jpg')) {
+        const pngPath = screenshotPath.replace('.jpg', '.png');
+        if (fs.existsSync(pngPath)) {
+          screenshotPath = pngPath;
+        }
+      }
     }
     
     return screenshotPath;
