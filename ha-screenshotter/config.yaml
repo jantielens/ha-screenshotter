@@ -17,4 +17,3 @@ map:
   - "share:rw"
 options: {}
 schema: {}
-image: "ghcr.io/jantielens/ha-screenshotter-{arch}"
