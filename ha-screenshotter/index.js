@@ -105,7 +105,7 @@ async function init() {
     console.log('📸 Starting screenshot functionality test...');
     
     // Take a test screenshot of Google.com
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const timestamp = new Date().toISOString().replace(/[:.TZ]/g, '-').replace(/-$/, '');
     const filename = `google-${timestamp}.png`;
     
     try {
