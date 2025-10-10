@@ -1,6 +1,6 @@
 # Home Assistant Add-on Configuration
 name: "HA Screenshotter"
-version: "0.3.2"
+version: "0.4.0"
 slug: "ha-screenshotter"
 description: "Takes screenshots of web pages on a configurable schedule"
 url: "https://github.com/jantielens/ha-screenshotter"
@@ -18,6 +18,10 @@ map:
 options:
   schedule: "* * * * *"
   urls: '["https://google.com", "https://time.now/"]'
+  resolution_width: 1920
+  resolution_height: 1080
 schema:
   schedule: str?
   urls: str?
+  resolution_width: int?
+  resolution_height: int?

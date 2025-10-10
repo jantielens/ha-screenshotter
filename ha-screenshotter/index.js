@@ -25,7 +25,9 @@ async function loadConfiguration() {
     urls: [
       "https://google.com",
       "https://time.now/"
-    ]
+    ],
+    resolution_width: 1920,
+    resolution_height: 1080
   };
   
   try {
@@ -49,9 +51,33 @@ async function loadConfiguration() {
         }
       }
       
+      // Handle resolution configuration
+      let resolution_width = defaultConfig.resolution_width;
+      let resolution_height = defaultConfig.resolution_height;
+      
+      if (config.resolution_width !== undefined) {
+        if (Number.isInteger(config.resolution_width) && config.resolution_width > 0) {
+          resolution_width = config.resolution_width;
+          console.log('✅ Resolution width from configuration:', resolution_width);
+        } else {
+          console.error('⚠️  Invalid resolution_width, using default:', defaultConfig.resolution_width);
+        }
+      }
+      
+      if (config.resolution_height !== undefined) {
+        if (Number.isInteger(config.resolution_height) && config.resolution_height > 0) {
+          resolution_height = config.resolution_height;
+          console.log('✅ Resolution height from configuration:', resolution_height);
+        } else {
+          console.error('⚠️  Invalid resolution_height, using default:', defaultConfig.resolution_height);
+        }
+      }
+      
       return {
         schedule: config.schedule || defaultConfig.schedule,
-        urls: urls
+        urls: urls,
+        resolution_width: resolution_width,
+        resolution_height: resolution_height
       };
     }
   } catch (error) {
@@ -66,8 +92,10 @@ async function loadConfiguration() {
  * Take a screenshot of a given URL
  * @param {string} url - The URL to screenshot
  * @param {number} index - The index of the URL (used for filename)
+ * @param {number} width - The viewport width for the screenshot
+ * @param {number} height - The viewport height for the screenshot
  */
-async function takeScreenshot(url, index) {
+async function takeScreenshot(url, index, width, height) {
   console.log(`📸 Taking screenshot of: ${url}`);
   
   let browser = null;
@@ -106,7 +134,8 @@ async function takeScreenshot(url, index) {
     const page = await browser.newPage();
     
     // Set viewport size for consistent screenshots
-    await page.setViewport({ width: 1280, height: 720 });
+    console.log(`📐 Setting viewport to ${width}x${height}`);
+    await page.setViewport({ width: width, height: height });
     
     // Navigate to the URL with timeout
     console.log(`🌐 Navigating to: ${url}`);
@@ -144,13 +173,15 @@ async function takeScreenshot(url, index) {
 /**
  * Take screenshots of all configured URLs
  * @param {Array} urls - Array of URLs to screenshot
+ * @param {number} width - The viewport width for the screenshots
+ * @param {number} height - The viewport height for the screenshots
  */
-async function takeAllScreenshots(urls) {
-  console.log(`📸 Taking screenshots of ${urls.length} URL(s)...`);
+async function takeAllScreenshots(urls, width, height) {
+  console.log(`📸 Taking screenshots of ${urls.length} URL(s) at ${width}x${height}...`);
   
   for (let i = 0; i < urls.length; i++) {
     try {
-      await takeScreenshot(urls[i], i);
+      await takeScreenshot(urls[i], i, width, height);
       console.log(`✅ Screenshot ${i}.jpg completed for: ${urls[i]}`);
     } catch (error) {
       console.error(`❌ Failed to screenshot ${urls[i]}:`, error.message);
@@ -179,7 +210,8 @@ async function init() {
     console.log('🔧 Configuration loaded:', {
       schedule: config.schedule,
       urls: config.urls,
-      urlCount: config.urls.length
+      urlCount: config.urls.length,
+      resolution: `${config.resolution_width}x${config.resolution_height}`
     });
     
     // Validate cron schedule
@@ -190,13 +222,13 @@ async function init() {
     
     // Take initial screenshots
     console.log('📸 Taking initial screenshots...');
-    await takeAllScreenshots(config.urls);
+    await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height);
     
     // Set up cron scheduler
     console.log(`⏰ Setting up scheduler with pattern: ${config.schedule}`);
     cron.schedule(config.schedule, async () => {
       console.log('⏰ Scheduled screenshot execution started');
-      await takeAllScreenshots(config.urls);
+      await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height);
     });
     
     console.log('🎉 HA Screenshotter configured and scheduled!');
