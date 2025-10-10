@@ -41,7 +41,8 @@ Create a file `data/options.json` with your test settings:
   "schedule": "*/2 * * * *",
   "urls": "[\"https://example.com\", \"https://google.com\"]",
   "resolution_width": 1366,
-  "resolution_height": 768
+  "resolution_height": 768,
+  "rotation_degrees": 0
 }
 ```
 
@@ -53,6 +54,7 @@ Create a file `data/options.json` with your test settings:
 | `urls` | string | JSON array of URLs to screenshot | `"[\"https://example.com\"]"` |
 | `resolution_width` | integer | Screenshot width in pixels | `1366` |
 | `resolution_height` | integer | Screenshot height in pixels | `768` |
+| `rotation_degrees` | integer | Degrees to rotate screenshots (0, 90, 180, 270) | `90` |
 
 ### Common Test Resolutions
 
@@ -117,9 +119,12 @@ Look for these key log messages:
 ```
 ✅ Resolution width from configuration: 1366
 ✅ Resolution height from configuration: 768
-🔧 Configuration loaded: { resolution: '1366x768' }
+✅ Rotation degrees from configuration: 90
+🔧 Configuration loaded: { resolution: '1366x768', rotation: '90°' }
 📐 Setting viewport to 1366x768
 ✅ Screenshot saved: /share/screenshots/0.jpg
+🔄 Rotating image 90°: /share/screenshots/0.jpg
+✅ Image rotated successfully
 ```
 
 ## Troubleshooting
@@ -165,6 +170,26 @@ Test different resolutions:
 // Ultra-wide
 {"resolution_width": 3440, "resolution_height": 1440}
 ```
+
+### Rotation Testing
+
+Test different rotation angles:
+
+```json
+// No rotation (default)
+{"rotation_degrees": 0}
+
+// 90 degrees clockwise (portrait displays)
+{"rotation_degrees": 90}
+
+// 180 degrees (upside down)
+{"rotation_degrees": 180}
+
+// 270 degrees clockwise (landscape displays)
+{"rotation_degrees": 270}
+```
+
+**Note**: Invalid rotation values (like 45, 135) will default to 0 degrees.
 
 ### Schedule Testing
 

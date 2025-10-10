@@ -9,11 +9,33 @@ const fs = require('fs-extra');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const cron = require('node-cron');
+const Jimp = require('jimp');
 
 // Configuration paths (Home Assistant standard paths)
 const CONFIG_PATH = '/data/options.json';
 const SHARE_PATH = '/share';
 const SCREENSHOTS_PATH = path.join(SHARE_PATH, 'screenshots');
+
+/**
+ * Rotate an image by specified degrees
+ * @param {string} imagePath - Path to the image file
+ * @param {number} degrees - Rotation degrees (0, 90, 180, 270)
+ */
+async function rotateImage(imagePath, degrees) {
+  if (degrees === 0) {
+    return; // No rotation needed
+  }
+  
+  try {
+    console.log(`🔄 Rotating image ${degrees}°: ${imagePath}`);
+    const image = await Jimp.read(imagePath);
+    await image.rotate(degrees).writeAsync(imagePath);
+    console.log(`✅ Image rotated successfully`);
+  } catch (error) {
+    console.error(`❌ Error rotating image:`, error.message);
+    throw error;
+  }
+}
 
 /**
  * Load configuration from Home Assistant
@@ -27,7 +49,8 @@ async function loadConfiguration() {
       "https://time.now/"
     ],
     resolution_width: 1920,
-    resolution_height: 1080
+    resolution_height: 1080,
+    rotation_degrees: 0
   };
   
   try {
@@ -73,11 +96,24 @@ async function loadConfiguration() {
         }
       }
       
+      // Handle rotation configuration
+      let rotation_degrees = defaultConfig.rotation_degrees;
+      if (config.rotation_degrees !== undefined) {
+        const validRotations = [0, 90, 180, 270];
+        if (Number.isInteger(config.rotation_degrees) && validRotations.includes(config.rotation_degrees)) {
+          rotation_degrees = config.rotation_degrees;
+          console.log('✅ Rotation degrees from configuration:', rotation_degrees);
+        } else {
+          console.error('⚠️  Invalid rotation_degrees (must be 0, 90, 180, or 270), using default:', defaultConfig.rotation_degrees);
+        }
+      }
+      
       return {
         schedule: config.schedule || defaultConfig.schedule,
         urls: urls,
         resolution_width: resolution_width,
-        resolution_height: resolution_height
+        resolution_height: resolution_height,
+        rotation_degrees: rotation_degrees
       };
     }
   } catch (error) {
@@ -94,8 +130,9 @@ async function loadConfiguration() {
  * @param {number} index - The index of the URL (used for filename)
  * @param {number} width - The viewport width for the screenshot
  * @param {number} height - The viewport height for the screenshot
+ * @param {number} rotationDegrees - Degrees to rotate the screenshot (0, 90, 180, 270)
  */
-async function takeScreenshot(url, index, width, height) {
+async function takeScreenshot(url, index, width, height, rotationDegrees = 0) {
   console.log(`📸 Taking screenshot of: ${url}`);
   
   let browser = null;
@@ -158,6 +195,12 @@ async function takeScreenshot(url, index, width, height) {
     });
     
     console.log(`✅ Screenshot saved: ${screenshotPath}`);
+    
+    // Apply rotation if needed
+    if (rotationDegrees !== 0) {
+      await rotateImage(screenshotPath, rotationDegrees);
+    }
+    
     return screenshotPath;
     
   } catch (error) {
@@ -175,14 +218,17 @@ async function takeScreenshot(url, index, width, height) {
  * @param {Array} urls - Array of URLs to screenshot
  * @param {number} width - The viewport width for the screenshots
  * @param {number} height - The viewport height for the screenshots
+ * @param {number} rotationDegrees - Degrees to rotate the screenshots (0, 90, 180, 270)
  */
-async function takeAllScreenshots(urls, width, height) {
-  console.log(`📸 Taking screenshots of ${urls.length} URL(s) at ${width}x${height}...`);
+async function takeAllScreenshots(urls, width, height, rotationDegrees = 0) {
+  const rotationText = rotationDegrees > 0 ? ` with ${rotationDegrees}° rotation` : '';
+  console.log(`📸 Taking screenshots of ${urls.length} URL(s) at ${width}x${height}${rotationText}...`);
   
   for (let i = 0; i < urls.length; i++) {
     try {
-      await takeScreenshot(urls[i], i, width, height);
-      console.log(`✅ Screenshot ${i}.jpg completed for: ${urls[i]}`);
+      await takeScreenshot(urls[i], i, width, height, rotationDegrees);
+      const rotationNote = rotationDegrees > 0 ? ` (rotated ${rotationDegrees}°)` : '';
+      console.log(`✅ Screenshot ${i}.jpg completed for: ${urls[i]}${rotationNote}`);
     } catch (error) {
       console.error(`❌ Failed to screenshot ${urls[i]}:`, error.message);
     }
@@ -211,7 +257,8 @@ async function init() {
       schedule: config.schedule,
       urls: config.urls,
       urlCount: config.urls.length,
-      resolution: `${config.resolution_width}x${config.resolution_height}`
+      resolution: `${config.resolution_width}x${config.resolution_height}`,
+      rotation: `${config.rotation_degrees}°`
     });
     
     // Validate cron schedule
@@ -222,13 +269,13 @@ async function init() {
     
     // Take initial screenshots
     console.log('📸 Taking initial screenshots...');
-    await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height);
+    await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees);
     
     // Set up cron scheduler
     console.log(`⏰ Setting up scheduler with pattern: ${config.schedule}`);
     cron.schedule(config.schedule, async () => {
       console.log('⏰ Scheduled screenshot execution started');
-      await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height);
+      await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees);
     });
     
     console.log('🎉 HA Screenshotter configured and scheduled!');
