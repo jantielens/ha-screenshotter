@@ -135,7 +135,8 @@ async function loadConfiguration() {
     resolution_height: 1080,
     rotation_degrees: 0,
     grayscale: false,
-    bit_depth: 24
+    bit_depth: 24,
+    run_once: false
   };
   
   try {
@@ -216,6 +217,17 @@ async function loadConfiguration() {
         }
       }
       
+      // Handle run_once configuration
+      let run_once = defaultConfig.run_once;
+      if (config.run_once !== undefined) {
+        if (typeof config.run_once === 'boolean') {
+          run_once = config.run_once;
+          console.log('✅ Run once setting from configuration:', run_once);
+        } else {
+          console.error('⚠️  Invalid run_once setting (must be true or false), using default:', defaultConfig.run_once);
+        }
+      }
+      
       return {
         schedule: config.schedule || defaultConfig.schedule,
         urls: urls,
@@ -223,7 +235,8 @@ async function loadConfiguration() {
         resolution_height: resolution_height,
         rotation_degrees: rotation_degrees,
         grayscale: grayscale,
-        bit_depth: bit_depth
+        bit_depth: bit_depth,
+        run_once: run_once
       };
     }
   } catch (error) {
@@ -395,7 +408,8 @@ async function init() {
       resolution: `${config.resolution_width}x${config.resolution_height}`,
       rotation: `${config.rotation_degrees}°`,
       grayscale: config.grayscale,
-      bitDepth: `${config.bit_depth}-bit`
+      bitDepth: `${config.bit_depth}-bit`,
+      runOnce: config.run_once
     });
     
     // Validate cron schedule
@@ -407,6 +421,13 @@ async function init() {
     // Take initial screenshots
     console.log('📸 Taking initial screenshots...');
     await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale, config.bit_depth);
+    
+    // Check if we should run once and exit
+    if (config.run_once) {
+      console.log('✅ Run once mode enabled - screenshots completed');
+      console.log('👋 HA Screenshotter exiting gracefully after one cycle...');
+      process.exit(0);
+    }
     
     // Set up cron scheduler
     console.log(`⏰ Setting up scheduler with pattern: ${config.schedule}`);

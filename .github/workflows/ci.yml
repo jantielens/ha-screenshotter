@@ -52,7 +52,8 @@ jobs:
           "resolution_height": ${{ github.event.inputs.resolution_height || 768 }},
           "rotation_degrees": ${{ github.event.inputs.rotation || 90 }},
           "grayscale": ${{ github.event.inputs.grayscale || true }},
-          "bit_depth": ${{ github.event.inputs.bit_depth || 4 }}
+          "bit_depth": ${{ github.event.inputs.bit_depth || 4 }},
+          "run_once": true
         }
         EOF
         echo "Test configuration:"
@@ -65,13 +66,13 @@ jobs:
         
     - name: Test container startup and screenshot
       run: |
-        echo "Starting container test..."
+        echo "Starting container test with run_once mode..."
         
-        # Run container with timeout to prevent hanging
-        timeout 60s docker run --rm \
+        # Run container - it will exit automatically after taking screenshots
+        docker run --rm \
           -v "$(pwd)/test-data:/data" \
           -v "$(pwd)/test-share:/share" \
-          ha-screenshotter-test || true
+          ha-screenshotter-test
         
         echo "Container run completed"
         
