@@ -38,6 +38,22 @@ async function rotateImage(imagePath, degrees) {
 }
 
 /**
+ * Convert an image to grayscale
+ * @param {string} imagePath - Path to the image file
+ */
+async function convertToGrayscale(imagePath) {
+  try {
+    console.log(`🎨 Converting image to grayscale: ${imagePath}`);
+    const image = await Jimp.read(imagePath);
+    await image.greyscale().writeAsync(imagePath);
+    console.log(`✅ Image converted to grayscale successfully`);
+  } catch (error) {
+    console.error(`❌ Error converting image to grayscale:`, error.message);
+    throw error;
+  }
+}
+
+/**
  * Load configuration from Home Assistant
  * @returns {Object} Configuration object with schedule and urls
  */
@@ -50,7 +66,8 @@ async function loadConfiguration() {
     ],
     resolution_width: 1920,
     resolution_height: 1080,
-    rotation_degrees: 0
+    rotation_degrees: 0,
+    grayscale: false
   };
   
   try {
@@ -108,12 +125,24 @@ async function loadConfiguration() {
         }
       }
       
+      // Handle grayscale configuration
+      let grayscale = defaultConfig.grayscale;
+      if (config.grayscale !== undefined) {
+        if (typeof config.grayscale === 'boolean') {
+          grayscale = config.grayscale;
+          console.log('✅ Grayscale setting from configuration:', grayscale);
+        } else {
+          console.error('⚠️  Invalid grayscale setting (must be true or false), using default:', defaultConfig.grayscale);
+        }
+      }
+      
       return {
         schedule: config.schedule || defaultConfig.schedule,
         urls: urls,
         resolution_width: resolution_width,
         resolution_height: resolution_height,
-        rotation_degrees: rotation_degrees
+        rotation_degrees: rotation_degrees,
+        grayscale: grayscale
       };
     }
   } catch (error) {
@@ -131,8 +160,9 @@ async function loadConfiguration() {
  * @param {number} width - The viewport width for the screenshot
  * @param {number} height - The viewport height for the screenshot
  * @param {number} rotationDegrees - Degrees to rotate the screenshot (0, 90, 180, 270)
+ * @param {boolean} grayscale - Whether to convert the screenshot to grayscale
  */
-async function takeScreenshot(url, index, width, height, rotationDegrees = 0) {
+async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false) {
   console.log(`📸 Taking screenshot of: ${url}`);
   
   let browser = null;
@@ -201,6 +231,11 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0) {
       await rotateImage(screenshotPath, rotationDegrees);
     }
     
+    // Apply grayscale conversion if needed
+    if (grayscale) {
+      await convertToGrayscale(screenshotPath);
+    }
+    
     return screenshotPath;
     
   } catch (error) {
@@ -219,16 +254,19 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0) {
  * @param {number} width - The viewport width for the screenshots
  * @param {number} height - The viewport height for the screenshots
  * @param {number} rotationDegrees - Degrees to rotate the screenshots (0, 90, 180, 270)
+ * @param {boolean} grayscale - Whether to convert the screenshots to grayscale
  */
-async function takeAllScreenshots(urls, width, height, rotationDegrees = 0) {
+async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, grayscale = false) {
   const rotationText = rotationDegrees > 0 ? ` with ${rotationDegrees}° rotation` : '';
-  console.log(`📸 Taking screenshots of ${urls.length} URL(s) at ${width}x${height}${rotationText}...`);
+  const grayscaleText = grayscale ? ' in grayscale' : '';
+  console.log(`📸 Taking screenshots of ${urls.length} URL(s) at ${width}x${height}${rotationText}${grayscaleText}...`);
   
   for (let i = 0; i < urls.length; i++) {
     try {
-      await takeScreenshot(urls[i], i, width, height, rotationDegrees);
+      await takeScreenshot(urls[i], i, width, height, rotationDegrees, grayscale);
       const rotationNote = rotationDegrees > 0 ? ` (rotated ${rotationDegrees}°)` : '';
-      console.log(`✅ Screenshot ${i}.jpg completed for: ${urls[i]}${rotationNote}`);
+      const grayscaleNote = grayscale ? ' (grayscale)' : '';
+      console.log(`✅ Screenshot ${i}.jpg completed for: ${urls[i]}${rotationNote}${grayscaleNote}`);
     } catch (error) {
       console.error(`❌ Failed to screenshot ${urls[i]}:`, error.message);
     }
@@ -258,7 +296,8 @@ async function init() {
       urls: config.urls,
       urlCount: config.urls.length,
       resolution: `${config.resolution_width}x${config.resolution_height}`,
-      rotation: `${config.rotation_degrees}°`
+      rotation: `${config.rotation_degrees}°`,
+      grayscale: config.grayscale
     });
     
     // Validate cron schedule
@@ -269,13 +308,13 @@ async function init() {
     
     // Take initial screenshots
     console.log('📸 Taking initial screenshots...');
-    await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees);
+    await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale);
     
     // Set up cron scheduler
     console.log(`⏰ Setting up scheduler with pattern: ${config.schedule}`);
     cron.schedule(config.schedule, async () => {
       console.log('⏰ Scheduled screenshot execution started');
-      await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees);
+      await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale);
     });
     
     console.log('🎉 HA Screenshotter configured and scheduled!');
