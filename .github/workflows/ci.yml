@@ -110,19 +110,6 @@ jobs:
           exit 1
         fi
         
-    - name: Display screenshot in summary
-      if: success()
-      run: |
-        if [ -f "test-share/screenshots/0.jpg" ]; then
-          echo "## Screenshot Preview" >> $GITHUB_STEP_SUMMARY
-          echo "Generated screenshot as base64 for preview:" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "data:image/jpeg;base64,$(base64 -w 0 test-share/screenshots/0.jpg)" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Note**: Full image also available in artifacts below." >> $GITHUB_STEP_SUMMARY
-        fi
-        
     - name: Upload test artifacts
       uses: actions/upload-artifact@v4
       if: always()
