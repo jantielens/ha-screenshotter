@@ -1,7 +1,10 @@
 name: CI - Build and Test
 
-# Manual trigger only
+# Trigger on pull requests and manual dispatch
 on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
   workflow_dispatch:
     inputs:
       test_url:
