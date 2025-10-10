@@ -1,6 +1,6 @@
-# HA Screenshotter - Home Assistant Add-on Repository
+# HA Screenshotter - Home Assistant Add-on
 
-A Home Assistant add-on that takes screenshots of web pages on a configurable schedule and serves them via a web interface.
+A powerful Home Assistant add-on that takes screenshots of web pages on a configurable schedule with advanced image processing capabilities. Perfect for e-ink displays, dashboards, and automated monitoring.
 
 ## Installation
 
@@ -10,35 +10,113 @@ A Home Assistant add-on that takes screenshots of web pages on a configurable sc
 4. Find "HA Screenshotter" in the add-on store and click **Install**
 5. Start the add-on
 
-## Current Status
+## Features
 
-### ✅ Step 3: Configuration and Scheduling (Current)
-- Full Home Assistant add-on structure
-- Puppeteer-based web page screenshots
-- **Configurable URLs** via Home Assistant settings UI
-- **Cron-based scheduling** (default: every minute)
-- **Multiple URL support** with predictable naming (0.jpg, 1.jpg, etc.)
-- Screenshots saved to accessible `/share/screenshots/` directory
-- Configuration validation and comprehensive error handling
-- Ready for production use with custom URLs and schedules
+### 📸 **Screenshot Capabilities**
+- **Multiple URL Support** - Screenshot multiple web pages simultaneously
+- **Configurable Resolution** - Set custom width and height (e.g., 1920x1080, 1366x768, 800x600)
+- **High-Quality Output** - Uses Chromium browser engine via Puppeteer for accurate rendering
+- **Predictable File Naming** - Outputs numbered files (0.jpg, 1.jpg, etc.) for easy integration
 
-### 🔄 Planned Features
-- **Step 4**: Web server to serve and access screenshots
+### ⏰ **Flexible Scheduling**
+- **Cron-Based Scheduling** - Full cron expression support for precise timing
+- **Configurable Intervals** - From every minute to monthly schedules
+- **Automatic Execution** - Runs continuously in the background
+- **Startup Screenshots** - Takes initial screenshots immediately on start
 
-## Development
+### 🎨 **Advanced Image Processing**
+- **Screenshot Rotation** - Rotate images by 0°, 90°, 180°, or 270° for different display orientations
+- **Grayscale Conversion** - Optional black and white conversion for e-ink displays
+- **Bit Depth Reduction** - Reduce colors for optimal display compatibility:
+  - **1-bit** - Pure black and white (2 colors)
+  - **4-bit** - 16 colors with dithering
+  - **8-bit** - 256 colors with dithering
+  - **16-bit** - 65,536 colors
+  - **24-bit** - Full color (default)
+- **Floyd-Steinberg Dithering** - Professional dithering for smooth color gradients
 
-This add-on is being developed incrementally following a step-by-step plan. Check the [PLAN.md](PLAN.md) file for detailed development roadmap.
+### 🏠 **Home Assistant Integration**
+- **Native Add-on** - Seamless integration with Home Assistant
+- **UI Configuration** - Easy setup through Home Assistant's settings interface
+- **Shared Storage** - Screenshots saved to `/share/screenshots/` for access by other add-ons
+- **Comprehensive Logging** - Detailed logs with emoji indicators for easy monitoring
+- **Error Handling** - Robust error handling with automatic recovery
 
-### Current Implementation
-- Node.js application with Puppeteer screenshot capability
-- Chromium-based headless browser integration
-- **Configurable cron-based scheduling** (every minute by default)
-- **Multiple URL support** with index-based file naming
-- **Home Assistant UI integration** for easy configuration
-- Proper Home Assistant add-on structure
-- Screenshots saved to `/share/screenshots/` directory
-- Configuration validation and comprehensive error handling
-- Graceful shutdown handling
+### 🖥️ **Perfect for E-ink Displays**
+- **Optimized Output** - Specifically designed for e-ink and low-color displays
+- **Inkplate Compatible** - Tested with Inkplate and similar e-paper displays
+- **Efficient Processing** - Minimal resource usage for continuous operation
+
+## Configuration
+
+Configure the add-on through Home Assistant's add-on configuration page. All settings are applied immediately when you restart the add-on.
+
+### 📋 **Configuration Options**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `schedule` | string | `"* * * * *"` | Cron expression for screenshot timing (every minute by default) |
+| `urls` | string | `'["https://google.com", "https://time.now/"]'` | JSON array of URLs to screenshot (as string) |
+| `resolution_width` | integer | `1920` | Screenshot width in pixels |
+| `resolution_height` | integer | `1080` | Screenshot height in pixels |
+| `rotation_degrees` | integer | `0` | Rotation angle: `0`, `90`, `180`, or `270` degrees |
+| `grayscale` | boolean | `false` | Convert screenshots to grayscale |
+| `bit_depth` | integer | `24` | Color depth: `1`, `4`, `8`, `16`, or `24` bits |
+
+### 📝 **Configuration Examples**
+
+#### E-ink Display (Black & White)
+```yaml
+schedule: "*/5 * * * *"  # Every 5 minutes
+urls: '["http://homeassistant.local:8123/lovelace/dashboard"]'
+resolution_width: 800
+resolution_height: 600
+rotation_degrees: 0
+grayscale: true
+bit_depth: 1
+```
+
+#### Color Dashboard (4-bit with Dithering)
+```yaml
+schedule: "0 * * * *"  # Every hour
+urls: '["https://example.com/dashboard", "https://weather.com"]'
+resolution_width: 1366
+resolution_height: 768
+rotation_degrees: 90
+grayscale: false
+bit_depth: 4
+```
+
+#### High-Quality Screenshots
+```yaml
+schedule: "0 8 * * *"  # Daily at 8 AM
+urls: '["https://news.com", "https://status.example.com"]'
+resolution_width: 1920
+resolution_height: 1080
+rotation_degrees: 0
+grayscale: false
+bit_depth: 24
+```
+
+### ⏰ **Cron Schedule Format**
+
+The `schedule` field uses standard cron format:
+```
+* * * * *
+│ │ │ │ │
+│ │ │ │ └── Day of week (0-7, Sunday = 0 or 7)
+│ │ │ └──── Month (1-12)
+│ │ └────── Day of month (1-31)
+│ └──────── Hour (0-23)
+└────────── Minute (0-59)
+```
+
+**Common Examples:**
+- `"* * * * *"` - Every minute
+- `"*/5 * * * *"` - Every 5 minutes
+- `"0 * * * *"` - Every hour
+- `"0 8,20 * * *"` - Twice daily (8 AM and 8 PM)
+- `"0 0 * * 0"` - Weekly on Sunday at midnight
 
 ## Support
 
