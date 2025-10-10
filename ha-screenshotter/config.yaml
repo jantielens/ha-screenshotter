@@ -1,0 +1,20 @@
+# Home Assistant Add-on Configuration
+name: "HA Screenshotter"
+version: "0.1.0"
+slug: "ha-screenshotter"
+description: "Takes screenshots of web pages on a configurable schedule"
+url: "https://github.com/jantielens/ha-screenshotter"
+arch:
+  - armhf
+  - armv7
+  - aarch64
+  - amd64
+  - i386
+startup: application
+boot: auto
+init: false
+map:
+  - "share:rw"
+options: {}
+schema: {}
+image: "ghcr.io/jantielens/ha-screenshotter-{arch}"

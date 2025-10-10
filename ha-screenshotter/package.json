@@ -1,0 +1,23 @@
+{
+  "name": "ha-screenshotter",
+  "version": "0.1.0",
+  "description": "Home Assistant add-on that takes screenshots of web pages on a configurable schedule",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": [
+    "home-assistant",
+    "addon",
+    "screenshot",
+    "automation"
+  ],
+  "author": "Jan Tielens <jan@tielens.be>",
+  "license": "MIT",
+  "dependencies": {
+    "fs-extra": "^11.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
