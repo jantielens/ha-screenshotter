@@ -58,21 +58,14 @@ This document outlines the step-by-step plan for creating a Home Assistant add-o
 
 **Deliverables**: Configurable add-on that takes screenshots on schedule
 
-### Step 4: Add Simple Web Server for Screenshot Access
-**Goal**: Serve latest screenshots via HTTP endpoint
+### Step 4: Enhancements
+**Goal**: Add advanced screenshot configuration options for improved functionality
 
-**Tasks**:
-- Add Express.js dependency for web server
-- Create simple HTTP server (default port 8080)
-- Serve screenshots from `/share` directory
-- Implement endpoints:
-  - `GET /screenshots` - list all available screenshots
-  - `GET /screenshot/:filename` - serve specific screenshot
-  - `GET /latest/:url-hash` - serve latest screenshot for a URL
-- Update `config.yaml` to expose port 8080
-- Add proper MIME types and caching headers
-
-**Deliverables**: Fully functional add-on with web interface for screenshot access
+**Features to Add**:
+- [ ] **Configurable screen resolution** - Allow users to specify custom width and height (e.g., 1920x1080, 1366x768, 800x600) for viewport size before taking screenshots. Add configuration options like `resolution_width` and `resolution_height` with sensible defaults.
+- [ ] **Screenshot rotation** - Add ability to rotate screenshots by specified degrees (0, 90, 180, 270). Useful for displays that are mounted in different orientations. Add `rotation_degrees` configuration option with validation.
+- [ ] **Grayscale conversion** - Optional conversion of screenshots to grayscale to reduce file size and for aesthetic purposes. Add boolean `grayscale` configuration option (default: false).
+- [ ] **Configurable bit depth** - Allow adjustment of image bit depth/quality to balance file size vs image quality. Add `bit_depth` or `quality` configuration option with values like 1, 8, 24 bits or quality percentage.
 
 ## Technical Architecture
 
@@ -92,14 +85,12 @@ ha-screenshotter/
 ### Key Dependencies
 - `puppeteer` - Web page screenshots
 - `node-cron` - Schedule management  
-- `express` - Web server
 - `fs-extra` - File system operations
 
 ### Home Assistant Integration
 - Screenshots saved to `/share/screenshots/` 
 - Configuration via `/data/options.json`
 - Logs accessible through Home Assistant UI
-- Web server accessible via Home Assistant's ingress or external port
 
 ## Development Notes
 
@@ -137,13 +128,6 @@ ha-screenshotter/
 - [x] URL list configuration works
 - [x] Screenshots are taken according to schedule
 - [x] Multiple URLs are handled correctly
-
-### Step 4 Success
-- [x] Web server starts and is accessible
-- [x] All defined endpoints work correctly
-- [x] Screenshots are served with proper headers
-- [x] Latest screenshots are easily accessible
-- [x] Integration with Home Assistant is seamless
 
 ## Next Steps
 Start with Step 1 to create the basic "Hello World" add-on structure and verify Home Assistant integration works correctly.
