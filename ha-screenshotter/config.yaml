@@ -17,19 +17,7 @@ map:
   - "share:rw"
 options:
   schedule: "* * * * *"
-  urls:
-    - "https://google.com"
-    - "https://time.now/"
+  urls: '["https://google.com", "https://time.now/"]'
 schema:
-  schedule:
-    type: str
-    required: false
-    default: "* * * * *"
-    description: "Cron schedule for taking screenshots (format: minute hour day month weekday)"
-  urls:
-    type: list(url)
-    required: false
-    default:
-      - https://google.com
-      - https://time.now/
-    description: "List of URLs to take screenshots of"
+  schedule: str?
+  urls: str?

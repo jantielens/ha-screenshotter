@@ -32,9 +32,26 @@ async function loadConfiguration() {
     const configExists = await fs.pathExists(CONFIG_PATH);
     if (configExists) {
       const config = await fs.readJson(CONFIG_PATH);
+      
+      let urls = defaultConfig.urls;
+      if (config.urls) {
+        try {
+          // Parse URLs from JSON string format
+          urls = JSON.parse(config.urls);
+          if (!Array.isArray(urls)) {
+            throw new Error('URLs must be an array');
+          }
+          console.log('✅ URLs parsed from configuration:', urls);
+        } catch (parseError) {
+          console.error('⚠️  Error parsing URLs, using defaults:', parseError.message);
+          console.log('ℹ️  Expected format: ["https://example.com", "https://example2.com"]');
+          urls = defaultConfig.urls;
+        }
+      }
+      
       return {
         schedule: config.schedule || defaultConfig.schedule,
-        urls: config.urls || defaultConfig.urls
+        urls: urls
       };
     }
   } catch (error) {

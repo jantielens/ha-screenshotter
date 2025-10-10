@@ -44,16 +44,12 @@ The add-on can be configured through the Home Assistant UI:
   - `0 9 * * *` - Daily at 9 AM
 
 ### URLs
-- **Format**: Array of strings
+- **Format**: JSON string containing array of URLs
 - **Default**: `["https://google.com", "https://time.now/"]`
 - **Naming**: Screenshots saved as `0.jpg`, `1.jpg`, `2.jpg`, etc.
 - **Example**:
   ```json
-  [
-    "https://google.com",
-    "https://github.com", 
-    "https://news.ycombinator.com"
-  ]
+  ["https://google.com", "https://github.com", "https://news.ycombinator.com"]
   ```
 
 ## Support
