@@ -52,8 +52,8 @@ async function takeScreenshot(url, filename) {
       timeout: 30000 
     });
     
-    // Wait a bit for dynamic content to load
-    await page.waitForTimeout(2000);
+    // Wait for the page to be fully loaded
+    await page.waitForFunction('document.readyState === "complete"');
     
     // Take the screenshot
     const screenshotPath = path.join(SCREENSHOTS_PATH, filename);
