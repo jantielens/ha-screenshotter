@@ -54,7 +54,7 @@ async function convertToGrayscale(imagePath) {
 }
 
 /**
- * Reduce image bit depth using Jimp's built-in quantization and dithering
+ * Reduce image bit depth using Jimp's built-in methods
  * @param {string} imagePath - Path to the image file
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
  */
@@ -64,7 +64,7 @@ async function reduceBitDepth(imagePath, bitDepth) {
   }
   
   try {
-    console.log(`🎨 Reducing image bit depth to ${bitDepth}-bit with dithering: ${imagePath}`);
+    console.log(`🎨 Reducing image bit depth to ${bitDepth}-bit: ${imagePath}`);
     const image = await Jimp.read(imagePath);
     
     // Calculate number of colors based on bit depth
@@ -96,18 +96,17 @@ async function reduceBitDepth(imagePath, bitDepth) {
       // This gives cleaner results for pure B&W
       await image.threshold({ max: 128 }).writeAsync(imagePath);
     } else {
-      // Use Jimp's built-in quantization with Floyd-Steinberg dithering
-      await image.quantize({
-        colors: colors,
-        imageQuantization: 'floyd-steinberg', // Use Floyd-Steinberg dithering
-        paletteQuantization: 'wuquant'        // Use Wu's color quantization algorithm
-      }).writeAsync(imagePath);
+      // Use Jimp's posterize method for bit depth reduction
+      // This is more compatible across different Jimp versions
+      const levels = Math.min(colors, 256); // Ensure we don't exceed Jimp's limits
+      await image.posterize(levels).writeAsync(imagePath);
     }
     
-    console.log(`✅ Image bit depth reduced to ${bitDepth}-bit with dithering successfully`);
+    console.log(`✅ Image bit depth reduced to ${bitDepth}-bit successfully`);
   } catch (error) {
     console.error(`❌ Error reducing image bit depth:`, error.message);
-    throw error;
+    // If bit depth reduction fails, just log the error but don't crash
+    console.log(`⚠️  Continuing without bit depth reduction for ${imagePath}`);
   }
 }
 
