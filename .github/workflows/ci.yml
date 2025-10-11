@@ -143,7 +143,7 @@ jobs:
             resolution_height: 768
             rotation_degrees: 0
             grayscale: false
-            bit_depth: 24
+            bit_depth: 8
             expected_result: "success"
             expected_files: 1
           
@@ -177,7 +177,7 @@ jobs:
             resolution_height: 768
             rotation_degrees: 0
             grayscale: false
-            bit_depth: 24
+            bit_depth: 8
             expected_result: "failure"
             expected_files: 0
           
@@ -188,7 +188,7 @@ jobs:
             resolution_height: 768
             rotation_degrees: 0
             grayscale: false
-            bit_depth: 24
+            bit_depth: 8
             expected_result: "failure"
             expected_files: 0
           
@@ -380,7 +380,7 @@ jobs:
                       EXPECTED_DEPTH=${{ matrix.bit_depth }}
                       # Handle bit depth fallback for invalid values
                       if [ "$EXPECTED_DEPTH" = "99" ]; then
-                        EXPECTED_DEPTH=24  # Should fallback to default
+                        EXPECTED_DEPTH=8  # Should fallback to default
                       fi
                       
                       echo "Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (identify reported: $BIT_DEPTH_IDENTIFY, expected: $EXPECTED_DEPTH)"
