@@ -406,8 +406,8 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     });
     
   console.log(`   │       💾 Screenshot saved to: ${filename}`);
-  // Log public URL for Home Assistant (served at /local/ha-screenshotter/)
-  const publicUrl = `/local/ha-screenshotter/${filename}`;
+  // Log public URL for Home Assistant (served at /media/ha-screenshotter/)
+  const publicUrl = `/media/ha-screenshotter/${filename}`;
   console.log(`   │       🌐 Home Assistant URL: ${publicUrl}`);
     
     // Apply rotation if needed
