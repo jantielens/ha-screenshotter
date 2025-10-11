@@ -60,7 +60,7 @@ async function init() {
     
     // Take initial screenshots
     console.log('📸 Taking initial screenshots...');
-  await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale, config.bit_depth, config.long_lived_access_token);
+    await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale, config.bit_depth, config.long_lived_access_token);
     
     // Check if we should run once and exit
     if (config.run_once) {
