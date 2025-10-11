@@ -584,8 +584,8 @@ jobs:
                       # Determine expected bit depth based on test case
                       case "${{ matrix.name }}" in
                         "per-url-object-format")
-                          # Both URLs use global bit depth (24)
-                          EXPECTED_DEPTH=24
+                          # Both URLs use global bit depth (8)
+                          EXPECTED_DEPTH=8
                           ;;
                         "per-url-array-with-objects")
                           # Both URLs use global bit depth (4)
