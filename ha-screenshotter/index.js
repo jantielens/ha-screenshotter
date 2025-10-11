@@ -105,6 +105,8 @@ async function init() {
         console.log(`⚡ Duration: ${duration} seconds`);
         console.log(`❌ Error: ${error.message}`);
         console.log('');
+        console.log('🛑 Shutting down container to allow Home Assistant restart...');
+        process.exit(1);
       }
     });
     
