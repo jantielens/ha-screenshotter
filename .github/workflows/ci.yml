@@ -4,6 +4,11 @@ name: CI - Build and Test
 # Tests include both success and failure scenarios to verify validation behavior
 # NEW: Added comprehensive per-URL configuration tests for object format, array with objects,
 #      mixed settings, and validation of per-URL parameters
+# NEW: Added comprehensive cropping functionality tests including:
+#      - Basic cropping with various dimensions
+#      - Cropping combined with rotation, grayscale, and bit depth
+#      - Global crop settings vs per-URL overrides
+#      - Error validation for invalid crop parameters
 
 # Trigger on pull requests and manual dispatch
 on:
@@ -320,6 +325,161 @@ jobs:
             expected_result: "failure"
             expected_files: 0
 
+          # Cropping functionality tests
+          - name: "basic-crop-test"
+            description: "Single URL with basic cropping"
+            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 400, \"height\": 300}}]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            expected_result: "success"
+            expected_files: 1
+            crop_test: true
+            expected_crop_width: 400
+            expected_crop_height: 300
+
+          - name: "crop-with-rotation"
+            description: "Cropping after 90-degree rotation"
+            urls: '[{\"url\": \"https://example.com\", \"width\": 800, \"height\": 600, \"rotation\": 90, \"crop\": {\"x\": 50, \"y\": 100, \"width\": 200, \"height\": 300}}]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            expected_result: "success"
+            expected_files: 1
+            crop_test: true
+            expected_crop_width: 200
+            expected_crop_height: 300
+
+          - name: "crop-header-only"
+            description: "Crop to extract header section only"
+            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 0, \"y\": 0, \"width\": 1366, \"height\": 100}}]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            expected_result: "success"
+            expected_files: 1
+            crop_test: true
+            expected_crop_width: 1366
+            expected_crop_height: 100
+
+          - name: "crop-with-grayscale"
+            description: "Cropping with grayscale and bit depth reduction"
+            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 200, \"y\": 100, \"width\": 600, \"height\": 400}, \"grayscale\": true, \"bit_depth\": 8}]'
+            resolution_width: 1920
+            resolution_height: 1080
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            expected_result: "success"
+            expected_files: 1
+            crop_test: true
+            expected_crop_width: 600
+            expected_crop_height: 400
+
+          - name: "multi-url-different-crops"
+            description: "Multiple URLs with different crop settings"
+            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 0, \"y\": 0, \"width\": 400, \"height\": 300}}, {\"url\": \"https://github.com/jantielens/ha-screenshotter\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 800, \"height\": 600}}]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            expected_result: "success"
+            expected_files: 2
+            crop_test: true
+
+          - name: "global-crop-setting"
+            description: "Global crop setting applied to all URLs"
+            urls: '[\"https://example.com\", \"https://github.com/jantielens/ha-screenshotter\"]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            global_crop: '{\"x\": 50, \"y\": 25, \"width\": 500, \"height\": 400}'
+            expected_result: "success"
+            expected_files: 2
+            crop_test: true
+            expected_crop_width: 500
+            expected_crop_height: 400
+
+          - name: "crop-override-global"
+            description: "Per-URL crop overriding global crop setting"
+            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 200, \"y\": 100, \"width\": 300, \"height\": 200}}, \"https://github.com/jantielens/ha-screenshotter\"]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            global_crop: '{\"x\": 0, \"y\": 0, \"width\": 600, \"height\": 400}'
+            expected_result: "success"
+            expected_files: 2
+            crop_test: true
+
+          # Cropping error cases
+          - name: "invalid-crop-negative-coords"
+            description: "Invalid crop with negative coordinates"
+            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": -10, \"y\": 50, \"width\": 400, \"height\": 300}}]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            expected_result: "failure"
+            expected_files: 0
+
+          - name: "invalid-crop-zero-dimensions"
+            description: "Invalid crop with zero width/height"
+            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 0, \"height\": 300}}]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            expected_result: "failure"
+            expected_files: 0
+
+          - name: "invalid-crop-exceeds-bounds"
+            description: "Crop area exceeds image dimensions"
+            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 1000, \"y\": 500, \"width\": 800, \"height\": 600}}]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            expected_result: "failure"
+            expected_files: 0
+
+          - name: "invalid-crop-missing-fields"
+            description: "Invalid crop configuration with missing required fields"
+            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"width\": 400}}]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            expected_result: "failure"
+            expected_files: 0
+
+          - name: "crop-disabled-per-url"
+            description: "Crop explicitly disabled per URL with global crop enabled"
+            urls: '[{\"url\": \"https://example.com\", \"crop\": null}, \"https://github.com/jantielens/ha-screenshotter\"]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            global_crop: '{\"x\": 100, \"y\": 50, \"width\": 400, \"height\": 300}'
+            expected_result: "success"
+            expected_files: 2
+            crop_test: true
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -335,18 +495,29 @@ jobs:
 
       - name: Create test configuration
         run: |
-          cat > test-data-${{ matrix.name }}/options.json << EOF
-          {
-            "schedule": "*/1 * * * *",
-            "urls": "${{ matrix.urls }}",
-            "resolution_width": ${{ matrix.resolution_width }},
-            "resolution_height": ${{ matrix.resolution_height }},
-            "rotation_degrees": ${{ matrix.rotation_degrees }},
-            "grayscale": ${{ matrix.grayscale }},
-            "bit_depth": ${{ matrix.bit_depth }},
-            "run_once": true
-          }
-          EOF
+          # Start building the configuration
+          CONFIG_JSON="{
+            \"schedule\": \"*/1 * * * *\",
+            \"urls\": \"${{ matrix.urls }}\",
+            \"resolution_width\": ${{ matrix.resolution_width }},
+            \"resolution_height\": ${{ matrix.resolution_height }},
+            \"rotation_degrees\": ${{ matrix.rotation_degrees }},
+            \"grayscale\": ${{ matrix.grayscale }},
+            \"bit_depth\": ${{ matrix.bit_depth }},
+            \"run_once\": true"
+          
+          # Add global crop setting if specified
+          if [ -n "${{ matrix.global_crop || '' }}" ]; then
+            CONFIG_JSON="${CONFIG_JSON},
+            \"crop\": ${{ matrix.global_crop }}"
+          fi
+          
+          # Close the JSON object
+          CONFIG_JSON="${CONFIG_JSON}
+          }"
+          
+          # Write to file
+          echo "$CONFIG_JSON" > test-data-${{ matrix.name }}/options.json
           echo "=== Test Configuration for ${{ matrix.name }} ==="
           echo "${{ matrix.description }}"
           echo "Expected result: ${{ matrix.expected_result }}"
@@ -435,8 +606,60 @@ jobs:
                         IMG_HEIGHT="${BASH_REMATCH[2]}"
                         
                         # Determine expected dimensions based on test case
-                        # For per-URL tests, we need to handle different logic
+                        # For crop tests, we expect the cropped dimensions
                         case "${{ matrix.name }}" in
+                          "basic-crop-test")
+                            EXPECTED_WIDTH=${{ matrix.expected_crop_width || 400 }}
+                            EXPECTED_HEIGHT=${{ matrix.expected_crop_height || 300 }}
+                            ;;
+                          "crop-with-rotation")
+                            # Crop is applied after rotation, so we expect the crop dimensions
+                            EXPECTED_WIDTH=${{ matrix.expected_crop_width || 200 }}
+                            EXPECTED_HEIGHT=${{ matrix.expected_crop_height || 300 }}
+                            ;;
+                          "crop-header-only")
+                            EXPECTED_WIDTH=${{ matrix.expected_crop_width || 1366 }}
+                            EXPECTED_HEIGHT=${{ matrix.expected_crop_height || 100 }}
+                            ;;
+                          "crop-with-grayscale")
+                            EXPECTED_WIDTH=${{ matrix.expected_crop_width || 600 }}
+                            EXPECTED_HEIGHT=${{ matrix.expected_crop_height || 400 }}
+                            ;;
+                          "multi-url-different-crops")
+                            # First URL: 400x300, Second URL: 800x600
+                            if [ "$i" = "0" ]; then
+                              EXPECTED_WIDTH=400
+                              EXPECTED_HEIGHT=300
+                            else
+                              EXPECTED_WIDTH=800
+                              EXPECTED_HEIGHT=600
+                            fi
+                            ;;
+                          "global-crop-setting")
+                            # Both URLs use global crop: 500x400
+                            EXPECTED_WIDTH=${{ matrix.expected_crop_width || 500 }}
+                            EXPECTED_HEIGHT=${{ matrix.expected_crop_height || 400 }}
+                            ;;
+                          "crop-override-global")
+                            # First URL overrides to 300x200, Second URL uses global 600x400
+                            if [ "$i" = "0" ]; then
+                              EXPECTED_WIDTH=300
+                              EXPECTED_HEIGHT=200
+                            else
+                              EXPECTED_WIDTH=600
+                              EXPECTED_HEIGHT=400
+                            fi
+                            ;;
+                          "crop-disabled-per-url")
+                            # First URL has crop disabled (original resolution), Second URL uses global crop
+                            if [ "$i" = "0" ]; then
+                              EXPECTED_WIDTH=${{ matrix.resolution_width }}
+                              EXPECTED_HEIGHT=${{ matrix.resolution_height }}
+                            else
+                              EXPECTED_WIDTH=400
+                              EXPECTED_HEIGHT=300
+                            fi
+                            ;;
                           "per-url-object-format")
                             # First URL: 800x600 grayscale, Second URL: 1920x1080 rotated 90°
                             if [ "$i" = "0" ]; then
@@ -473,7 +696,7 @@ jobs:
                             EXPECTED_HEIGHT=1200 # Rotated 270°: width becomes height
                             ;;
                           *)
-                            # Standard logic for non-per-URL tests
+                            # Standard logic for non-per-URL and non-crop tests
                             EXPECTED_WIDTH=${{ matrix.resolution_width }}
                             EXPECTED_HEIGHT=${{ matrix.resolution_height }}
                             if [ "${{ matrix.rotation_degrees }}" = "90" ] || [ "${{ matrix.rotation_degrees }}" = "270" ]; then
@@ -709,6 +932,27 @@ jobs:
           echo "| per-url-invalid-rotation | Per-URL with invalid rotation value | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| per-url-invalid-bit-depth | Per-URL with invalid bit depth | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| per-url-malformed-json | Per-URL with malformed JSON structure | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ✂️ Cropping Functionality Tests" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Case | Description | Expected Result | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------------|----------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| basic-crop-test | Single URL with basic cropping | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| crop-with-rotation | Cropping after 90-degree rotation | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| crop-header-only | Crop to extract header section only | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| crop-with-grayscale | Cropping with grayscale and bit depth | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| multi-url-different-crops | Multiple URLs with different crops | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| global-crop-setting | Global crop setting applied to all URLs | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| crop-override-global | Per-URL crop overriding global setting | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| crop-disabled-per-url | Crop disabled per URL with global enabled | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ❌ Cropping Error Cases" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Case | Description | Expected Result | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|-------------|----------------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| invalid-crop-negative-coords | Invalid crop with negative coordinates | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| invalid-crop-zero-dimensions | Invalid crop with zero width/height | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| invalid-crop-exceeds-bounds | Crop area exceeds image dimensions | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| invalid-crop-missing-fields | Missing required crop fields | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📊 Overall Result" >> $GITHUB_STEP_SUMMARY
