@@ -17,8 +17,10 @@ const { rotateImage, convertToGrayscale, reduceBitDepth } = require('./imageProc
  * @param {number} rotationDegrees - Degrees to rotate the screenshot (0, 90, 180, 270)
  * @param {boolean} grayscale - Whether to convert the screenshot to grayscale
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
+ * @param {string} longLivedToken - Home Assistant long-lived access token
+ * @param {string} language - Language setting for Home Assistant frontend
  */
-async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, longLivedToken = '') {
+async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, longLivedToken = '', language = 'en') {
   let browser = null;
   try {
     // Check if Chromium is available
@@ -63,7 +65,7 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
           token_type: 'Bearer'
         };
 
-        // Inject the tokens and a default language into localStorage for the origin
+        // Inject the tokens and configured language into localStorage for the origin
         await page.evaluate((tokens, selectedLanguage) => {
           try {
             localStorage.setItem('hassTokens', tokens);
@@ -73,7 +75,7 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
             // eslint-disable-next-line no-console
             console.warn('   │       ⚠️ Could not set localStorage for authentication:', e && e.message ? e.message : e);
           }
-        }, JSON.stringify(hassTokens), JSON.stringify('en'));
+        }, JSON.stringify(hassTokens), JSON.stringify(language));
 
         // Also set extra HTTP headers as a best-effort fallback for regular HTTP requests
         await page.setExtraHTTPHeaders({
@@ -149,8 +151,10 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
  * @param {number} rotationDegrees - Degrees to rotate the screenshots (0, 90, 180, 270)
  * @param {boolean} grayscale - Whether to convert the screenshots to grayscale
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
+ * @param {string} longLivedToken - Home Assistant long-lived access token
+ * @param {string} language - Language setting for Home Assistant frontend
  */
-async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, longLivedToken = '') {
+async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, longLivedToken = '', language = 'en') {
   const rotationText = rotationDegrees > 0 ? ` with ${rotationDegrees}° rotation` : '';
   const grayscaleText = grayscale ? ' in grayscale' : '';
   const bitDepthText = bitDepth !== 24 ? ` at ${bitDepth}-bit depth` : '';
@@ -165,8 +169,8 @@ async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, gray
     const urlNum = i + 1;
     console.log(`   │ 📸 [${urlNum}/${urls.length}] Processing: ${urls[i]}`);
     
-  try {
-  await takeScreenshot(urls[i], i, width, height, rotationDegrees, grayscale, bitDepth, longLivedToken);
+    try {
+      await takeScreenshot(urls[i], i, width, height, rotationDegrees, grayscale, bitDepth, longLivedToken, language);
       const rotationNote = rotationDegrees > 0 ? ` (rotated ${rotationDegrees}°)` : '';
       const grayscaleNote = grayscale ? ' (grayscale)' : '';
       const bitDepthNote = bitDepth !== 24 ? ` (${bitDepth}-bit)` : '';
@@ -176,7 +180,6 @@ async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, gray
       console.log(`   │    ❌ Failed: ${error.message}`);
       failureCount++;
     }
-    
     // Add a separator between URLs (except for the last one)
     if (i < urls.length - 1) {
       console.log('   │');
