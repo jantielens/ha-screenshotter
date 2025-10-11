@@ -221,7 +221,7 @@ jobs:
           cat > test-data-${{ matrix.name }}/options.json << EOF
           {
             "schedule": "*/1 * * * *",
-            "urls": "${{ matrix.urls }}",
+            "urls": ${{ matrix.urls }},
             "resolution_width": ${{ matrix.resolution_width }},
             "resolution_height": ${{ matrix.resolution_height }},
             "rotation_degrees": ${{ matrix.rotation_degrees }},
