@@ -27,8 +27,5 @@ RUN npm install --only=production
 # Copy the rest of the application code
 COPY . .
 
-# Expose port 3000 for the web server
-EXPOSE 3000
-
 # Start the application
 CMD ["node", "index.js"]
