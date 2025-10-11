@@ -263,6 +263,35 @@ async function loadConfiguration() {
 }
 
 /**
+ * Clean up existing screenshots from the screenshots directory
+ * This prevents old screenshots from persisting after URL configuration changes
+ */
+async function cleanupExistingScreenshots() {
+  try {
+    const files = await fs.readdir(SCREENSHOTS_PATH);
+    const screenshotFiles = files.filter(file => file.endsWith('.png'));
+    
+    if (screenshotFiles.length === 0) {
+      console.log('🧹 No existing screenshots to clean up');
+      return;
+    }
+    
+    console.log(`🧹 Cleaning up ${screenshotFiles.length} existing screenshot(s)...`);
+    
+    for (const file of screenshotFiles) {
+      const filePath = path.join(SCREENSHOTS_PATH, file);
+      await fs.remove(filePath);
+      console.log(`   ✅ Deleted: ${file}`);
+    }
+    
+    console.log(`✅ Cleanup complete: ${screenshotFiles.length} file(s) removed`);
+  } catch (error) {
+    console.error('⚠️  Error during screenshot cleanup:', error.message);
+    // Don't throw error, just log it - cleanup failure shouldn't prevent startup
+  }
+}
+
+/**
  * Display comprehensive system information including version and configuration
  * @param {Object} config - The configuration object to display
  */
@@ -670,6 +699,9 @@ async function init() {
       throw new Error(`Invalid cron schedule: ${config.schedule}`);
     }
     console.log('✅ Cron schedule is valid:', config.schedule);
+    
+    // Clean up existing screenshots before taking new ones
+    await cleanupExistingScreenshots();
     
     // Take initial screenshots
     console.log('📸 Taking initial screenshots...');
