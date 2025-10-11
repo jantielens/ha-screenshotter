@@ -63,7 +63,7 @@ jobs:
           cat > test-data/options.json << EOF
           {
             "schedule": "*/1 * * * *",
-            "urls": "[\"${{ github.event.inputs.test_url || 'https://github.com/jantielens/ha-screenshotter/' }}\"]",
+            "urls": "[\\\"${{ github.event.inputs.test_url || 'https://github.com/jantielens/ha-screenshotter/' }}\\\"]",
             "resolution_width": ${{ github.event.inputs.resolution_width || 1366 }},
             "resolution_height": ${{ github.event.inputs.resolution_height || 768 }},
             "rotation_degrees": ${{ github.event.inputs.rotation || 90 }},
@@ -138,7 +138,7 @@ jobs:
           # Valid parameter tests
           - name: "basic-test"
             description: "Single URL, no grayscale, full bit depth"
-            urls: '["https://example.com"]'
+            urls: '[\"https://example.com\"]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -149,7 +149,7 @@ jobs:
           
           - name: "multi-grayscale-medium"
             description: "Two URLs, grayscale, medium bit depth"
-            urls: '["https://github.com/jantielens/ha-screenshotter", "https://example.com"]'
+            urls: '[\"https://github.com/jantielens/ha-screenshotter\", \"https://example.com\"]'
             resolution_width: 1920
             resolution_height: 1080
             rotation_degrees: 90
@@ -160,7 +160,7 @@ jobs:
           
           - name: "multi-grayscale-minimal"
             description: "Two URLs, grayscale, minimal bit depth"
-            urls: '["https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html", "https://example.com"]'
+            urls: '[\"https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html\", \"https://example.com\"]'
             resolution_width: 800
             resolution_height: 600
             rotation_degrees: 180
@@ -172,7 +172,7 @@ jobs:
           # Invalid parameter tests
           - name: "invalid-url"
             description: "Non-existent URL test"
-            urls: '["https://nonexistent-test-domain-12345.com"]'
+            urls: '[\"https://nonexistent-test-domain-12345.com\"]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -194,7 +194,7 @@ jobs:
           
           - name: "invalid-bit-depth"
             description: "Invalid bit depth value"
-            urls: '["https://example.com"]'
+            urls: '[\"https://example.com\"]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -221,7 +221,7 @@ jobs:
           cat > test-data-${{ matrix.name }}/options.json << EOF
           {
             "schedule": "*/1 * * * *",
-            "urls": ${{ matrix.urls }},
+            "urls": "${{ matrix.urls }}",
             "resolution_width": ${{ matrix.resolution_width }},
             "resolution_height": ${{ matrix.resolution_height }},
             "rotation_degrees": ${{ matrix.rotation_degrees }},
