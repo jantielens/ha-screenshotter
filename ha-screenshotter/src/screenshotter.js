@@ -179,7 +179,8 @@ async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, gray
     } catch (error) {
       console.log(`   │    ❌ Failed: ${error.message}`);
       failureCount++;
-    }    // Add a separator between URLs (except for the last one)
+    }
+    // Add a separator between URLs (except for the last one)
     if (i < urls.length - 1) {
       console.log('   │');
     }
