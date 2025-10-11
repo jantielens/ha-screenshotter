@@ -64,31 +64,6 @@ rotation_degrees: 90
 
 Screenshots are automatically saved to Home Assistant's media folder and are immediately accessible via `/media/` URLs for use in Lovelace cards and automations.
 
-**Current Configuration:**
-- Screenshots are saved to `/media/ha-screenshotter/` using the media mapping
-- Access screenshots at: `https://your-home-assistant/media/ha-screenshotter/yourfile.png`
-- Configuration uses:
-  ```yaml
-  map:
-    - type: media
-      read_only: false
-  ```
-
-**Alternative approaches (if needed):**
-
-1) Save/COPY screenshots to the `www` folder (legacy approach)
-	 - Files in Home Assistant's `config/www` folder are served at `/local/`
-	 - Requires manual copying or symlinks
-
-2) Map `config/www` directly (deprecated)
-	 - The old approach used `"config/www:rw"` mapping
-	 - Screenshots were available at `/local/` URLs
-
-**Security notes:**
-- The media mapping provides secure access to media files
-- Screenshots are accessible to authenticated Home Assistant users
-- If your instance is Internet-facing, ensure proper authentication is configured
-
 ## 📊 Monitoring
 
 Monitor the add-on through:

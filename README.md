@@ -38,7 +38,7 @@ A powerful Home Assistant add-on that takes screenshots of web pages on a config
 ### 🏠 **Home Assistant Integration**
 - **Native Add-on** - Seamless integration with Home Assistant
 - **UI Configuration** - Easy setup through Home Assistant's settings interface
-- **Shared Storage** - Screenshots saved to `/share/screenshots/` for access by other add-ons
+- **Media Storage** - Screenshots saved to `/media/ha-screenshotter/` for access through Home Assistant's media system
 - **Comprehensive Logging** - Detailed logs with emoji indicators for easy monitoring
 - **Error Handling** - Robust error handling with automatic recovery
 
