@@ -32,114 +32,130 @@ on:
         description: 'Bit depth'
         required: false
         default: '4'
+      screenshots_subfolder:
+        description: 'Subfolder name inside /config/www where screenshots are written'
+        required: false
+        default: 'ha-screenshotter'
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+    env:
+      SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up test directories
-      run: |
-        mkdir -p test-data test-share/screenshots
-        
-    - name: Create test configuration
-      run: |
-        cat > test-data/options.json << EOF
-        {
-          "schedule": "*/1 * * * *",
-          "urls": "[\"${{ github.event.inputs.test_url || 'https://github.com/jantielens/ha-screenshotter/' }}\"]",
-          "resolution_width": ${{ github.event.inputs.resolution_width || 1366 }},
-          "resolution_height": ${{ github.event.inputs.resolution_height || 768 }},
-          "rotation_degrees": ${{ github.event.inputs.rotation || 90 }},
-          "grayscale": ${{ github.event.inputs.grayscale || true }},
-          "bit_depth": ${{ github.event.inputs.bit_depth || 4 }},
-          "run_once": true
-        }
-        EOF
-        echo "Test configuration:"
-        cat test-data/options.json
-        
-    - name: Build Docker container
-      run: |
-        cd ha-screenshotter
-        docker build -t ha-screenshotter-test .
-        
-    - name: Test container startup and screenshot
-      run: |
-        echo "Starting container test with run_once mode..."
-        
-        # Run container - it will exit automatically after taking screenshots
-        docker run --rm \
-          -v "$(pwd)/test-data:/data" \
-          -v "$(pwd)/test-share:/share" \
-          ha-screenshotter-test
-        
-        echo "Container run completed"
-        
-    - name: Verify screenshot output
-      run: |
-        echo "Checking for generated screenshots..."
-        ls -la test-share/screenshots/
-        
-        if [ -f "test-share/screenshots/0.png" ]; then
-          echo "✅ Screenshot generated successfully!"
-          
-          # Get image info
-          file test-share/screenshots/0.png
-          
-          # Check if we can get basic image dimensions (requires imagemagick)
-          if command -v identify &> /dev/null; then
-            echo "Image details:"
-            identify test-share/screenshots/0.png
-          fi
-          
-          # Check file size (should be > 0)
-          size=$(stat -c%s test-share/screenshots/0.png)
-          echo "Screenshot file size: $size bytes"
-          
-          if [ "$size" -gt 1000 ]; then
-            echo "✅ Screenshot appears to be valid (size > 1KB)"
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up test directories
+        run: |
+            # Create test-data and the repo-root test-share subfolder where screenshots will be mounted
+            mkdir -p test-data test-share/$SCREENSHOT_SUBFOLDER
+
+      - name: Create test configuration
+        run: |
+          cat > test-data/options.json << EOF
+          {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"${{ github.event.inputs.test_url || 'https://github.com/jantielens/ha-screenshotter/' }}\"]",
+            "resolution_width": ${{ github.event.inputs.resolution_width || 1366 }},
+            "resolution_height": ${{ github.event.inputs.resolution_height || 768 }},
+            "rotation_degrees": ${{ github.event.inputs.rotation || 90 }},
+            "grayscale": ${{ github.event.inputs.grayscale || true }},
+            "bit_depth": ${{ github.event.inputs.bit_depth || 4 }},
+            "run_once": true
+          }
+          EOF
+          echo "Test configuration:"
+          cat test-data/options.json
+
+      - name: Build Docker container
+        run: |
+          cd ha-screenshotter
+          docker build -t ha-screenshotter-test .
+
+      - name: Test container startup and screenshot
+        run: |
+          echo "Starting container test with run_once mode..."
+
+          # Run container - it will exit automatically after taking screenshots
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/test-data:/data" \
+            -v "${GITHUB_WORKSPACE}/test-share:/config/www" \
+            ha-screenshotter-test
+
+          echo "Container run completed"
+
+      - name: "Debug: list test-share locations"
+        run: |
+          echo "Listing repository-root test-share:"
+          ls -la "${GITHUB_WORKSPACE}/test-share" || true
+          echo "Listing ha-screenshotter subdir inside repo:"
+          ls -la "${GITHUB_WORKSPACE}/ha-screenshotter/test-share" || true
+          echo "Listing mounted config/www inside repo tree (if present):"
+          ls -la "${GITHUB_WORKSPACE}/ha-screenshotter/config/www" || true
+
+      - name: Verify screenshot output
+        run: |
+          echo "Checking for generated screenshots..."
+          ls -la test-share/$SCREENSHOT_SUBFOLDER/
+
+          if [ -f "test-share/$SCREENSHOT_SUBFOLDER/0.png" ]; then
+            echo "✅ Screenshot generated successfully!"
+
+            # Get image info
+            file test-share/$SCREENSHOT_SUBFOLDER/0.png || true
+
+            # Check if we can get basic image dimensions (requires imagemagick)
+            if command -v identify &> /dev/null; then
+              echo "Image details:"
+              identify test-share/$SCREENSHOT_SUBFOLDER/0.png
+            fi
+
+            # Check file size (should be > 0)
+            size=$(stat -c%s test-share/$SCREENSHOT_SUBFOLDER/0.png)
+            echo "Screenshot file size: $size bytes"
+
+            if [ "$size" -gt 1000 ]; then
+              echo "✅ Screenshot appears to be valid (size > 1KB)"
+            else
+              echo "❌ Screenshot file seems too small"
+              exit 1
+            fi
+
           else
-            echo "❌ Screenshot file seems too small"
+            echo "❌ No screenshot generated"
+            echo "Contents of '${SCREENSHOT_SUBFOLDER}' directory:"
+            ls -la test-share/$SCREENSHOT_SUBFOLDER/
             exit 1
           fi
-          
-        else
-          echo "❌ No screenshot generated"
-          echo "Contents of screenshots directory:"
-          ls -la test-share/screenshots/
-          exit 1
-        fi
-        
-    - name: Upload test artifacts
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-screenshots
-        path: test-share/screenshots/
-        retention-days: 7
-        
-    - name: Test summary
-      if: always()
-      run: |
-        echo "## Test Results" >> $GITHUB_STEP_SUMMARY
-        if [ "${{ job.status }}" = "success" ]; then
-          echo "- **Build**: ✅ Success" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "- **Build**: ❌ Failed" >> $GITHUB_STEP_SUMMARY
-        fi
-        echo "- **Test URL**: ${{ github.event.inputs.test_url || 'https://github.com/jantielens/ha-screenshotter/' }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Resolution**: ${{ github.event.inputs.resolution_width || 1366 }}x${{ github.event.inputs.resolution_height || 768 }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Rotation**: ${{ github.event.inputs.rotation || 90 }}°" >> $GITHUB_STEP_SUMMARY
-        echo "- **Grayscale**: ${{ github.event.inputs.grayscale || true }}" >> $GITHUB_STEP_SUMMARY
-        echo "- **Bit Depth**: ${{ github.event.inputs.bit_depth || 4 }}" >> $GITHUB_STEP_SUMMARY
-        
-        if [ -f "test-share/screenshots/0.png" ]; then
-          size=$(stat -c%s test-share/screenshots/0.png)
-          echo "- **Screenshot**: ✅ Generated (${size} bytes)" >> $GITHUB_STEP_SUMMARY
-        else
-          echo "- **Screenshot**: ❌ Not generated" >> $GITHUB_STEP_SUMMARY
-        fi
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-screenshots
+          path: test-share/${{ env.SCREENSHOT_SUBFOLDER }}/
+          retention-days: 7
+
+      - name: Test summary
+        if: always()
+        run: |
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "- **Build**: ✅ Success" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Build**: ❌ Failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "- **Test URL**: ${{ github.event.inputs.test_url || 'https://github.com/jantielens/ha-screenshotter/' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Resolution**: ${{ github.event.inputs.resolution_width || 1366 }}x${{ github.event.inputs.resolution_height || 768 }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Rotation**: ${{ github.event.inputs.rotation || 90 }}°" >> $GITHUB_STEP_SUMMARY
+          echo "- **Grayscale**: ${{ github.event.inputs.grayscale || true }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Bit Depth**: ${{ github.event.inputs.bit_depth || 4 }}" >> $GITHUB_STEP_SUMMARY
+
+          if [ -f "test-share/$SCREENSHOT_SUBFOLDER/0.png" ]; then
+            size=$(stat -c%s test-share/$SCREENSHOT_SUBFOLDER/0.png)
+            echo "- **Screenshot**: ✅ Generated (${size} bytes)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "- **Screenshot**: ❌ Not generated" >> $GITHUB_STEP_SUMMARY
+          fi

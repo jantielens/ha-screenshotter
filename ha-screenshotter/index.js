@@ -14,8 +14,9 @@ const sharp = require('sharp');
 
 // Configuration paths (Home Assistant standard paths)
 const CONFIG_PATH = '/data/options.json';
-const SHARE_PATH = '/share';
-const SCREENSHOTS_PATH = path.join(SHARE_PATH, 'screenshots');
+// Write screenshots to the Home Assistant served www folder so files are available at /local/
+const WWW_PATH = '/config/www';
+const SCREENSHOTS_PATH = path.join(WWW_PATH, 'ha-screenshotter');
 
 /**
  * Rotate an image by specified degrees
@@ -313,7 +314,10 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       type: 'png'
     });
     
-    console.log(`✅ Screenshot saved: ${screenshotPath}`);
+  console.log(`✅ Screenshot saved: ${screenshotPath}`);
+  // Log public URL for Home Assistant (served at /local/ha-screenshotter/)
+  const publicUrl = `/local/ha-screenshotter/${filename}`;
+  console.log(`🌐 Accessible via Home Assistant at: ${publicUrl}`);
     
     // Apply rotation if needed
     if (rotationDegrees !== 0) {
@@ -380,11 +384,11 @@ async function init() {
   console.log('📅 Started at:', new Date().toISOString());
   
   try {
-    // Ensure share and screenshots directories exist
-    await fs.ensureDir(SHARE_PATH);
-    await fs.ensureDir(SCREENSHOTS_PATH);
-    console.log('✅ Share directory ensured at:', SHARE_PATH);
-    console.log('✅ Screenshots directory ensured at:', SCREENSHOTS_PATH);
+  // Ensure www and screenshots directories exist (served at /local/)
+  await fs.ensureDir(WWW_PATH);
+  await fs.ensureDir(SCREENSHOTS_PATH);
+  console.log('✅ WWW directory ensured at:', WWW_PATH);
+  console.log('✅ Screenshots directory ensured at:', SCREENSHOTS_PATH);
     
     // Load configuration
     const config = await loadConfiguration();
