@@ -16,19 +16,39 @@ This guide explains how to test the HA Screenshotter container locally during de
    docker build -t ha-screenshotter-test .
    ```
 
-2. **Create test configuration:**
-   ```bash
-   mkdir data
-   mkdir share
-   mkdir share\screenshots
+2. **Create test configuration and output folder:**
+  ```bash
+  mkdir -p ha-screenshotter/data ha-screenshotter/config/www/ha-screenshotter
+  ```
+
+3. **Configure test settings** (create `ha-screenshotter/data/options.json`; see [Configuration](#configuration) section below)
+
+   Example `options.json` (place in `ha-screenshotter/data/options.json`):
+
+   ```json
+   {
+     "schedule": "*/5 * * * *",
+     "urls": "[\"https://example.com\"]",
+     "resolution_width": 800,
+     "resolution_height": 600,
+     "rotation_degrees": 0,
+     "grayscale": false,
+     "bit_depth": 24,
+     "run_once": true
+   }
    ```
 
-3. **Configure test settings** (see [Configuration](#configuration) section below)
+4. **Run the container (Windows example above).**
 
-4. **Run the container:**
-   ```bash
-   docker run --rm -v "c:\dev\ha-screenshotter\ha-screenshotter\data:/data" -v "c:\dev\ha-screenshotter\ha-screenshotter\share:/share" ha-screenshotter-test
-   ```
+Linux / macOS example:
+
+```bash
+# From repository root
+docker build -t ha-screenshotter:local -f ha-screenshotter/Dockerfile .
+mkdir -p ha-screenshotter/data ha-screenshotter/config/www/ha-screenshotter
+# A sample options.json is included at ha-screenshotter/data/options.json and targets https://google.com with run_once=true
+docker run --rm -v "$(pwd)/ha-screenshotter/data:/data:ro" -v "$(pwd)/ha-screenshotter/config/www:/config/www:rw" ha-screenshotter:local
+```
 
 ## Configuration
 
@@ -76,7 +96,7 @@ cd ha-screenshotter
 docker build -t ha-screenshotter-test .
 
 # Run with volume mounts (Windows paths)
-docker run --rm -v "c:\dev\ha-screenshotter\ha-screenshotter\data:/data" -v "c:\dev\ha-screenshotter\ha-screenshotter\share:/share" ha-screenshotter-test
+docker run --rm -v "c:\dev\ha-screenshotter\ha-screenshotter\data:/data" -v "c:\dev\ha-screenshotter\ha-screenshotter\config\www:/config/www" ha-screenshotter-test
 ```
 
 ### Background Test Run
@@ -102,7 +122,8 @@ docker rm ha-screenshotter-test
 
 ### Check Screenshots
 
-Screenshots are saved to: `share/screenshots/`
+
+Screenshots are saved to: `/config/www/ha-screenshotter/` (served at `/local/ha-screenshotter/`)
 
 - `0.jpg` - First URL in the list
 - `1.jpg` - Second URL in the list
@@ -122,8 +143,8 @@ Look for these key log messages:
 ✅ Rotation degrees from configuration: 90
 🔧 Configuration loaded: { resolution: '1366x768', rotation: '90°' }
 📐 Setting viewport to 1366x768
-✅ Screenshot saved: /share/screenshots/0.jpg
-🔄 Rotating image 90°: /share/screenshots/0.jpg
+✅ Screenshot saved: /config/www/ha-screenshotter/0.png
+🔄 Rotating image 90°: /config/www/ha-screenshotter/0.png
 ✅ Image rotated successfully
 ```
 
@@ -143,10 +164,7 @@ Look for these key log messages:
 
 ### Screenshots Not Generated
 
-- Check container logs for browser errors
-- Verify URLs are accessible
-- Ensure `share/screenshots` directory exists
-- Check for sufficient disk space
+Ensure `/config/www/ha-screenshotter` directory exists
 
 ### Invalid Resolution Values
 
@@ -222,7 +240,7 @@ Test files are excluded from git via `.gitignore`, but you can manually clean up
 ```bash
 # Remove test directories
 rmdir /s data
-rmdir /s share
+rmdir /s config\www\ha-screenshotter
 
 # Remove test container image
 docker rmi ha-screenshotter-test
