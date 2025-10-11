@@ -8,6 +8,7 @@ const { CONFIG_PATH } = require('./constants');
 /**
  * Load configuration from Home Assistant
  * @returns {Object} Configuration object with schedule and urls
+ * @throws {Error} When configuration values are invalid - causes container shutdown
  */
 async function loadConfiguration() {
   const defaultConfig = {
@@ -42,9 +43,9 @@ async function loadConfiguration() {
           }
           console.log('✅ URLs parsed from configuration:', urls);
         } catch (parseError) {
-          console.error('⚠️  Error parsing URLs, using defaults:', parseError.message);
-          console.log('ℹ️  Expected format: ["https://example.com", "https://example2.com"]');
-          urls = defaultConfig.urls;
+          console.error('❌ Error parsing URLs:', parseError.message);
+          console.error('ℹ️  Expected format: ["https://example.com", "https://example2.com"]');
+          throw new Error(`Invalid URLs configuration: ${parseError.message}. Expected format: ["https://example.com", "https://example2.com"]`);
         }
       }
       
@@ -57,7 +58,8 @@ async function loadConfiguration() {
           resolution_width = config.resolution_width;
           console.log('✅ Resolution width from configuration:', resolution_width);
         } else {
-          console.error('⚠️  Invalid resolution_width, using default:', defaultConfig.resolution_width);
+          console.error('❌ Invalid resolution_width:', config.resolution_width);
+          throw new Error(`Invalid resolution_width: ${config.resolution_width}. Must be a positive integer.`);
         }
       }
       
@@ -66,7 +68,8 @@ async function loadConfiguration() {
           resolution_height = config.resolution_height;
           console.log('✅ Resolution height from configuration:', resolution_height);
         } else {
-          console.error('⚠️  Invalid resolution_height, using default:', defaultConfig.resolution_height);
+          console.error('❌ Invalid resolution_height:', config.resolution_height);
+          throw new Error(`Invalid resolution_height: ${config.resolution_height}. Must be a positive integer.`);
         }
       }
       
@@ -78,7 +81,8 @@ async function loadConfiguration() {
           rotation_degrees = config.rotation_degrees;
           console.log('✅ Rotation degrees from configuration:', rotation_degrees);
         } else {
-          console.error('⚠️  Invalid rotation_degrees (must be 0, 90, 180, or 270), using default:', defaultConfig.rotation_degrees);
+          console.error('❌ Invalid rotation_degrees:', config.rotation_degrees);
+          throw new Error(`Invalid rotation_degrees: ${config.rotation_degrees}. Must be one of: 0, 90, 180, or 270.`);
         }
       }
       
@@ -89,7 +93,8 @@ async function loadConfiguration() {
           grayscale = config.grayscale;
           console.log('✅ Grayscale setting from configuration:', grayscale);
         } else {
-          console.error('⚠️  Invalid grayscale setting (must be true or false), using default:', defaultConfig.grayscale);
+          console.error('❌ Invalid grayscale setting:', config.grayscale);
+          throw new Error(`Invalid grayscale setting: ${config.grayscale}. Must be true or false.`);
         }
       }
       
@@ -101,7 +106,8 @@ async function loadConfiguration() {
           bit_depth = config.bit_depth;
           console.log('✅ Bit depth setting from configuration:', bit_depth);
         } else {
-          console.error('⚠️  Invalid bit_depth setting (must be 1, 4, 8, 16, or 24), using default:', defaultConfig.bit_depth);
+          console.error('❌ Invalid bit_depth setting:', config.bit_depth);
+          throw new Error(`Invalid bit_depth setting: ${config.bit_depth}. Must be one of: 1, 4, 8, 16, or 24.`);
         }
       }
       
@@ -112,7 +118,8 @@ async function loadConfiguration() {
           run_once = config.run_once;
           console.log('✅ Run once setting from configuration:', run_once);
         } else {
-          console.error('⚠️  Invalid run_once setting (must be true or false), using default:', defaultConfig.run_once);
+          console.error('❌ Invalid run_once setting:', config.run_once);
+          throw new Error(`Invalid run_once setting: ${config.run_once}. Must be true or false.`);
         }
       }
       
@@ -123,7 +130,8 @@ async function loadConfiguration() {
           webserverport = config.webserverport;
           console.log('✅ Web server port from configuration:', webserverport);
         } else {
-          console.error('⚠️  Invalid webserverport setting (must be a non-negative integer), using default:', defaultConfig.webserverport);
+          console.error('❌ Invalid webserverport setting:', config.webserverport);
+          throw new Error(`Invalid webserverport setting: ${config.webserverport}. Must be a non-negative integer.`);
         }
       }
       
@@ -134,7 +142,8 @@ async function loadConfiguration() {
           language = config.language.trim();
           console.log('✅ Language setting from configuration:', language);
         } else {
-          console.error('⚠️  Invalid language setting (must be a non-empty string), using default:', defaultConfig.language);
+          console.error('❌ Invalid language setting:', config.language);
+          throw new Error(`Invalid language setting: ${config.language}. Must be a non-empty string.`);
         }
       }
       
@@ -153,7 +162,9 @@ async function loadConfiguration() {
       };
     }
   } catch (error) {
-    console.error('⚠️  Error loading configuration:', error.message);
+    console.error('❌ Error loading configuration:', error.message);
+    console.error('🛑 Container shutting down due to invalid configuration');
+    throw error;
   }
   
   console.log('🔧 Using default configuration');

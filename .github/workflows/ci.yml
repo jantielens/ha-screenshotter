@@ -1,5 +1,8 @@
 name: CI - Build and Test
 
+# NOTE: Configuration validation is strict - invalid values cause container shutdown
+# Tests include both success and failure scenarios to verify validation behavior
+
 # Trigger on pull requests and manual dispatch
 on:
   pull_request:
@@ -200,8 +203,30 @@ jobs:
             rotation_degrees: 0
             grayscale: true
             bit_depth: 99
-            expected_result: "success"  # Should fallback to default
-            expected_files: 1
+            expected_result: "failure"  # Should now cause container shutdown
+            expected_files: 0
+          
+          - name: "invalid-resolution-width"
+            description: "Invalid negative resolution width"
+            urls: '[\"https://example.com\"]'
+            resolution_width: -100
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 8
+            expected_result: "failure"
+            expected_files: 0
+          
+          - name: "invalid-rotation"
+            description: "Invalid rotation degrees"
+            urls: '[\"https://example.com\"]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 45
+            grayscale: false
+            bit_depth: 8
+            expected_result: "failure"
+            expected_files: 0
 
     steps:
       - name: Checkout code
@@ -378,9 +403,10 @@ jobs:
                       fi
                       
                       EXPECTED_DEPTH=${{ matrix.bit_depth }}
-                      # Handle bit depth fallback for invalid values
+                      # Note: Invalid bit depth values now cause container failure
+                      # This check is kept for any remaining valid edge cases
                       if [ "$EXPECTED_DEPTH" = "99" ]; then
-                        EXPECTED_DEPTH=8  # Should fallback to default
+                        EXPECTED_DEPTH=8  # This case should now never reach here due to validation
                       fi
                       
                       echo "Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (identify reported: $BIT_DEPTH_IDENTIFY, expected: $EXPECTED_DEPTH)"
@@ -466,7 +492,9 @@ jobs:
           echo "| multi-grayscale-minimal | Two URLs, grayscale, minimal bit depth | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| invalid-url | Non-existent URL test | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| malformed-urls | Invalid JSON format for URLs | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| invalid-bit-depth | Invalid bit depth value | Success (fallback) | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| invalid-bit-depth | Invalid bit depth value | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| invalid-resolution-width | Invalid negative resolution width | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| invalid-rotation | Invalid rotation degrees | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📊 Overall Result" >> $GITHUB_STEP_SUMMARY

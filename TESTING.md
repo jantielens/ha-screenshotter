@@ -166,11 +166,24 @@ Look for these key log messages:
 
 Ensure `/media/ha-screenshotter` directory exists
 
-### Invalid Resolution Values
+### Invalid Configuration Values
 
-- Ensure resolution values are positive integers
-- Very large resolutions may cause browser issues
-- Very small resolutions may not render properly
+**Important**: Invalid configuration values will now cause the container to shut down immediately instead of reverting to default values. This ensures strict configuration validation.
+
+- **Resolution values**: Must be positive integers
+- **Rotation degrees**: Must be one of: 0, 90, 180, or 270
+- **URLs**: Must be valid JSON array format: `"[\"https://example.com\"]"`
+- **Boolean values** (grayscale, run_once): Must be `true` or `false`
+- **Bit depth**: Must be one of: 1, 4, 8, 16, or 24
+- **Web server port**: Must be a non-negative integer (0 to disable)
+- **Language**: Must be a non-empty string
+
+If any configuration value is invalid, you'll see error messages like:
+```
+❌ Invalid resolution_width: -100
+❌ Error loading configuration: Invalid resolution_width: -100. Must be a positive integer.
+🛑 Container shutting down due to invalid configuration
+```
 
 ## Test Scenarios
 
