@@ -122,5 +122,21 @@ Monitor the add-on through:
 - **Dashboard Archiving** - Historical snapshots of Home Assistant dashboards
 - **Cross-Platform Access** - View screenshots on devices that can't access Home Assistant directly
 
+## 👨‍💻 Development
+
+### Code Structure
+
+The codebase has been refactored into a modular structure for better maintainability:
+
+- **`index.js`** - Main entry point and application orchestration
+- **`src/constants.js`** - Application constants and paths
+- **`src/config.js`** - Configuration loading and validation
+- **`src/imageProcessor.js`** - Image manipulation (rotation, grayscale, bit depth)
+- **`src/screenshotter.js`** - Screenshot capture with Puppeteer
+- **`src/systemInfo.js`** - System information display
+- **`src/webServer.js`** - Optional web server for gallery
+
+See [REFACTORING.md](REFACTORING.md) for detailed documentation on the code structure.
+
 ## 🆘 Support
 For issues and feature requests, visit the [GitHub repository](https://github.com/jantielens/ha-screenshotter/issues).
