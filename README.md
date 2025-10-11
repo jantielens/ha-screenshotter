@@ -38,6 +38,8 @@ A powerful Home Assistant add-on that takes screenshots of web pages on a config
 ### 🏠 **Home Assistant Integration**
 - **Native Add-on** - Seamless integration with Home Assistant
 - **UI Configuration** - Easy setup through Home Assistant's settings interface
+- **Authentication Support** - Long-lived access token support for protected dashboards
+- **Multi-Language Support** - Configure Home Assistant UI language for screenshots (en, es, fr, de, etc.)
 - **Media Storage** - Screenshots saved to `/media/ha-screenshotter/` for access through Home Assistant's media system
 - **Comprehensive Logging** - Detailed logs with emoji indicators for easy monitoring
 - **Error Handling** - Robust error handling with automatic recovery
@@ -71,6 +73,7 @@ Configure the add-on through Home Assistant's add-on configuration page. All set
 | `bit_depth` | integer | `24` | Color depth: `1`, `4`, `8`, `16`, or `24` bits |
 | `webserverport` | integer | `0` | Web server port (0 = disabled, >0 = enabled) |
 | `long_lived_access_token` | string | `""` | Optional Home Assistant Long-Lived Access Token for authenticated screenshots (Bearer token) |
+| `language` | string | `"en"` | Language code for Home Assistant frontend (e.g., "en", "es", "fr", "de") - used when taking screenshots of HA dashboards |
 
 ### 📝 **Configuration Examples**
 
@@ -115,6 +118,17 @@ resolution_width: 1024
 resolution_height: 768
 webserverport: 3000  # Enable web server
 long_lived_access_token: "YOUR_LONG_LIVED_TOKEN_HERE"
+language: "en"  # Set Home Assistant UI language
+```
+
+#### Multi-Language Home Assistant Dashboard
+```yaml
+schedule: "0 6 * * *"  # Daily at 6 AM
+urls: '["http://homeassistant.local:8123/lovelace/dashboard"]'
+resolution_width: 1200
+resolution_height: 800
+long_lived_access_token: "YOUR_LONG_LIVED_TOKEN_HERE"
+language: "es"  # Spanish UI language for screenshots
 ```
 
 **Usage with Picture Frames:**

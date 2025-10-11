@@ -26,6 +26,7 @@ Configure through the add-on **Configuration** tab:
 | `bit_depth` | `24` | Color depth: 1, 4, 8, 16, or 24 bits |
 | `webserverport` | `0` | Web server port (0 = disabled, >0 = enabled) |
 | `long_lived_access_token` | `""` | Optional Home Assistant Long-Lived Access Token for authenticated screenshots |
+| `language` | `"en"` | Language code for Home Assistant UI (e.g., "en", "es", "fr", "de") |
 
 ### 📋 Quick Examples
 
@@ -55,8 +56,21 @@ resolution_width: 1024
 resolution_height: 768
 webserverport: 3000
 long_lived_access_token: "YOUR_LONG_LIVED_TOKEN_HERE"
+language: "en"  # Home Assistant UI language
 ```
 *Picture frame can access: `http://your-ha-ip:3000/screenshots/0.png`*
+
+**Multi-Language Dashboard:**
+```yaml
+schedule: "0 */2 * * *"  # Every 2 hours
+urls: '["http://homeassistant.local:8123/lovelace/main"]'
+resolution_width: 800
+resolution_height: 600
+long_lived_access_token: "YOUR_LONG_LIVED_TOKEN_HERE"
+language: "fr"  # French Home Assistant UI
+grayscale: true
+bit_depth: 4
+```
 
 ### 🔐 Using a Home Assistant Long-Lived Access Token
 
@@ -70,6 +84,33 @@ long_lived_access_token: "<long-lived-access-token>"
 ```
 
 Only enable or store tokens in trusted environments.
+
+### 🌍 Language Configuration
+
+When taking screenshots of Home Assistant dashboards, you can configure the UI language that will be displayed in your screenshots using the `language` option. This is particularly useful for:
+
+- **Multi-language households** - Display dashboards in different languages for different users
+- **Localized displays** - Show dates, numbers, and text in the appropriate language format  
+- **International deployments** - Consistent language across all screenshot outputs
+
+**Supported Language Codes:**
+- `"en"` - English (default)
+- `"es"` - Spanish  
+- `"fr"` - French
+- `"de"` - German
+- `"it"` - Italian
+- `"nl"` - Dutch
+- `"pt"` - Portuguese
+- `"ru"` - Russian
+- `"zh"` - Chinese
+- And many more supported by Home Assistant
+
+**Example:**
+```yaml
+language: "es"  # Spanish Home Assistant UI
+```
+
+The language setting is injected into the browser's localStorage before taking screenshots, ensuring Home Assistant renders in the specified language.
 
 ### ⏰ Cron Schedule Examples
 

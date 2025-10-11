@@ -23,7 +23,8 @@ async function loadConfiguration() {
     bit_depth: 24,
     long_lived_access_token: "",
     run_once: false,
-    webserverport: 0
+    webserverport: 0,
+    language: "en"
   };
   
   try {
@@ -126,6 +127,17 @@ async function loadConfiguration() {
         }
       }
       
+      // Handle language configuration
+      let language = defaultConfig.language;
+      if (config.language !== undefined) {
+        if (typeof config.language === 'string' && config.language.trim().length > 0) {
+          language = config.language.trim();
+          console.log('✅ Language setting from configuration:', language);
+        } else {
+          console.error('⚠️  Invalid language setting (must be a non-empty string), using default:', defaultConfig.language);
+        }
+      }
+      
       return {
         schedule: config.schedule || defaultConfig.schedule,
         urls: urls,
@@ -136,7 +148,8 @@ async function loadConfiguration() {
         bit_depth: bit_depth,
         long_lived_access_token: config.long_lived_access_token || defaultConfig.long_lived_access_token,
         run_once: run_once,
-        webserverport: webserverport
+        webserverport: webserverport,
+        language: language
       };
     }
   } catch (error) {
