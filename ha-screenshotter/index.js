@@ -82,7 +82,7 @@ async function init() {
       console.log('');
       
       try {
-  await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale, config.bit_depth, config.long_lived_access_token);
+        await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale, config.bit_depth, config.long_lived_access_token);
         
         const endTime = new Date();
         const duration = Math.round((endTime - startTime) / 1000);
