@@ -47,7 +47,8 @@ jobs:
       
     - name: Set up test directories
       run: |
-        mkdir -p test-data test-share/config/www/${{ github.event.inputs.screenshots_subfolder }}
+        # Create test-data and the repo-root test-share subfolder where screenshots will be mounted
+        mkdir -p test-data test-share/${{ github.event.inputs.screenshots_subfolder }}
         
     - name: Create test configuration
       run: |
