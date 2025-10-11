@@ -164,8 +164,21 @@ Monitor the add-on through:
 
 ## 🔧 Troubleshooting
 
+### Configuration Validation
+
+⚠️ **Important**: Invalid configuration values will cause the add-on to stop immediately. Configuration validation is strict and will not fall back to defaults.
+
+Common validation errors:
+- **URLs**: Must be valid JSON format: `'["https://example.com", "https://example2.com"]'`
+- **Resolution**: Must be positive integers
+- **Rotation**: Must be exactly 0, 90, 180, or 270
+- **Bit depth**: Must be 1, 4, 8, 16, or 24
+- **Boolean values**: Must be exactly `true` or `false`
+
+### General Troubleshooting
+
 - Check **Logs** for error messages
-- Verify **URLs** are accessible from your network
+- Verify **URLs** are accessible from your network  
 - Ensure **resolution** settings are reasonable for your system
 - Test with **24-bit** depth first, then optimize for your display
 
