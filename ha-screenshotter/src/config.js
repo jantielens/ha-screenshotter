@@ -20,7 +20,8 @@ async function loadConfiguration() {
         height: 1080,
         rotation: 0,
         grayscale: false,
-        bit_depth: 24
+        bit_depth: 24,
+        crop: null
       },
       {
         url: "https://time.now/",
@@ -28,7 +29,8 @@ async function loadConfiguration() {
         height: 1080,
         rotation: 0,
         grayscale: false,
-        bit_depth: 24
+        bit_depth: 24,
+        crop: null
       }
     ],
     resolution_width: 1920,
@@ -36,6 +38,7 @@ async function loadConfiguration() {
     rotation_degrees: 0,
     grayscale: false,
     bit_depth: 24,
+    crop: null,
     long_lived_access_token: "",
     run_once: false,
     webserverport: 0,
@@ -109,6 +112,47 @@ async function loadConfiguration() {
         }
       }
       
+      // Handle crop configuration
+      let crop = defaultConfig.crop;
+      if (config.crop !== undefined) {
+        if (config.crop === null || config.crop === false) {
+          crop = null;
+          console.log('✅ Crop setting disabled from configuration');
+        } else if (typeof config.crop === 'object' && config.crop !== null) {
+          // Validate crop object
+          const requiredFields = ['x', 'y', 'width', 'height'];
+          const missingFields = requiredFields.filter(field => !(field in config.crop));
+          if (missingFields.length > 0) {
+            throw new Error(`Invalid crop configuration: missing required fields: ${missingFields.join(', ')}`);
+          }
+          
+          // Validate crop values
+          if (!Number.isInteger(config.crop.x) || config.crop.x < 0) {
+            throw new Error(`Invalid crop x coordinate: ${config.crop.x}. Must be a non-negative integer.`);
+          }
+          if (!Number.isInteger(config.crop.y) || config.crop.y < 0) {
+            throw new Error(`Invalid crop y coordinate: ${config.crop.y}. Must be a non-negative integer.`);
+          }
+          if (!Number.isInteger(config.crop.width) || config.crop.width <= 0) {
+            throw new Error(`Invalid crop width: ${config.crop.width}. Must be a positive integer.`);
+          }
+          if (!Number.isInteger(config.crop.height) || config.crop.height <= 0) {
+            throw new Error(`Invalid crop height: ${config.crop.height}. Must be a positive integer.`);
+          }
+          
+          crop = {
+            x: config.crop.x,
+            y: config.crop.y,
+            width: config.crop.width,
+            height: config.crop.height
+          };
+          console.log('✅ Crop setting from configuration:', `(${crop.x}, ${crop.y}) ${crop.width}x${crop.height}`);
+        } else {
+          console.error('❌ Invalid crop setting:', config.crop);
+          throw new Error(`Invalid crop setting: ${config.crop}. Must be null, false, or an object with x, y, width, and height properties.`);
+        }
+      }
+      
       // Parse URLs with per-URL settings (using global settings as defaults)
       let urls = defaultConfig.urls;
       if (config.urls) {
@@ -127,17 +171,46 @@ async function loadConfiguration() {
                   height: resolution_height,
                   rotation: rotation_degrees,
                   grayscale: grayscale,
-                  bit_depth: bit_depth
+                  bit_depth: bit_depth,
+                  crop: crop
                 };
               } else if (typeof urlItem === 'object' && urlItem.url) {
                 // Object with url property and optional overrides
+                let urlCrop = urlItem.crop !== undefined ? urlItem.crop : crop;
+                
+                // Validate per-URL crop settings
+                if (urlCrop !== null && urlCrop !== false && typeof urlCrop === 'object') {
+                  const requiredFields = ['x', 'y', 'width', 'height'];
+                  const missingFields = requiredFields.filter(field => !(field in urlCrop));
+                  if (missingFields.length > 0) {
+                    throw new Error(`Invalid crop configuration for URL ${urlItem.url}: missing required fields: ${missingFields.join(', ')}`);
+                  }
+                  
+                  // Validate crop values
+                  if (!Number.isInteger(urlCrop.x) || urlCrop.x < 0) {
+                    throw new Error(`Invalid crop x coordinate for URL ${urlItem.url}: ${urlCrop.x}. Must be a non-negative integer.`);
+                  }
+                  if (!Number.isInteger(urlCrop.y) || urlCrop.y < 0) {
+                    throw new Error(`Invalid crop y coordinate for URL ${urlItem.url}: ${urlCrop.y}. Must be a non-negative integer.`);
+                  }
+                  if (!Number.isInteger(urlCrop.width) || urlCrop.width <= 0) {
+                    throw new Error(`Invalid crop width for URL ${urlItem.url}: ${urlCrop.width}. Must be a positive integer.`);
+                  }
+                  if (!Number.isInteger(urlCrop.height) || urlCrop.height <= 0) {
+                    throw new Error(`Invalid crop height for URL ${urlItem.url}: ${urlCrop.height}. Must be a positive integer.`);
+                  }
+                } else if (urlCrop !== null && urlCrop !== false) {
+                  throw new Error(`Invalid crop setting for URL ${urlItem.url}: ${urlCrop}. Must be null, false, or an object with x, y, width, and height properties.`);
+                }
+                
                 return {
                   url: urlItem.url,
                   width: urlItem.width || resolution_width,
                   height: urlItem.height || resolution_height,
                   rotation: urlItem.rotation !== undefined ? urlItem.rotation : rotation_degrees,
                   grayscale: urlItem.grayscale !== undefined ? urlItem.grayscale : grayscale,
-                  bit_depth: urlItem.bit_depth || bit_depth
+                  bit_depth: urlItem.bit_depth || bit_depth,
+                  crop: urlCrop
                 };
               } else {
                 throw new Error(`Invalid URL at index ${index}: must be a string or object with 'url' property`);
@@ -148,13 +221,41 @@ async function loadConfiguration() {
           else if (typeof parsedUrls === 'object' && parsedUrls !== null) {
             urls = Object.entries(parsedUrls).map(([url, settings]) => {
               if (typeof settings === 'object' && settings !== null) {
+                let urlCrop = settings.crop !== undefined ? settings.crop : crop;
+                
+                // Validate per-URL crop settings
+                if (urlCrop !== null && urlCrop !== false && typeof urlCrop === 'object') {
+                  const requiredFields = ['x', 'y', 'width', 'height'];
+                  const missingFields = requiredFields.filter(field => !(field in urlCrop));
+                  if (missingFields.length > 0) {
+                    throw new Error(`Invalid crop configuration for URL ${url}: missing required fields: ${missingFields.join(', ')}`);
+                  }
+                  
+                  // Validate crop values
+                  if (!Number.isInteger(urlCrop.x) || urlCrop.x < 0) {
+                    throw new Error(`Invalid crop x coordinate for URL ${url}: ${urlCrop.x}. Must be a non-negative integer.`);
+                  }
+                  if (!Number.isInteger(urlCrop.y) || urlCrop.y < 0) {
+                    throw new Error(`Invalid crop y coordinate for URL ${url}: ${urlCrop.y}. Must be a non-negative integer.`);
+                  }
+                  if (!Number.isInteger(urlCrop.width) || urlCrop.width <= 0) {
+                    throw new Error(`Invalid crop width for URL ${url}: ${urlCrop.width}. Must be a positive integer.`);
+                  }
+                  if (!Number.isInteger(urlCrop.height) || urlCrop.height <= 0) {
+                    throw new Error(`Invalid crop height for URL ${url}: ${urlCrop.height}. Must be a positive integer.`);
+                  }
+                } else if (urlCrop !== null && urlCrop !== false) {
+                  throw new Error(`Invalid crop setting for URL ${url}: ${urlCrop}. Must be null, false, or an object with x, y, width, and height properties.`);
+                }
+                
                 return {
                   url: url,
                   width: settings.width || resolution_width,
                   height: settings.height || resolution_height,
                   rotation: settings.rotation !== undefined ? settings.rotation : rotation_degrees,
                   grayscale: settings.grayscale !== undefined ? settings.grayscale : grayscale,
-                  bit_depth: settings.bit_depth || bit_depth
+                  bit_depth: settings.bit_depth || bit_depth,
+                  crop: urlCrop
                 };
               } else {
                 // Empty settings object or null - use defaults
@@ -164,7 +265,8 @@ async function loadConfiguration() {
                   height: resolution_height,
                   rotation: rotation_degrees,
                   grayscale: grayscale,
-                  bit_depth: bit_depth
+                  bit_depth: bit_depth,
+                  crop: crop
                 };
               }
             });
@@ -192,11 +294,22 @@ async function loadConfiguration() {
             if (!Number.isInteger(urlConfig.bit_depth) || ![1, 4, 8, 16, 24].includes(urlConfig.bit_depth)) {
               throw new Error(`Invalid bit_depth for URL ${urlConfig.url}: must be 1, 4, 8, 16, or 24`);
             }
+            if (urlConfig.crop !== null && urlConfig.crop !== false) {
+              if (typeof urlConfig.crop !== 'object') {
+                throw new Error(`Invalid crop for URL ${urlConfig.url}: must be null, false, or an object`);
+              }
+              const requiredFields = ['x', 'y', 'width', 'height'];
+              const missingFields = requiredFields.filter(field => !(field in urlConfig.crop));
+              if (missingFields.length > 0) {
+                throw new Error(`Invalid crop for URL ${urlConfig.url}: missing required fields: ${missingFields.join(', ')}`);
+              }
+            }
           });
           
           console.log('✅ URLs parsed from configuration:', urls.length, 'URLs with individual settings');
           urls.forEach((urlConfig, index) => {
-            console.log(`   ${index}: ${urlConfig.url} (${urlConfig.width}x${urlConfig.height}, ${urlConfig.rotation}°, grayscale:${urlConfig.grayscale}, ${urlConfig.bit_depth}-bit)`);
+            const cropText = urlConfig.crop ? `, crop:(${urlConfig.crop.x},${urlConfig.crop.y}) ${urlConfig.crop.width}x${urlConfig.crop.height}` : '';
+            console.log(`   ${index}: ${urlConfig.url} (${urlConfig.width}x${urlConfig.height}, ${urlConfig.rotation}°, grayscale:${urlConfig.grayscale}, ${urlConfig.bit_depth}-bit${cropText})`);
           });
         } catch (parseError) {
           console.error('❌ Error parsing URLs:', parseError.message);
@@ -252,6 +365,7 @@ async function loadConfiguration() {
         rotation_degrees: rotation_degrees,
         grayscale: grayscale,
         bit_depth: bit_depth,
+        crop: crop,
         long_lived_access_token: config.long_lived_access_token || defaultConfig.long_lived_access_token,
         run_once: run_once,
         webserverport: webserverport,

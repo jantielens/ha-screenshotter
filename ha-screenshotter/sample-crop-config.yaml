@@ -1,0 +1,93 @@
+# Sample configuration demonstrating crop functionality for ha-screenshotter
+# Copy this to your Home Assistant add-on configuration section
+
+# Basic settings
+schedule: "*/5 * * * *"  # Every 5 minutes
+
+# Global defaults (can be overridden per URL)
+resolution_width: 1920
+resolution_height: 1080
+rotation_degrees: 0
+grayscale: false
+bit_depth: 24
+
+# Global crop setting (applies to all URLs unless overridden)
+# Set to null or false to disable cropping globally
+crop: null
+
+# Home Assistant configuration
+long_lived_access_token: "your_token_here"
+language: "en"
+
+# URLs with various cropping configurations
+urls: '[
+  "https://simple-url.com",
+  {
+    "url": "https://custom-size.com", 
+    "width": 1280, 
+    "height": 720
+  },
+  {
+    "url": "https://rotated-and-cropped.com", 
+    "width": 1920, 
+    "height": 1080,
+    "rotation": 90,
+    "crop": {
+      "x": 100,
+      "y": 50,
+      "width": 800,
+      "height": 600
+    }
+  },
+  {
+    "url": "https://dashboard-header-only.com",
+    "width": 1920,
+    "height": 1080,
+    "crop": {
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 200
+    }
+  },
+  {
+    "url": "https://sidebar-content.com",
+    "width": 1920,
+    "height": 1080,
+    "crop": {
+      "x": 250,
+      "y": 100,
+      "width": 600,
+      "height": 800
+    }
+  },
+  {
+    "url": "https://center-widget.com",
+    "width": 1920,
+    "height": 1080,
+    "crop": {
+      "x": 660,
+      "y": 390,
+      "width": 600,
+      "height": 300
+    }
+  },
+  {
+    "url": "https://full-processing.com",
+    "width": 1920,
+    "height": 1080,
+    "rotation": 270,
+    "crop": {
+      "x": 50,
+      "y": 100,
+      "width": 500,
+      "height": 400
+    },
+    "grayscale": true,
+    "bit_depth": 8
+  }
+]'
+
+# Additional settings
+run_once: false
+webserverport: 8099
