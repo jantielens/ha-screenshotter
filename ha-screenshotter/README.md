@@ -18,15 +18,51 @@ Configure through the add-on **Configuration** tab:
 | Setting | Default | Description |
 |---------|---------|-------------|
 | `schedule` | `"* * * * *"` | Cron expression (every minute) |
-| `urls` | `'["https://google.com"]'` | JSON array of URLs to screenshot |
-| `resolution_width` | `1920` | Screenshot width in pixels |
-| `resolution_height` | `1080` | Screenshot height in pixels |
-| `rotation_degrees` | `0` | Rotate: 0°, 90°, 180°, or 270° |
-| `grayscale` | `false` | Convert to black & white |
-| `bit_depth` | `24` | Color depth: 1, 4, 8, 16, or 24 bits |
+| `urls` | `'["https://google.com"]'` | JSON array of URLs to screenshot (see URL Formats below) |
+| `resolution_width` | `1920` | Default screenshot width in pixels |
+| `resolution_height` | `1080` | Default screenshot height in pixels |
+| `rotation_degrees` | `0` | Default rotation: 0°, 90°, 180°, or 270° |
+| `grayscale` | `false` | Default grayscale conversion |
+| `bit_depth` | `24` | Default color depth: 1, 4, 8, 16, or 24 bits |
 | `webserverport` | `0` | Web server port (0 = disabled, >0 = enabled) |
 | `long_lived_access_token` | `""` | Optional Home Assistant Long-Lived Access Token for authenticated screenshots |
 | `language` | `"en"` | Language code for Home Assistant UI (e.g., "en", "es", "fr", "de") |
+
+### 🎯 URL Configuration Formats
+
+You can configure URLs in three different ways, with **full backward compatibility**:
+
+#### **1. Simple Array (Original Format)**
+```yaml
+urls: '["https://google.com", "https://weather.com"]'
+```
+All URLs use the global `resolution_width`, `resolution_height`, `rotation_degrees`, `grayscale`, and `bit_depth` settings.
+
+#### **2. Object Format (Per-URL Settings)**
+```yaml
+urls: '{
+  "https://dashboard.local": {"width": 800, "height": 600, "grayscale": true},
+  "https://weather.com": {"rotation": 90},
+  "https://status.page": {}
+}'
+```
+Each URL can have individual settings. Missing settings fall back to global defaults.
+
+#### **3. Array with Objects (Mixed Format)**
+```yaml
+urls: '[
+  "https://simple-url.com",
+  {"url": "https://custom.com", "width": 800, "height": 600},
+  {"url": "https://rotated.com", "rotation": 90}
+]'
+```
+Mix simple URLs with URLs that have custom settings.
+
+**Per-URL Setting Options:**
+- `width` / `height` - Custom resolution for this URL
+- `rotation` - Rotation degrees (0, 90, 180, 270)
+- `grayscale` - Boolean for grayscale conversion
+- `bit_depth` - Color depth (1, 4, 8, 16, 24)
 
 ### 📋 Quick Examples
 
@@ -38,6 +74,30 @@ resolution_width: 800
 resolution_height: 600
 grayscale: true
 bit_depth: 1
+```
+
+**Per-URL Settings (Object Format):**
+```yaml
+schedule: "*/10 * * * *"
+urls: '{
+  "http://homeassistant.local:8123/dashboard": {"width": 800, "height": 600, "grayscale": true, "bit_depth": 1},
+  "https://weather.com": {"width": 1920, "height": 1080, "rotation": 90},
+  "https://status.page": {}
+}'
+resolution_width: 1024  # Default for URLs without explicit settings
+resolution_height: 768
+```
+
+**Per-URL Settings (Array with Objects):**
+```yaml
+schedule: "0 * * * *"
+urls: '[
+  {"url": "http://homeassistant.local:8123/eink", "width": 800, "height": 600, "grayscale": true},
+  {"url": "https://weather.com", "rotation": 90},
+  {"url": "https://status.page"}
+]'
+resolution_width: 1920  # Default for URLs without explicit settings
+resolution_height: 1080
 ```
 
 **4-bit Color with Dithering:**
