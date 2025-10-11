@@ -2,7 +2,6 @@
 
 /**
  * HA Screenshotter - Home Assistant Add-on
- * Step 2: Basic screenshot functionality
  */
 
 const fs = require('fs-extra');
@@ -11,6 +10,10 @@ const puppeteer = require('puppeteer');
 const cron = require('node-cron');
 const Jimp = require('jimp');
 const sharp = require('sharp');
+const express = require('express');
+
+// Load package.json for version info
+const packageInfo = require('./package.json');
 
 // Configuration paths (Home Assistant standard paths)
 const CONFIG_PATH = '/data/options.json';
@@ -22,19 +25,20 @@ const SCREENSHOTS_PATH = path.join(WWW_PATH, 'ha-screenshotter');
  * Rotate an image by specified degrees
  * @param {string} imagePath - Path to the image file
  * @param {number} degrees - Rotation degrees (0, 90, 180, 270)
+ * @param {string} indent - Indentation prefix for logging
  */
-async function rotateImage(imagePath, degrees) {
+async function rotateImage(imagePath, degrees, indent = '') {
   if (degrees === 0) {
     return; // No rotation needed
   }
   
   try {
-    console.log(`🔄 Rotating image ${degrees}°: ${imagePath}`);
+    console.log(`${indent}🔄 Rotating image ${degrees}°...`);
     const image = await Jimp.read(imagePath);
     await image.rotate(degrees).writeAsync(imagePath);
-    console.log(`✅ Image rotated successfully`);
+    console.log(`${indent}✅ Image rotated successfully`);
   } catch (error) {
-    console.error(`❌ Error rotating image:`, error.message);
+    console.error(`${indent}❌ Error rotating image:`, error.message);
     throw error;
   }
 }
@@ -42,15 +46,16 @@ async function rotateImage(imagePath, degrees) {
 /**
  * Convert an image to grayscale
  * @param {string} imagePath - Path to the image file
+ * @param {string} indent - Indentation prefix for logging
  */
-async function convertToGrayscale(imagePath) {
+async function convertToGrayscale(imagePath, indent = '') {
   try {
-    console.log(`🎨 Converting image to grayscale: ${imagePath}`);
+    console.log(`${indent}🎨 Converting to grayscale...`);
     const image = await Jimp.read(imagePath);
     await image.greyscale().writeAsync(imagePath);
-    console.log(`✅ Image converted to grayscale successfully`);
+    console.log(`${indent}✅ Grayscale conversion completed`);
   } catch (error) {
-    console.error(`❌ Error converting image to grayscale:`, error.message);
+    console.error(`${indent}❌ Error converting to grayscale:`, error.message);
     throw error;
   }
 }
@@ -59,14 +64,15 @@ async function convertToGrayscale(imagePath) {
  * Reduce image bit depth using Sharp - processes PNG files for true bit depth control
  * @param {string} imagePath - Path to the PNG image file
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
+ * @param {string} indent - Indentation prefix for logging
  */
-async function reduceBitDepth(imagePath, bitDepth) {
+async function reduceBitDepth(imagePath, bitDepth, indent = '') {
   if (bitDepth === 24) {
     return; // No reduction needed for 24-bit
   }
   
   try {
-    console.log(`🎨 Reducing image bit depth to ${bitDepth}-bit: ${imagePath}`);
+    console.log(`${indent}🎨 Reducing bit depth to ${bitDepth}-bit...`);
     
     let processedBuffer;
     
@@ -107,12 +113,12 @@ async function reduceBitDepth(imagePath, bitDepth) {
     
     // Write the processed buffer back to the original file
     await fs.writeFile(imagePath, processedBuffer);
-    console.log(`✅ Image bit depth reduced to ${bitDepth}-bit successfully`);
+    console.log(`${indent}✅ Bit depth reduced to ${bitDepth}-bit successfully`);
     
   } catch (error) {
-    console.error(`❌ Error reducing image bit depth:`, error.message);
+    console.error(`${indent}❌ Error reducing bit depth:`, error.message);
     // If bit depth reduction fails, just log the error but don't crash
-    console.log(`⚠️  Continuing without bit depth reduction for ${imagePath}`);
+    console.log(`${indent}⚠️  Continuing without bit depth reduction`);
   }
 }
 
@@ -132,7 +138,8 @@ async function loadConfiguration() {
     rotation_degrees: 0,
     grayscale: false,
     bit_depth: 24,
-    run_once: false
+    run_once: false,
+    webserverport: 0
   };
   
   try {
@@ -224,6 +231,17 @@ async function loadConfiguration() {
         }
       }
       
+      // Handle webserverport configuration
+      let webserverport = defaultConfig.webserverport;
+      if (config.webserverport !== undefined) {
+        if (Number.isInteger(config.webserverport) && config.webserverport >= 0) {
+          webserverport = config.webserverport;
+          console.log('✅ Web server port from configuration:', webserverport);
+        } else {
+          console.error('⚠️  Invalid webserverport setting (must be a non-negative integer), using default:', defaultConfig.webserverport);
+        }
+      }
+      
       return {
         schedule: config.schedule || defaultConfig.schedule,
         urls: urls,
@@ -232,7 +250,8 @@ async function loadConfiguration() {
         rotation_degrees: rotation_degrees,
         grayscale: grayscale,
         bit_depth: bit_depth,
-        run_once: run_once
+        run_once: run_once,
+        webserverport: webserverport
       };
     }
   } catch (error) {
@@ -241,6 +260,83 @@ async function loadConfiguration() {
   
   console.log('🔧 Using default configuration');
   return defaultConfig;
+}
+
+/**
+ * Display comprehensive system information including version and configuration
+ * @param {Object} config - The configuration object to display
+ */
+function displaySystemInfo(config = null) {
+  console.log('');
+  console.log('═'.repeat(80));
+  console.log('🖥️  SYSTEM INFORMATION');
+  console.log('═'.repeat(80));
+  
+  // Version and package info
+  console.log('📦 Application Info:');
+  console.log(`   • Name: ${packageInfo.name}`);
+  console.log(`   • Version: ${packageInfo.version}`);
+  console.log(`   • Description: ${packageInfo.description}`);
+  console.log(`   • Author: ${packageInfo.author}`);
+  
+  // Try to get git information if available (development builds)
+  try {
+    const { execSync } = require('child_process');
+    const gitBranch = execSync('git rev-parse --abbrev-ref HEAD 2>/dev/null', { encoding: 'utf8' }).trim();
+    const gitCommit = execSync('git rev-parse --short HEAD 2>/dev/null', { encoding: 'utf8' }).trim();
+    if (gitBranch && gitCommit) {
+      console.log(`   • Git Branch: ${gitBranch}`);
+      console.log(`   • Git Commit: ${gitCommit}`);
+    }
+  } catch (error) {
+    // Git info not available (likely in production Docker container)
+  }
+  console.log('');
+  
+  // System environment
+  console.log('🔧 System Environment:');
+  console.log(`   • Platform: ${process.platform}`);
+  console.log(`   • Architecture: ${process.arch}`);
+  console.log(`   • Node.js Version: ${process.version}`);
+  console.log(`   • Memory Usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+  console.log(`   • Process ID: ${process.pid}`);
+  console.log(`   • Started: ${new Date().toISOString()}`);
+  console.log('');
+  
+  // Configuration details (if provided)
+  if (config) {
+    console.log('⚙️  Configuration:');
+    console.log(`   • Schedule: ${config.schedule}`);
+    console.log(`   • URL Count: ${config.urls.length}`);
+    console.log(`   • Resolution: ${config.resolution_width}x${config.resolution_height}`);
+    console.log(`   • Rotation: ${config.rotation_degrees}°`);
+    console.log(`   • Grayscale: ${config.grayscale ? 'enabled' : 'disabled'}`);
+    console.log(`   • Bit Depth: ${config.bit_depth}-bit`);
+    console.log(`   • Run Once: ${config.run_once ? 'enabled' : 'disabled'}`);
+    console.log(`   • Web Server Port: ${config.webserverport > 0 ? config.webserverport : 'disabled'}`);
+    console.log('');
+    
+    console.log('🌐 URLs to Screenshot:');
+    config.urls.forEach((url, index) => {
+      console.log(`   ${index + 1}. ${url}`);
+    });
+    console.log('');
+    
+    console.log('📂 Paths:');
+    console.log(`   • Config Path: ${CONFIG_PATH}`);
+    console.log(`   • WWW Path: ${WWW_PATH}`);
+    console.log(`   • Screenshots Path: ${SCREENSHOTS_PATH}`);
+    console.log('');
+  }
+  
+  // Dependencies
+  console.log('📚 Dependencies:');
+  Object.entries(packageInfo.dependencies).forEach(([name, version]) => {
+    console.log(`   • ${name}: ${version}`);
+  });
+  
+  console.log('═'.repeat(80));
+  console.log('');
 }
 
 /**
@@ -254,8 +350,6 @@ async function loadConfiguration() {
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
  */
 async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24) {
-  console.log(`📸 Taking screenshot of: ${url}`);
-  
   let browser = null;
   try {
     // Check if Chromium is available
@@ -263,18 +357,13 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     if (!fs.existsSync('/usr/bin/chromium-browser')) {
       throw new Error('Chromium browser not found at /usr/bin/chromium-browser');
     }
-    console.log('✅ Chromium browser found');
+    console.log('   │       🔍 Chromium browser found');
     
-    // Log system info for debugging
-    console.log('🖥️  System info:', {
-      platform: process.platform,
-      arch: process.arch,
-      nodeVersion: process.version,
-      memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB'
-    });
+    // Log basic runtime info
+    console.log(`   │       💾 Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
     
     // Launch Puppeteer with minimal configuration first
-    console.log('🚀 Launching browser...');
+    console.log('   │       🚀 Launching browser...');
     browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'new',
@@ -287,25 +376,27 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       ]
     });
     
-    console.log('✅ Browser launched successfully');
+    console.log('   │       ✅ Browser launched successfully');
 
     const page = await browser.newPage();
     
     // Set viewport size for consistent screenshots
-    console.log(`📐 Setting viewport to ${width}x${height}`);
+    console.log(`   │       📐 Setting viewport to ${width}x${height}`);
     await page.setViewport({ width: width, height: height });
     
     // Navigate to the URL with timeout
-    console.log(`🌐 Navigating to: ${url}`);
+    console.log(`   │       🌐 Navigating to URL...`);
     await page.goto(url, { 
       waitUntil: 'networkidle2', 
       timeout: 30000 
     });
     
     // Wait for the page to be fully loaded
+    console.log('   │       ⏳ Waiting for page to fully load...');
     await page.waitForFunction('document.readyState === "complete"');
     
     // Take the screenshot
+    console.log('   │       📷 Taking screenshot...');
     const filename = `${index}.png`;
     let screenshotPath = path.join(SCREENSHOTS_PATH, filename);
     await page.screenshot({ 
@@ -314,24 +405,24 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       type: 'png'
     });
     
-  console.log(`✅ Screenshot saved: ${screenshotPath}`);
-  // Log public URL for Home Assistant (served at /local/ha-screenshotter/)
-  const publicUrl = `/local/ha-screenshotter/${filename}`;
-  console.log(`🌐 Accessible via Home Assistant at: ${publicUrl}`);
+  console.log(`   │       💾 Screenshot saved to: ${filename}`);
+  // Log public URL for Home Assistant (served at /media/ha-screenshotter/)
+  const publicUrl = `/media/ha-screenshotter/${filename}`;
+  console.log(`   │       🌐 Home Assistant URL: ${publicUrl}`);
     
     // Apply rotation if needed
     if (rotationDegrees !== 0) {
-      await rotateImage(screenshotPath, rotationDegrees);
+      await rotateImage(screenshotPath, rotationDegrees, '   │       ');
     }
     
     // Apply grayscale conversion if needed
     if (grayscale) {
-      await convertToGrayscale(screenshotPath);
+      await convertToGrayscale(screenshotPath, '   │       ');
     }
     
     // Apply bit depth reduction if needed
     if (bitDepth !== 24) {
-      await reduceBitDepth(screenshotPath, bitDepth);
+      await reduceBitDepth(screenshotPath, bitDepth, '   │       ');
     }
     
     return screenshotPath;
@@ -359,21 +450,199 @@ async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, gray
   const rotationText = rotationDegrees > 0 ? ` with ${rotationDegrees}° rotation` : '';
   const grayscaleText = grayscale ? ' in grayscale' : '';
   const bitDepthText = bitDepth !== 24 ? ` at ${bitDepth}-bit depth` : '';
-  console.log(`📸 Taking screenshots of ${urls.length} URL(s) at ${width}x${height}${rotationText}${grayscaleText}${bitDepthText}...`);
+  
+  console.log(`📸 Starting screenshot batch: ${urls.length} URL(s) at ${width}x${height}${rotationText}${grayscaleText}${bitDepthText}`);
+  console.log('   ┌─────────────────────────────────────────────────────────────┐');
+  
+  let successCount = 0;
+  let failureCount = 0;
   
   for (let i = 0; i < urls.length; i++) {
+    const urlNum = i + 1;
+    console.log(`   │ 📸 [${urlNum}/${urls.length}] Processing: ${urls[i]}`);
+    
     try {
       await takeScreenshot(urls[i], i, width, height, rotationDegrees, grayscale, bitDepth);
       const rotationNote = rotationDegrees > 0 ? ` (rotated ${rotationDegrees}°)` : '';
       const grayscaleNote = grayscale ? ' (grayscale)' : '';
       const bitDepthNote = bitDepth !== 24 ? ` (${bitDepth}-bit)` : '';
-      console.log(`✅ Screenshot ${i}.png completed for: ${urls[i]}${rotationNote}${grayscaleNote}${bitDepthNote}`);
+      console.log(`   │    ✅ Screenshot ${i}.png saved${rotationNote}${grayscaleNote}${bitDepthNote}`);
+      successCount++;
     } catch (error) {
-      console.error(`❌ Failed to screenshot ${urls[i]}:`, error.message);
+      console.log(`   │    ❌ Failed: ${error.message}`);
+      failureCount++;
+    }
+    
+    // Add a separator between URLs (except for the last one)
+    if (i < urls.length - 1) {
+      console.log('   │');
     }
   }
   
-  console.log('📸 Screenshot batch completed');
+  console.log('   └─────────────────────────────────────────────────────────────┘');
+  console.log(`📊 Batch completed: ${successCount} successful, ${failureCount} failed`);
+}
+
+/**
+ * Set up a basic web server to serve screenshots
+ */
+function setupWebServer(config) {
+  const app = express();
+  const PORT = config.webserverport;
+  
+  // Serve static files from the screenshots directory
+  app.use('/screenshots', express.static(SCREENSHOTS_PATH));
+  
+  // Main page with a simple gallery view
+  app.get('/', async (req, res) => {
+    try {
+      // Read all screenshot files
+      const files = await fs.readdir(SCREENSHOTS_PATH);
+      const imageFiles = files.filter(file => file.endsWith('.png')).sort();
+      
+      // Generate HTML page
+      const html = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HA Screenshotter Gallery</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .screenshot-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .screenshot-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .screenshot-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .screenshot-info {
+            padding: 15px;
+        }
+        .screenshot-name {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .screenshot-time {
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .refresh-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 0;
+        }
+        .refresh-btn:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📸 HA Screenshotter Gallery</h1>
+        <button class="refresh-btn" onclick="location.reload()">🔄 Refresh</button>
+    </div>
+    
+    <div class="info">
+        <h3>Configuration</h3>
+        <p><strong>Schedule:</strong> ${config.schedule}</p>
+        <p><strong>URLs:</strong> ${config.urls.length} configured</p>
+        <p><strong>Resolution:</strong> ${config.resolution_width}x${config.resolution_height}</p>
+        <p><strong>Last Update:</strong> ${new Date().toLocaleString()}</p>
+    </div>
+    
+    <div class="gallery">
+        ${imageFiles.map((file, index) => `
+            <div class="screenshot-card">
+                <img src="/screenshots/${file}" alt="Screenshot ${index + 1}" onclick="window.open('/screenshots/${file}', '_blank')">
+                <div class="screenshot-info">
+                    <div class="screenshot-name">Screenshot ${index + 1}</div>
+                    <div class="screenshot-time">File: ${file}</div>
+                </div>
+            </div>
+        `).join('')}
+    </div>
+    
+    ${imageFiles.length === 0 ? '<p style="text-align: center; color: #666; font-size: 1.2em;">No screenshots found. Screenshots will appear here once they are generated.</p>' : ''}
+    
+    <script>
+        // Auto-refresh every 60 seconds
+        setInterval(() => {
+            location.reload();
+        }, 60000);
+    </script>
+</body>
+</html>`;
+      
+      res.send(html);
+    } catch (error) {
+      console.error('❌ Error serving web page:', error.message);
+      res.status(500).send('Error loading screenshots');
+    }
+  });
+  
+  // Health check endpoint
+  app.get('/health', (req, res) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      screenshots_path: SCREENSHOTS_PATH,
+      config: {
+        schedule: config.schedule,
+        url_count: config.urls.length,
+        resolution: `${config.resolution_width}x${config.resolution_height}`
+      }
+    });
+  });
+  
+  // Start the server
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🌐 Web server started on port ${PORT}`);
+    console.log(`📱 Access the gallery at: http://localhost:${PORT}`);
+    console.log(`🏥 Health check available at: http://localhost:${PORT}/health`);
+  });
 }
 
 /**
@@ -392,16 +661,9 @@ async function init() {
     
     // Load configuration
     const config = await loadConfiguration();
-    console.log('🔧 Configuration loaded:', {
-      schedule: config.schedule,
-      urls: config.urls,
-      urlCount: config.urls.length,
-      resolution: `${config.resolution_width}x${config.resolution_height}`,
-      rotation: `${config.rotation_degrees}°`,
-      grayscale: config.grayscale,
-      bitDepth: `${config.bit_depth}-bit`,
-      runOnce: config.run_once
-    });
+    
+    // Display comprehensive system information
+    displaySystemInfo(config);
     
     // Validate cron schedule
     if (!cron.validate(config.schedule)) {
@@ -423,9 +685,48 @@ async function init() {
     // Set up cron scheduler
     console.log(`⏰ Setting up scheduler with pattern: ${config.schedule}`);
     cron.schedule(config.schedule, async () => {
-      console.log('⏰ Scheduled screenshot execution started');
-      await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale, config.bit_depth);
+      const startTime = new Date();
+      console.log('');
+      console.log('┌─────────────────────────────────────────────────────────────┐');
+      console.log('│                  🕐 SCHEDULED EXECUTION START                 │');
+      console.log('└─────────────────────────────────────────────────────────────┘');
+      console.log(`⏰ Started at: ${startTime.toISOString()}`);
+      console.log(`📋 Processing ${config.urls.length} URL(s)`);
+      console.log('');
+      
+      try {
+        await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale, config.bit_depth);
+        
+        const endTime = new Date();
+        const duration = Math.round((endTime - startTime) / 1000);
+        console.log('');
+        console.log('┌─────────────────────────────────────────────────────────────┐');
+        console.log('│                  ✅ SCHEDULED EXECUTION COMPLETE              │');
+        console.log('└─────────────────────────────────────────────────────────────┘');
+        console.log(`⏰ Completed at: ${endTime.toISOString()}`);
+        console.log(`⚡ Duration: ${duration} seconds`);
+        console.log(`📊 Successfully processed ${config.urls.length} URL(s)`);
+        console.log('');
+      } catch (error) {
+        const endTime = new Date();
+        const duration = Math.round((endTime - startTime) / 1000);
+        console.log('');
+        console.log('┌─────────────────────────────────────────────────────────────┐');
+        console.log('│                   ❌ SCHEDULED EXECUTION FAILED               │');
+        console.log('└─────────────────────────────────────────────────────────────┘');
+        console.log(`⏰ Failed at: ${endTime.toISOString()}`);
+        console.log(`⚡ Duration: ${duration} seconds`);
+        console.log(`❌ Error: ${error.message}`);
+        console.log('');
+      }
     });
+    
+    // Set up web server if port is configured
+    if (config.webserverport > 0) {
+      setupWebServer(config);
+    } else {
+      console.log('🌐 Web server disabled (webserverport = 0)');
+    }
     
     console.log('🎉 HA Screenshotter configured and scheduled!');
     console.log('✨ Add-on is running successfully');

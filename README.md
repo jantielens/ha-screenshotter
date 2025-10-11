@@ -1,6 +1,6 @@
 # HA Screenshotter - Home Assistant Add-on
 
-A powerful Home Assistant add-on that takes screenshots of web pages on a configurable schedule with advanced image processing capabilities. Perfect for e-ink displays, dashboards, and automated monitoring.
+A powerful Home Assistant add-on that takes screenshots of web pages on a configurable schedule with advanced image processing capabilities and a local web server. Perfect for e-ink displays, dashboards, and automated monitoring.
 
 ## Installation
 
@@ -38,9 +38,16 @@ A powerful Home Assistant add-on that takes screenshots of web pages on a config
 ### 🏠 **Home Assistant Integration**
 - **Native Add-on** - Seamless integration with Home Assistant
 - **UI Configuration** - Easy setup through Home Assistant's settings interface
-- **Shared Storage** - Screenshots saved to `/share/screenshots/` for access by other add-ons
+- **Media Storage** - Screenshots saved to `/media/ha-screenshotter/` for access through Home Assistant's media system
 - **Comprehensive Logging** - Detailed logs with emoji indicators for easy monitoring
 - **Error Handling** - Robust error handling with automatic recovery
+
+### 🌐 **Optional Web Server**
+- **External Access** - Optional built-in web server for accessing screenshots outside Home Assistant
+- **Gallery Interface** - Visual gallery showing all screenshots with auto-refresh
+- **Direct URLs** - Direct access to screenshot files via HTTP
+- **Picture Frame Ready** - Perfect for digital photo frames and external displays
+- **No Authentication** - Simple access for trusted network environments
 
 ### 🖥️ **Perfect for E-ink Displays**
 - **Optimized Output** - Specifically designed for e-ink and low-color displays
@@ -62,6 +69,7 @@ Configure the add-on through Home Assistant's add-on configuration page. All set
 | `rotation_degrees` | integer | `0` | Rotation angle: `0`, `90`, `180`, or `270` degrees |
 | `grayscale` | boolean | `false` | Convert screenshots to grayscale |
 | `bit_depth` | integer | `24` | Color depth: `1`, `4`, `8`, `16`, or `24` bits |
+| `webserverport` | integer | `0` | Web server port (0 = disabled, >0 = enabled) |
 
 ### 📝 **Configuration Examples**
 
@@ -97,6 +105,27 @@ rotation_degrees: 0
 grayscale: false
 bit_depth: 24
 ```
+
+#### Picture Frame / External Display Setup
+```yaml
+schedule: "*/10 * * * *"  # Every 10 minutes
+urls: '["http://homeassistant.local:8123/lovelace/dashboard"]'
+resolution_width: 1024
+resolution_height: 768
+webserverport: 3000  # Enable web server
+```
+
+**Usage with Picture Frames:**
+With the web server enabled, your picture frame or external display can easily fetch screenshots:
+- **Gallery View:** `http://your-home-assistant-ip:3000`
+- **Direct Image:** `http://your-home-assistant-ip:3000/screenshots/0.png`
+- **Health Check:** `http://your-home-assistant-ip:3000/health`
+
+This is perfect for:
+- **Digital photo frames** displaying Home Assistant dashboards
+- **Wall-mounted displays** showing status information
+- **Devices outside your Home Assistant network** that need dashboard access
+- **Automated systems** that fetch dashboard images programmatically
 
 ### ⏰ **Cron Schedule Format**
 

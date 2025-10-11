@@ -7,9 +7,9 @@
 - **📱 Multiple URLs** - Screenshot multiple web pages simultaneously
 - **⏰ Cron Scheduling** - Flexible timing with full cron expression support
 - **🎨 Image Processing** - Rotation, grayscale, and bit depth reduction with dithering
-- **🖥️ E-ink Optimized** - Perfect for Inkplate and e-paper displays
 - **🔄 Auto-Naming** - Predictable file naming (0.jpg, 1.jpg, etc.)
- - **📁 Media Storage** - Screenshots saved to `/media/ha-screenshotter/` (served at `/media/ha-screenshotter/`)
+- **📁 Media Storage** - Screenshots saved to `/media/ha-screenshotter/` (served at `/media/ha-screenshotter/`)
+- **🌐 Optional Web Server** - Built-in HTTP server for external access (perfect for picture frames)
 
 ## ⚙️ Configuration
 
@@ -24,6 +24,7 @@ Configure through the add-on **Configuration** tab:
 | `rotation_degrees` | `0` | Rotate: 0°, 90°, 180°, or 270° |
 | `grayscale` | `false` | Convert to black & white |
 | `bit_depth` | `24` | Color depth: 1, 4, 8, 16, or 24 bits |
+| `webserverport` | `0` | Web server port (0 = disabled, >0 = enabled) |
 
 ### 📋 Quick Examples
 
@@ -45,6 +46,16 @@ bit_depth: 4
 rotation_degrees: 90
 ```
 
+**Picture Frame Setup:**
+```yaml
+schedule: "*/10 * * * *"
+urls: '["http://homeassistant.local:8123/lovelace/dashboard"]'
+resolution_width: 1024
+resolution_height: 768
+webserverport: 3000
+```
+*Picture frame can access: `http://your-ha-ip:3000/screenshots/0.png`*
+
 ### ⏰ Cron Schedule Examples
 
 - `"* * * * *"` - Every minute
@@ -60,34 +71,33 @@ rotation_degrees: 90
 3. **Check Logs** for screenshot status
 4. **Access** screenshots in `/share/screenshots/` (numbered 0.jpg, 1.jpg, etc.)
 
-### 🔗 Accessing screenshots over HTTP (for Lovelace cards)
+### 🌐 Built-in Web Server (Optional)
+
+The add-on includes an optional web server for accessing screenshots from outside Home Assistant:
+
+**Enable the Web Server:**
+```yaml
+webserverport: 3000  # Choose any available port
+```
+
+**Web Server Features:**
+- **📱 Gallery View** - Visual gallery of all screenshots at `http://your-ha-ip:3000`
+- **🔗 Direct Access** - Direct image URLs at `http://your-ha-ip:3000/screenshots/[filename]`
+- **💾 Easy Downloads** - Right-click images to save or copy URLs
+- **🔄 Auto-refresh** - Gallery updates automatically every 60 seconds
+- **❤️ Health Check** - Status endpoint at `http://your-ha-ip:3000/health`
+
+**Perfect for External Devices:**
+- **🖼️ Picture Frames** - Digital frames can download screenshots directly
+- **📺 External Displays** - Access dashboards from devices outside Home Assistant
+- **🔗 Direct Links** - Share screenshot URLs with other applications
+- **📱 Mobile Access** - View screenshots on any device with a web browser
+
+**Security Note:** The web server has no authentication - only enable on trusted networks.
+
+### 🔗 Accessing Screenshots in Home Assistant
 
 Screenshots are automatically saved to Home Assistant's media folder and are immediately accessible via `/media/` URLs for use in Lovelace cards and automations.
-
-**Current Configuration:**
-- Screenshots are saved to `/media/ha-screenshotter/` using the media mapping
-- Access screenshots at: `https://your-home-assistant/media/ha-screenshotter/yourfile.png`
-- Configuration uses:
-  ```yaml
-  map:
-    - type: media
-      read_only: false
-  ```
-
-**Alternative approaches (if needed):**
-
-1) Save/COPY screenshots to the `www` folder (legacy approach)
-	 - Files in Home Assistant's `config/www` folder are served at `/local/`
-	 - Requires manual copying or symlinks
-
-2) Map `config/www` directly (deprecated)
-	 - The old approach used `"config/www:rw"` mapping
-	 - Screenshots were available at `/local/` URLs
-
-**Security notes:**
-- The media mapping provides secure access to media files
-- Screenshots are accessible to authenticated Home Assistant users
-- If your instance is Internet-facing, ensure proper authentication is configured
 
 ## 📊 Monitoring
 
@@ -106,10 +116,11 @@ Monitor the add-on through:
 ## 💡 Use Cases
 
 - **E-ink Displays** - Dashboards for Inkplate, Waveshare displays
-- **Digital Photo Frames** - Automated content updates
-- **Status Monitoring** - Regular screenshots of status pages
+- **Digital Photo Frames** - Automated content updates with direct HTTP access
+- **External Displays** - Picture frames that fetch Home Assistant dashboards automatically
+- **Status Monitoring** - Regular screenshots of status pages accessible from anywhere
 - **Dashboard Archiving** - Historical snapshots of Home Assistant dashboards
+- **Cross-Platform Access** - View screenshots on devices that can't access Home Assistant directly
 
 ## 🆘 Support
-
 For issues and feature requests, visit the [GitHub repository](https://github.com/jantielens/ha-screenshotter/issues).
