@@ -120,6 +120,7 @@ Monitor the add-on through:
 - **External Displays** - Picture frames that fetch Home Assistant dashboards automatically
 - **Status Monitoring** - Regular screenshots of status pages accessible from anywhere
 - **Dashboard Archiving** - Historical snapshots of Home Assistant dashboards
-- **Cross-Platform Access** - View screenshots on devices that can't access Home Assistant directly## 🆘 Support
+- **Cross-Platform Access** - View screenshots on devices that can't access Home Assistant directly
 
+## 🆘 Support
 For issues and feature requests, visit the [GitHub repository](https://github.com/jantielens/ha-screenshotter/issues).
