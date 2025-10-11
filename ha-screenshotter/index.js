@@ -12,6 +12,9 @@ const Jimp = require('jimp');
 const sharp = require('sharp');
 const express = require('express');
 
+// Load package.json for version info
+const packageInfo = require('./package.json');
+
 // Configuration paths (Home Assistant standard paths)
 const CONFIG_PATH = '/data/options.json';
 // Write screenshots to the Home Assistant media folder so files are available at /media/
@@ -22,19 +25,20 @@ const SCREENSHOTS_PATH = path.join(WWW_PATH, 'ha-screenshotter');
  * Rotate an image by specified degrees
  * @param {string} imagePath - Path to the image file
  * @param {number} degrees - Rotation degrees (0, 90, 180, 270)
+ * @param {string} indent - Indentation prefix for logging
  */
-async function rotateImage(imagePath, degrees) {
+async function rotateImage(imagePath, degrees, indent = '') {
   if (degrees === 0) {
     return; // No rotation needed
   }
   
   try {
-    console.log(`🔄 Rotating image ${degrees}°: ${imagePath}`);
+    console.log(`${indent}🔄 Rotating image ${degrees}°...`);
     const image = await Jimp.read(imagePath);
     await image.rotate(degrees).writeAsync(imagePath);
-    console.log(`✅ Image rotated successfully`);
+    console.log(`${indent}✅ Image rotated successfully`);
   } catch (error) {
-    console.error(`❌ Error rotating image:`, error.message);
+    console.error(`${indent}❌ Error rotating image:`, error.message);
     throw error;
   }
 }
@@ -42,15 +46,16 @@ async function rotateImage(imagePath, degrees) {
 /**
  * Convert an image to grayscale
  * @param {string} imagePath - Path to the image file
+ * @param {string} indent - Indentation prefix for logging
  */
-async function convertToGrayscale(imagePath) {
+async function convertToGrayscale(imagePath, indent = '') {
   try {
-    console.log(`🎨 Converting image to grayscale: ${imagePath}`);
+    console.log(`${indent}🎨 Converting to grayscale...`);
     const image = await Jimp.read(imagePath);
     await image.greyscale().writeAsync(imagePath);
-    console.log(`✅ Image converted to grayscale successfully`);
+    console.log(`${indent}✅ Grayscale conversion completed`);
   } catch (error) {
-    console.error(`❌ Error converting image to grayscale:`, error.message);
+    console.error(`${indent}❌ Error converting to grayscale:`, error.message);
     throw error;
   }
 }
@@ -59,14 +64,15 @@ async function convertToGrayscale(imagePath) {
  * Reduce image bit depth using Sharp - processes PNG files for true bit depth control
  * @param {string} imagePath - Path to the PNG image file
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
+ * @param {string} indent - Indentation prefix for logging
  */
-async function reduceBitDepth(imagePath, bitDepth) {
+async function reduceBitDepth(imagePath, bitDepth, indent = '') {
   if (bitDepth === 24) {
     return; // No reduction needed for 24-bit
   }
   
   try {
-    console.log(`🎨 Reducing image bit depth to ${bitDepth}-bit: ${imagePath}`);
+    console.log(`${indent}🎨 Reducing bit depth to ${bitDepth}-bit...`);
     
     let processedBuffer;
     
@@ -107,12 +113,12 @@ async function reduceBitDepth(imagePath, bitDepth) {
     
     // Write the processed buffer back to the original file
     await fs.writeFile(imagePath, processedBuffer);
-    console.log(`✅ Image bit depth reduced to ${bitDepth}-bit successfully`);
+    console.log(`${indent}✅ Bit depth reduced to ${bitDepth}-bit successfully`);
     
   } catch (error) {
-    console.error(`❌ Error reducing image bit depth:`, error.message);
+    console.error(`${indent}❌ Error reducing bit depth:`, error.message);
     // If bit depth reduction fails, just log the error but don't crash
-    console.log(`⚠️  Continuing without bit depth reduction for ${imagePath}`);
+    console.log(`${indent}⚠️  Continuing without bit depth reduction`);
   }
 }
 
@@ -257,6 +263,83 @@ async function loadConfiguration() {
 }
 
 /**
+ * Display comprehensive system information including version and configuration
+ * @param {Object} config - The configuration object to display
+ */
+function displaySystemInfo(config = null) {
+  console.log('');
+  console.log('═'.repeat(80));
+  console.log('🖥️  SYSTEM INFORMATION');
+  console.log('═'.repeat(80));
+  
+  // Version and package info
+  console.log('📦 Application Info:');
+  console.log(`   • Name: ${packageInfo.name}`);
+  console.log(`   • Version: ${packageInfo.version}`);
+  console.log(`   • Description: ${packageInfo.description}`);
+  console.log(`   • Author: ${packageInfo.author}`);
+  
+  // Try to get git information if available (development builds)
+  try {
+    const { execSync } = require('child_process');
+    const gitBranch = execSync('git rev-parse --abbrev-ref HEAD 2>/dev/null', { encoding: 'utf8' }).trim();
+    const gitCommit = execSync('git rev-parse --short HEAD 2>/dev/null', { encoding: 'utf8' }).trim();
+    if (gitBranch && gitCommit) {
+      console.log(`   • Git Branch: ${gitBranch}`);
+      console.log(`   • Git Commit: ${gitCommit}`);
+    }
+  } catch (error) {
+    // Git info not available (likely in production Docker container)
+  }
+  console.log('');
+  
+  // System environment
+  console.log('🔧 System Environment:');
+  console.log(`   • Platform: ${process.platform}`);
+  console.log(`   • Architecture: ${process.arch}`);
+  console.log(`   • Node.js Version: ${process.version}`);
+  console.log(`   • Memory Usage: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+  console.log(`   • Process ID: ${process.pid}`);
+  console.log(`   • Started: ${new Date().toISOString()}`);
+  console.log('');
+  
+  // Configuration details (if provided)
+  if (config) {
+    console.log('⚙️  Configuration:');
+    console.log(`   • Schedule: ${config.schedule}`);
+    console.log(`   • URL Count: ${config.urls.length}`);
+    console.log(`   • Resolution: ${config.resolution_width}x${config.resolution_height}`);
+    console.log(`   • Rotation: ${config.rotation_degrees}°`);
+    console.log(`   • Grayscale: ${config.grayscale ? 'enabled' : 'disabled'}`);
+    console.log(`   • Bit Depth: ${config.bit_depth}-bit`);
+    console.log(`   • Run Once: ${config.run_once ? 'enabled' : 'disabled'}`);
+    console.log(`   • Web Server Port: ${config.webserverport > 0 ? config.webserverport : 'disabled'}`);
+    console.log('');
+    
+    console.log('🌐 URLs to Screenshot:');
+    config.urls.forEach((url, index) => {
+      console.log(`   ${index + 1}. ${url}`);
+    });
+    console.log('');
+    
+    console.log('📂 Paths:');
+    console.log(`   • Config Path: ${CONFIG_PATH}`);
+    console.log(`   • WWW Path: ${WWW_PATH}`);
+    console.log(`   • Screenshots Path: ${SCREENSHOTS_PATH}`);
+    console.log('');
+  }
+  
+  // Dependencies
+  console.log('📚 Dependencies:');
+  Object.entries(packageInfo.dependencies).forEach(([name, version]) => {
+    console.log(`   • ${name}: ${version}`);
+  });
+  
+  console.log('═'.repeat(80));
+  console.log('');
+}
+
+/**
  * Take a screenshot of a given URL
  * @param {string} url - The URL to screenshot
  * @param {number} index - The index of the URL (used for filename)
@@ -267,8 +350,6 @@ async function loadConfiguration() {
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
  */
 async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24) {
-  console.log(`📸 Taking screenshot of: ${url}`);
-  
   let browser = null;
   try {
     // Check if Chromium is available
@@ -276,18 +357,13 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     if (!fs.existsSync('/usr/bin/chromium-browser')) {
       throw new Error('Chromium browser not found at /usr/bin/chromium-browser');
     }
-    console.log('✅ Chromium browser found');
+    console.log('   │       🔍 Chromium browser found');
     
-    // Log system info for debugging
-    console.log('🖥️  System info:', {
-      platform: process.platform,
-      arch: process.arch,
-      nodeVersion: process.version,
-      memory: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + 'MB'
-    });
+    // Log basic runtime info
+    console.log(`   │       💾 Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
     
     // Launch Puppeteer with minimal configuration first
-    console.log('🚀 Launching browser...');
+    console.log('   │       🚀 Launching browser...');
     browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'new',
@@ -300,25 +376,27 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       ]
     });
     
-    console.log('✅ Browser launched successfully');
+    console.log('   │       ✅ Browser launched successfully');
 
     const page = await browser.newPage();
     
     // Set viewport size for consistent screenshots
-    console.log(`📐 Setting viewport to ${width}x${height}`);
+    console.log(`   │       📐 Setting viewport to ${width}x${height}`);
     await page.setViewport({ width: width, height: height });
     
     // Navigate to the URL with timeout
-    console.log(`🌐 Navigating to: ${url}`);
+    console.log(`   │       🌐 Navigating to URL...`);
     await page.goto(url, { 
       waitUntil: 'networkidle2', 
       timeout: 30000 
     });
     
     // Wait for the page to be fully loaded
+    console.log('   │       ⏳ Waiting for page to fully load...');
     await page.waitForFunction('document.readyState === "complete"');
     
     // Take the screenshot
+    console.log('   │       📷 Taking screenshot...');
     const filename = `${index}.png`;
     let screenshotPath = path.join(SCREENSHOTS_PATH, filename);
     await page.screenshot({ 
@@ -327,24 +405,24 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       type: 'png'
     });
     
-  console.log(`✅ Screenshot saved: ${screenshotPath}`);
+  console.log(`   │       💾 Screenshot saved to: ${filename}`);
   // Log public URL for Home Assistant (served at /local/ha-screenshotter/)
   const publicUrl = `/local/ha-screenshotter/${filename}`;
-  console.log(`🌐 Accessible via Home Assistant at: ${publicUrl}`);
+  console.log(`   │       🌐 Home Assistant URL: ${publicUrl}`);
     
     // Apply rotation if needed
     if (rotationDegrees !== 0) {
-      await rotateImage(screenshotPath, rotationDegrees);
+      await rotateImage(screenshotPath, rotationDegrees, '   │       ');
     }
     
     // Apply grayscale conversion if needed
     if (grayscale) {
-      await convertToGrayscale(screenshotPath);
+      await convertToGrayscale(screenshotPath, '   │       ');
     }
     
     // Apply bit depth reduction if needed
     if (bitDepth !== 24) {
-      await reduceBitDepth(screenshotPath, bitDepth);
+      await reduceBitDepth(screenshotPath, bitDepth, '   │       ');
     }
     
     return screenshotPath;
@@ -372,21 +450,37 @@ async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, gray
   const rotationText = rotationDegrees > 0 ? ` with ${rotationDegrees}° rotation` : '';
   const grayscaleText = grayscale ? ' in grayscale' : '';
   const bitDepthText = bitDepth !== 24 ? ` at ${bitDepth}-bit depth` : '';
-  console.log(`📸 Taking screenshots of ${urls.length} URL(s) at ${width}x${height}${rotationText}${grayscaleText}${bitDepthText}...`);
+  
+  console.log(`📸 Starting screenshot batch: ${urls.length} URL(s) at ${width}x${height}${rotationText}${grayscaleText}${bitDepthText}`);
+  console.log('   ┌─────────────────────────────────────────────────────────────┐');
+  
+  let successCount = 0;
+  let failureCount = 0;
   
   for (let i = 0; i < urls.length; i++) {
+    const urlNum = i + 1;
+    console.log(`   │ 📸 [${urlNum}/${urls.length}] Processing: ${urls[i]}`);
+    
     try {
       await takeScreenshot(urls[i], i, width, height, rotationDegrees, grayscale, bitDepth);
       const rotationNote = rotationDegrees > 0 ? ` (rotated ${rotationDegrees}°)` : '';
       const grayscaleNote = grayscale ? ' (grayscale)' : '';
       const bitDepthNote = bitDepth !== 24 ? ` (${bitDepth}-bit)` : '';
-      console.log(`✅ Screenshot ${i}.png completed for: ${urls[i]}${rotationNote}${grayscaleNote}${bitDepthNote}`);
+      console.log(`   │    ✅ Screenshot ${i}.png saved${rotationNote}${grayscaleNote}${bitDepthNote}`);
+      successCount++;
     } catch (error) {
-      console.error(`❌ Failed to screenshot ${urls[i]}:`, error.message);
+      console.log(`   │    ❌ Failed: ${error.message}`);
+      failureCount++;
+    }
+    
+    // Add a separator between URLs (except for the last one)
+    if (i < urls.length - 1) {
+      console.log('   │');
     }
   }
   
-  console.log('📸 Screenshot batch completed');
+  console.log('   └─────────────────────────────────────────────────────────────┘');
+  console.log(`📊 Batch completed: ${successCount} successful, ${failureCount} failed`);
 }
 
 /**
@@ -567,17 +661,9 @@ async function init() {
     
     // Load configuration
     const config = await loadConfiguration();
-    console.log('🔧 Configuration loaded:', {
-      schedule: config.schedule,
-      urls: config.urls,
-      urlCount: config.urls.length,
-      resolution: `${config.resolution_width}x${config.resolution_height}`,
-      rotation: `${config.rotation_degrees}°`,
-      grayscale: config.grayscale,
-      bitDepth: `${config.bit_depth}-bit`,
-      runOnce: config.run_once,
-      webServerPort: config.webserverport
-    });
+    
+    // Display comprehensive system information
+    displaySystemInfo(config);
     
     // Validate cron schedule
     if (!cron.validate(config.schedule)) {
@@ -599,8 +685,40 @@ async function init() {
     // Set up cron scheduler
     console.log(`⏰ Setting up scheduler with pattern: ${config.schedule}`);
     cron.schedule(config.schedule, async () => {
-      console.log('⏰ Scheduled screenshot execution started');
-      await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale, config.bit_depth);
+      const startTime = new Date();
+      console.log('');
+      console.log('┌─────────────────────────────────────────────────────────────┐');
+      console.log('│                  🕐 SCHEDULED EXECUTION START                 │');
+      console.log('└─────────────────────────────────────────────────────────────┘');
+      console.log(`⏰ Started at: ${startTime.toISOString()}`);
+      console.log(`📋 Processing ${config.urls.length} URL(s)`);
+      console.log('');
+      
+      try {
+        await takeAllScreenshots(config.urls, config.resolution_width, config.resolution_height, config.rotation_degrees, config.grayscale, config.bit_depth);
+        
+        const endTime = new Date();
+        const duration = Math.round((endTime - startTime) / 1000);
+        console.log('');
+        console.log('┌─────────────────────────────────────────────────────────────┐');
+        console.log('│                  ✅ SCHEDULED EXECUTION COMPLETE              │');
+        console.log('└─────────────────────────────────────────────────────────────┘');
+        console.log(`⏰ Completed at: ${endTime.toISOString()}`);
+        console.log(`⚡ Duration: ${duration} seconds`);
+        console.log(`📊 Successfully processed ${config.urls.length} URL(s)`);
+        console.log('');
+      } catch (error) {
+        const endTime = new Date();
+        const duration = Math.round((endTime - startTime) / 1000);
+        console.log('');
+        console.log('┌─────────────────────────────────────────────────────────────┐');
+        console.log('│                   ❌ SCHEDULED EXECUTION FAILED               │');
+        console.log('└─────────────────────────────────────────────────────────────┘');
+        console.log(`⏰ Failed at: ${endTime.toISOString()}`);
+        console.log(`⚡ Duration: ${duration} seconds`);
+        console.log(`❌ Error: ${error.message}`);
+        console.log('');
+      }
     });
     
     // Set up web server if port is configured
