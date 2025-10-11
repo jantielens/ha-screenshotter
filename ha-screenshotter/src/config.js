@@ -14,8 +14,22 @@ async function loadConfiguration() {
   const defaultConfig = {
     schedule: "* * * * *",
     urls: [
-      "https://google.com",
-      "https://time.now/"
+      {
+        url: "https://google.com",
+        width: 1920,
+        height: 1080,
+        rotation: 0,
+        grayscale: false,
+        bit_depth: 24
+      },
+      {
+        url: "https://time.now/",
+        width: 1920,
+        height: 1080,
+        rotation: 0,
+        grayscale: false,
+        bit_depth: 24
+      }
     ],
     resolution_width: 1920,
     resolution_height: 1080,
@@ -33,23 +47,7 @@ async function loadConfiguration() {
     if (configExists) {
       const config = await fs.readJson(CONFIG_PATH);
       
-      let urls = defaultConfig.urls;
-      if (config.urls) {
-        try {
-          // Parse URLs from JSON string format
-          urls = JSON.parse(config.urls);
-          if (!Array.isArray(urls)) {
-            throw new Error('URLs must be an array');
-          }
-          console.log('✅ URLs parsed from configuration:', urls);
-        } catch (parseError) {
-          console.error('❌ Error parsing URLs:', parseError.message);
-          console.error('ℹ️  Expected format: ["https://example.com", "https://example2.com"]');
-          throw new Error(`Invalid URLs configuration: ${parseError.message}. Expected format: ["https://example.com", "https://example2.com"]`);
-        }
-      }
-      
-      // Handle resolution configuration
+      // Handle resolution configuration first (needed for URL defaults)
       let resolution_width = defaultConfig.resolution_width;
       let resolution_height = defaultConfig.resolution_height;
       
@@ -108,6 +106,105 @@ async function loadConfiguration() {
         } else {
           console.error('❌ Invalid bit_depth setting:', config.bit_depth);
           throw new Error(`Invalid bit_depth setting: ${config.bit_depth}. Must be one of: 1, 4, 8, 16, or 24.`);
+        }
+      }
+      
+      // Parse URLs with per-URL settings (using global settings as defaults)
+      let urls = defaultConfig.urls;
+      if (config.urls) {
+        try {
+          // Parse URLs from JSON string format
+          const parsedUrls = JSON.parse(config.urls);
+          
+          // Handle array format (backward compatibility)
+          if (Array.isArray(parsedUrls)) {
+            urls = parsedUrls.map((urlItem, index) => {
+              if (typeof urlItem === 'string') {
+                // Simple string URL - use global defaults
+                return {
+                  url: urlItem,
+                  width: resolution_width,
+                  height: resolution_height,
+                  rotation: rotation_degrees,
+                  grayscale: grayscale,
+                  bit_depth: bit_depth
+                };
+              } else if (typeof urlItem === 'object' && urlItem.url) {
+                // Object with url property and optional overrides
+                return {
+                  url: urlItem.url,
+                  width: urlItem.width || resolution_width,
+                  height: urlItem.height || resolution_height,
+                  rotation: urlItem.rotation !== undefined ? urlItem.rotation : rotation_degrees,
+                  grayscale: urlItem.grayscale !== undefined ? urlItem.grayscale : grayscale,
+                  bit_depth: urlItem.bit_depth || bit_depth
+                };
+              } else {
+                throw new Error(`Invalid URL at index ${index}: must be a string or object with 'url' property`);
+              }
+            });
+          } 
+          // Handle object format (new feature)
+          else if (typeof parsedUrls === 'object' && parsedUrls !== null) {
+            urls = Object.entries(parsedUrls).map(([url, settings]) => {
+              if (typeof settings === 'object' && settings !== null) {
+                return {
+                  url: url,
+                  width: settings.width || resolution_width,
+                  height: settings.height || resolution_height,
+                  rotation: settings.rotation !== undefined ? settings.rotation : rotation_degrees,
+                  grayscale: settings.grayscale !== undefined ? settings.grayscale : grayscale,
+                  bit_depth: settings.bit_depth || bit_depth
+                };
+              } else {
+                // Empty settings object or null - use defaults
+                return {
+                  url: url,
+                  width: resolution_width,
+                  height: resolution_height,
+                  rotation: rotation_degrees,
+                  grayscale: grayscale,
+                  bit_depth: bit_depth
+                };
+              }
+            });
+          } else {
+            throw new Error('URLs must be an array or an object');
+          }
+          
+          // Validate each URL configuration
+          urls.forEach((urlConfig, index) => {
+            if (!urlConfig.url || typeof urlConfig.url !== 'string') {
+              throw new Error(`Invalid URL at index ${index}: URL must be a non-empty string`);
+            }
+            if (!Number.isInteger(urlConfig.width) || urlConfig.width <= 0) {
+              throw new Error(`Invalid width for URL ${urlConfig.url}: must be a positive integer`);
+            }
+            if (!Number.isInteger(urlConfig.height) || urlConfig.height <= 0) {
+              throw new Error(`Invalid height for URL ${urlConfig.url}: must be a positive integer`);
+            }
+            if (!Number.isInteger(urlConfig.rotation) || ![0, 90, 180, 270].includes(urlConfig.rotation)) {
+              throw new Error(`Invalid rotation for URL ${urlConfig.url}: must be 0, 90, 180, or 270`);
+            }
+            if (typeof urlConfig.grayscale !== 'boolean') {
+              throw new Error(`Invalid grayscale for URL ${urlConfig.url}: must be true or false`);
+            }
+            if (!Number.isInteger(urlConfig.bit_depth) || ![1, 4, 8, 16, 24].includes(urlConfig.bit_depth)) {
+              throw new Error(`Invalid bit_depth for URL ${urlConfig.url}: must be 1, 4, 8, 16, or 24`);
+            }
+          });
+          
+          console.log('✅ URLs parsed from configuration:', urls.length, 'URLs with individual settings');
+          urls.forEach((urlConfig, index) => {
+            console.log(`   ${index}: ${urlConfig.url} (${urlConfig.width}x${urlConfig.height}, ${urlConfig.rotation}°, grayscale:${urlConfig.grayscale}, ${urlConfig.bit_depth}-bit)`);
+          });
+        } catch (parseError) {
+          console.error('❌ Error parsing URLs:', parseError.message);
+          console.error('ℹ️  Expected formats:');
+          console.error('     Array: ["https://example.com", "https://example2.com"]');
+          console.error('     Array with objects: [{"url": "https://example.com", "width": 800}]');
+          console.error('     Object: {"https://example.com": {"width": 800, "height": 600}}');
+          throw new Error(`Invalid URLs configuration: ${parseError.message}`);
         }
       }
       

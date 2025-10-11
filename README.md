@@ -14,9 +14,12 @@ A powerful Home Assistant add-on that takes screenshots of web pages on a config
 
 ### 📸 **Screenshot Capabilities**
 - **Multiple URL Support** - Screenshot multiple web pages simultaneously
+- **Per-URL Configuration** - Individual resolution, rotation, and processing settings for each URL
+- **Flexible Formats** - Support for simple arrays, objects, and mixed configurations
 - **Configurable Resolution** - Set custom width and height (e.g., 1920x1080, 1366x768, 800x600)
 - **High-Quality Output** - Uses Chromium browser engine via Puppeteer for accurate rendering
 - **Predictable File Naming** - Outputs numbered files (0.jpg, 1.jpg, etc.) for easy integration
+- **Backward Compatibility** - Existing configurations continue to work unchanged
 
 ### ⏰ **Flexible Scheduling**
 - **Cron-Based Scheduling** - Full cron expression support for precise timing
@@ -75,6 +78,44 @@ Configure the add-on through Home Assistant's add-on configuration page. All set
 | `long_lived_access_token` | string | `""` | Optional Home Assistant Long-Lived Access Token for authenticated screenshots (Bearer token) |
 | `language` | string | `"en"` | Language code for Home Assistant frontend (e.g., "en", "es", "fr", "de") - used when taking screenshots of HA dashboards |
 
+### 🎯 **Per-URL Configuration (Advanced)**
+
+You can configure individual settings for each URL using different formats. This allows mixing different resolutions, rotations, and image processing settings for different URLs while maintaining full backward compatibility.
+
+#### **URL Configuration Formats:**
+
+**1. Simple Array (Original Format - Backward Compatible):**
+```yaml
+urls: '["https://google.com", "https://weather.com"]'
+```
+All URLs use the global settings (`resolution_width`, `resolution_height`, etc.).
+
+**2. Object Format (Per-URL Settings):**
+```yaml
+urls: '{
+  "https://dashboard.local": {"width": 800, "height": 600, "grayscale": true},
+  "https://weather.com": {"rotation": 90},
+  "https://status.page": {}
+}'
+```
+Each URL can have individual settings. Missing settings fall back to global defaults.
+
+**3. Array with Objects (Mixed Format):**
+```yaml
+urls: '[
+  "https://simple-url.com",
+  {"url": "https://custom.com", "width": 800, "height": 600},
+  {"url": "https://rotated.com", "rotation": 90}
+]'
+```
+Mix simple URLs with URLs that have custom settings.
+
+#### **Per-URL Setting Options:**
+- `width` / `height` - Custom resolution for this URL
+- `rotation` - Rotation degrees (0, 90, 180, 270)
+- `grayscale` - Boolean for grayscale conversion
+- `bit_depth` - Color depth (1, 4, 8, 16, 24)
+
 ### 📝 **Configuration Examples**
 
 #### E-ink Display (Black & White)
@@ -130,6 +171,41 @@ resolution_height: 800
 long_lived_access_token: "YOUR_LONG_LIVED_TOKEN_HERE"
 language: "es"  # Spanish UI language for screenshots
 ```
+
+#### Per-URL Configuration Examples
+
+**Mixed Resolution Setup (E-ink + HD Dashboard):**
+```yaml
+schedule: "*/10 * * * *"
+urls: '{
+  "http://homeassistant.local:8123/lovelace/eink": {"width": 800, "height": 600, "grayscale": true, "bit_depth": 1},
+  "http://homeassistant.local:8123/lovelace/main": {"width": 1920, "height": 1080},
+  "https://weather.com": {"width": 1024, "rotation": 90},
+  "https://status.page": {}
+}'
+resolution_width: 1280    # Default for URLs without explicit settings
+resolution_height: 720
+webserverport: 3000
+long_lived_access_token: "YOUR_TOKEN"
+```
+
+**Multi-Device Dashboard (Different Orientations):**
+```yaml
+schedule: "*/5 * * * *"
+urls: '[
+  {"url": "http://homeassistant.local:8123/lovelace/landscape", "width": 1920, "height": 1080},
+  {"url": "http://homeassistant.local:8123/lovelace/portrait", "width": 1080, "height": 1920, "rotation": 90},
+  {"url": "http://homeassistant.local:8123/lovelace/eink", "grayscale": true, "bit_depth": 4}
+]'
+resolution_width: 1024    # Default resolution
+resolution_height: 768
+```
+
+This creates:
+- `0.png` - E-ink optimized dashboard (800x600, grayscale, 1-bit)
+- `1.png` - HD main dashboard (1920x1080, full color)
+- `2.png` - Weather widget rotated for portrait display (1024x768 rotated 90°)
+- `3.png` - Status page with default settings (1280x720)
 
 **Usage with Picture Frames:**
 With the web server enabled, your picture frame or external display can easily fetch screenshots:

@@ -145,35 +145,44 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
 
 /**
  * Take screenshots of all configured URLs
- * @param {Array} urls - Array of URLs to screenshot
- * @param {number} width - The viewport width for the screenshots
- * @param {number} height - The viewport height for the screenshots
- * @param {number} rotationDegrees - Degrees to rotate the screenshots (0, 90, 180, 270)
- * @param {boolean} grayscale - Whether to convert the screenshots to grayscale
- * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
+ * @param {Array} urls - Array of URL configuration objects with individual settings
  * @param {string} longLivedToken - Home Assistant long-lived access token
  * @param {string} language - Language setting for Home Assistant frontend
  */
-async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, longLivedToken = '', language = 'en') {
-  const rotationText = rotationDegrees > 0 ? ` with ${rotationDegrees}° rotation` : '';
-  const grayscaleText = grayscale ? ' in grayscale' : '';
-  const bitDepthText = bitDepth !== 24 ? ` at ${bitDepth}-bit depth` : '';
-  
-  console.log(`📸 Starting screenshot batch: ${urls.length} URL(s) at ${width}x${height}${rotationText}${grayscaleText}${bitDepthText}`);
+async function takeAllScreenshots(urls, longLivedToken = '', language = 'en') {
+  console.log(`📸 Starting screenshot batch: ${urls.length} URL(s) with individual settings`);
   console.log('   ┌─────────────────────────────────────────────────────────────┐');
   
   let successCount = 0;
   let failureCount = 0;
   
   for (let i = 0; i < urls.length; i++) {
+    const urlConfig = urls[i];
     const urlNum = i + 1;
-    console.log(`   │ 📸 [${urlNum}/${urls.length}] Processing: ${urls[i]}`);
+    
+    const rotationText = urlConfig.rotation > 0 ? ` with ${urlConfig.rotation}° rotation` : '';
+    const grayscaleText = urlConfig.grayscale ? ' in grayscale' : '';
+    const bitDepthText = urlConfig.bit_depth !== 24 ? ` at ${urlConfig.bit_depth}-bit depth` : '';
+    
+    console.log(`   │ 📸 [${urlNum}/${urls.length}] Processing: ${urlConfig.url}`);
+    console.log(`   │       📐 Resolution: ${urlConfig.width}x${urlConfig.height}${rotationText}${grayscaleText}${bitDepthText}`);
     
     try {
-      await takeScreenshot(urls[i], i, width, height, rotationDegrees, grayscale, bitDepth, longLivedToken, language);
-      const rotationNote = rotationDegrees > 0 ? ` (rotated ${rotationDegrees}°)` : '';
-      const grayscaleNote = grayscale ? ' (grayscale)' : '';
-      const bitDepthNote = bitDepth !== 24 ? ` (${bitDepth}-bit)` : '';
+      await takeScreenshot(
+        urlConfig.url, 
+        i, 
+        urlConfig.width, 
+        urlConfig.height, 
+        urlConfig.rotation, 
+        urlConfig.grayscale, 
+        urlConfig.bit_depth, 
+        longLivedToken, 
+        language
+      );
+      
+      const rotationNote = urlConfig.rotation > 0 ? ` (rotated ${urlConfig.rotation}°)` : '';
+      const grayscaleNote = urlConfig.grayscale ? ' (grayscale)' : '';
+      const bitDepthNote = urlConfig.bit_depth !== 24 ? ` (${urlConfig.bit_depth}-bit)` : '';
       console.log(`   │    ✅ Screenshot ${i}.png saved${rotationNote}${grayscaleNote}${bitDepthNote}`);
       successCount++;
     } catch (error) {

@@ -2,6 +2,8 @@ name: CI - Build and Test
 
 # NOTE: Configuration validation is strict - invalid values cause container shutdown
 # Tests include both success and failure scenarios to verify validation behavior
+# NEW: Added comprehensive per-URL configuration tests for object format, array with objects,
+#      mixed settings, and validation of per-URL parameters
 
 # Trigger on pull requests and manual dispatch
 on:
@@ -227,6 +229,96 @@ jobs:
             bit_depth: 8
             expected_result: "failure"
             expected_files: 0
+          
+          # Per-URL configuration tests
+          - name: "per-url-object-format"
+            description: "Per-URL settings using object format"
+            urls: '{\"https://example.com\": {\"width\": 800, \"height\": 600, \"grayscale\": true}, \"https://github.com/jantielens/ha-screenshotter\": {\"rotation\": 90}}'
+            resolution_width: 1920
+            resolution_height: 1080
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            expected_result: "success"
+            expected_files: 2
+          
+          - name: "per-url-array-with-objects"
+            description: "Per-URL settings using array with objects format"
+            urls: '[{\"url\": \"https://example.com\", \"width\": 1024, \"height\": 768}, \"https://github.com/jantielens/ha-screenshotter\"]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 90
+            grayscale: true
+            bit_depth: 4
+            expected_result: "success"
+            expected_files: 2
+          
+          - name: "per-url-mixed-settings"
+            description: "Per-URL with different bit depths and grayscale"
+            urls: '{\"https://example.com\": {\"bit_depth\": 1, \"grayscale\": true}, \"https://github.com/jantielens/ha-screenshotter\": {\"bit_depth\": 8, \"rotation\": 180}}'
+            resolution_width: 800
+            resolution_height: 600
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 24
+            expected_result: "success"
+            expected_files: 2
+          
+          - name: "per-url-empty-settings"
+            description: "Per-URL with empty settings (should use defaults)"
+            urls: '{\"https://example.com\": {}, \"https://github.com/jantielens/ha-screenshotter\": null}'
+            resolution_width: 1200
+            resolution_height: 800
+            rotation_degrees: 270
+            grayscale: true
+            bit_depth: 4
+            expected_result: "success"
+            expected_files: 2
+          
+          # Per-URL validation tests
+          - name: "per-url-invalid-width"
+            description: "Per-URL with invalid width value"
+            urls: '{\"https://example.com\": {\"width\": -500}}'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 8
+            expected_result: "failure"
+            expected_files: 0
+          
+          - name: "per-url-invalid-rotation"
+            description: "Per-URL with invalid rotation value"
+            urls: '[{\"url\": \"https://example.com\", \"rotation\": 45}]'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 8
+            expected_result: "failure"
+            expected_files: 0
+          
+          - name: "per-url-invalid-bit-depth"
+            description: "Per-URL with invalid bit depth"
+            urls: '{\"https://example.com\": {\"bit_depth\": 32}}'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 8
+            expected_result: "failure"
+            expected_files: 0
+          
+          - name: "per-url-malformed-json"
+            description: "Per-URL with malformed JSON structure"
+            urls: '{\"https://example.com\": {\"width\": 800, \"height\": }}'
+            resolution_width: 1366
+            resolution_height: 768
+            rotation_degrees: 0
+            grayscale: false
+            bit_depth: 8
+            expected_result: "failure"
+            expected_files: 0
 
     steps:
       - name: Checkout code
@@ -342,14 +434,55 @@ jobs:
                         IMG_WIDTH="${BASH_REMATCH[1]}"
                         IMG_HEIGHT="${BASH_REMATCH[2]}"
                         
-                        # Account for rotation
-                        EXPECTED_WIDTH=${{ matrix.resolution_width }}
-                        EXPECTED_HEIGHT=${{ matrix.resolution_height }}
-                        if [ "${{ matrix.rotation_degrees }}" = "90" ] || [ "${{ matrix.rotation_degrees }}" = "270" ]; then
-                          # Swap expected dimensions for 90/270 degree rotations
-                          EXPECTED_WIDTH=${{ matrix.resolution_height }}
-                          EXPECTED_HEIGHT=${{ matrix.resolution_width }}
-                        fi
+                        # Determine expected dimensions based on test case
+                        # For per-URL tests, we need to handle different logic
+                        case "${{ matrix.name }}" in
+                          "per-url-object-format")
+                            # First URL: 800x600 grayscale, Second URL: 1920x1080 rotated 90°
+                            if [ "$i" = "0" ]; then
+                              EXPECTED_WIDTH=800
+                              EXPECTED_HEIGHT=600
+                            else
+                              EXPECTED_WIDTH=1080  # Rotated 90°: height becomes width
+                              EXPECTED_HEIGHT=1920 # Rotated 90°: width becomes height
+                            fi
+                            ;;
+                          "per-url-array-with-objects")
+                            # First URL: 1024x768, Second URL: defaults (1366x768 rotated 90°)
+                            if [ "$i" = "0" ]; then
+                              EXPECTED_WIDTH=1024
+                              EXPECTED_HEIGHT=768
+                            else
+                              EXPECTED_WIDTH=768   # Rotated 90°
+                              EXPECTED_HEIGHT=1366 # Rotated 90°
+                            fi
+                            ;;
+                          "per-url-mixed-settings")
+                            # Both URLs use defaults (800x600) with different rotations
+                            if [ "$i" = "0" ]; then
+                              EXPECTED_WIDTH=800
+                              EXPECTED_HEIGHT=600
+                            else
+                              EXPECTED_WIDTH=800   # 180° rotation keeps same dimensions
+                              EXPECTED_HEIGHT=600
+                            fi
+                            ;;
+                          "per-url-empty-settings")
+                            # Both URLs use defaults (1200x800 rotated 270°)
+                            EXPECTED_WIDTH=800   # Rotated 270°: height becomes width
+                            EXPECTED_HEIGHT=1200 # Rotated 270°: width becomes height
+                            ;;
+                          *)
+                            # Standard logic for non-per-URL tests
+                            EXPECTED_WIDTH=${{ matrix.resolution_width }}
+                            EXPECTED_HEIGHT=${{ matrix.resolution_height }}
+                            if [ "${{ matrix.rotation_degrees }}" = "90" ] || [ "${{ matrix.rotation_degrees }}" = "270" ]; then
+                              # Swap expected dimensions for 90/270 degree rotations
+                              EXPECTED_WIDTH=${{ matrix.resolution_height }}
+                              EXPECTED_HEIGHT=${{ matrix.resolution_width }}
+                            fi
+                            ;;
+                        esac
                         
                         if [ "$IMG_WIDTH" = "$EXPECTED_WIDTH" ] && [ "$IMG_HEIGHT" = "$EXPECTED_HEIGHT" ]; then
                           echo "✅ Screenshot $i dimensions correct: ${IMG_WIDTH}x${IMG_HEIGHT}"
@@ -361,8 +494,38 @@ jobs:
                         fi
                       fi
                       
-                      # Check grayscale
-                      if [ "${{ matrix.grayscale }}" = "true" ]; then
+                      # Check grayscale based on test case
+                      EXPECT_GRAYSCALE=false
+                      case "${{ matrix.name }}" in
+                        "per-url-object-format")
+                          # First URL should be grayscale, second should not
+                          if [ "$i" = "0" ]; then
+                            EXPECT_GRAYSCALE=true
+                          fi
+                          ;;
+                        "per-url-array-with-objects")
+                          # Both URLs should use global grayscale setting (true)
+                          EXPECT_GRAYSCALE=true
+                          ;;
+                        "per-url-mixed-settings")
+                          # First URL explicitly grayscale, second uses global (false)
+                          if [ "$i" = "0" ]; then
+                            EXPECT_GRAYSCALE=true
+                          fi
+                          ;;
+                        "per-url-empty-settings")
+                          # Both URLs use global grayscale setting (true)
+                          EXPECT_GRAYSCALE=true
+                          ;;
+                        *)
+                          # Use global grayscale setting
+                          if [ "${{ matrix.grayscale }}" = "true" ]; then
+                            EXPECT_GRAYSCALE=true
+                          fi
+                          ;;
+                      esac
+                      
+                      if [ "$EXPECT_GRAYSCALE" = "true" ]; then
                         # Check if image is grayscale using multiple methods
                         COLOR_TYPE=$(identify -ping -format "%[colorspace]" "$SCREENSHOT_FILE" 2>/dev/null || echo "Unknown")
                         # Also check PNG color type from file command
@@ -381,7 +544,21 @@ jobs:
                           VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i: Grayscale ✅\n"
                         else
                           # Additional check: if it has very few colors, it might still be grayscale
-                          if [ "$UNIQUE_COLORS" -le 256 ] && [ "${{ matrix.bit_depth }}" -le 8 ]; then
+                          EXPECTED_BIT_DEPTH=24
+                          case "${{ matrix.name }}" in
+                            "per-url-mixed-settings")
+                              if [ "$i" = "0" ]; then
+                                EXPECTED_BIT_DEPTH=1
+                              else
+                                EXPECTED_BIT_DEPTH=8
+                              fi
+                              ;;
+                            *)
+                              EXPECTED_BIT_DEPTH=${{ matrix.bit_depth }}
+                              ;;
+                          esac
+                          
+                          if [ "$UNIQUE_COLORS" -le 256 ] && [ "$EXPECTED_BIT_DEPTH" -le 8 ]; then
                             echo "✅ Screenshot $i appears grayscale (colorspace: $COLOR_TYPE, colors: $UNIQUE_COLORS, PNG type: $PNG_TYPE)"
                             VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i: Likely grayscale ($UNIQUE_COLORS colors) ✅\n"
                           else
@@ -390,6 +567,8 @@ jobs:
                             TEST_PASSED=false
                           fi
                         fi
+                      else
+                        echo "ℹ️  Screenshot $i: Not checking grayscale (not expected for this URL)"
                       fi
                       
                       # Check bit depth using file command for more accurate PNG bit depth detection
@@ -402,12 +581,37 @@ jobs:
                         ACTUAL_BIT_DEPTH="$BIT_DEPTH_IDENTIFY"
                       fi
                       
-                      EXPECTED_DEPTH=${{ matrix.bit_depth }}
-                      # Note: Invalid bit depth values now cause container failure
-                      # This check is kept for any remaining valid edge cases
-                      if [ "$EXPECTED_DEPTH" = "99" ]; then
-                        EXPECTED_DEPTH=8  # This case should now never reach here due to validation
-                      fi
+                      # Determine expected bit depth based on test case
+                      case "${{ matrix.name }}" in
+                        "per-url-object-format")
+                          # Both URLs use global bit depth (24)
+                          EXPECTED_DEPTH=24
+                          ;;
+                        "per-url-array-with-objects")
+                          # Both URLs use global bit depth (4)
+                          EXPECTED_DEPTH=4
+                          ;;
+                        "per-url-mixed-settings")
+                          # First URL: 1-bit, Second URL: 8-bit
+                          if [ "$i" = "0" ]; then
+                            EXPECTED_DEPTH=1
+                          else
+                            EXPECTED_DEPTH=8
+                          fi
+                          ;;
+                        "per-url-empty-settings")
+                          # Both URLs use global bit depth (4)
+                          EXPECTED_DEPTH=4
+                          ;;
+                        *)
+                          # Use global bit depth
+                          EXPECTED_DEPTH=${{ matrix.bit_depth }}
+                          # Note: Invalid bit depth values now cause container failure
+                          if [ "$EXPECTED_DEPTH" = "99" ]; then
+                            EXPECTED_DEPTH=8  # This case should now never reach here due to validation
+                          fi
+                          ;;
+                      esac
                       
                       echo "Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (identify reported: $BIT_DEPTH_IDENTIFY, expected: $EXPECTED_DEPTH)"
                       
@@ -495,6 +699,16 @@ jobs:
           echo "| invalid-bit-depth | Invalid bit depth value | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| invalid-resolution-width | Invalid negative resolution width | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           echo "| invalid-rotation | Invalid rotation degrees | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🎯 Per-URL Configuration Tests" >> $GITHUB_STEP_SUMMARY
+          echo "| per-url-object-format | Per-URL settings using object format | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| per-url-array-with-objects | Per-URL settings using array with objects | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| per-url-mixed-settings | Per-URL with different bit depths and grayscale | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| per-url-empty-settings | Per-URL with empty settings (defaults) | Success | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| per-url-invalid-width | Per-URL with invalid width value | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| per-url-invalid-rotation | Per-URL with invalid rotation value | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| per-url-invalid-bit-depth | Per-URL with invalid bit depth | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| per-url-malformed-json | Per-URL with malformed JSON structure | Failure | ${{ needs.matrix-test.result == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
           
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "## 📊 Overall Result" >> $GITHUB_STEP_SUMMARY
