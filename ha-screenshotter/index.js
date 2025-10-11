@@ -14,8 +14,8 @@ const sharp = require('sharp');
 
 // Configuration paths (Home Assistant standard paths)
 const CONFIG_PATH = '/data/options.json';
-// Write screenshots to the Home Assistant served www folder so files are available at /local/
-const WWW_PATH = '/config/www';
+// Write screenshots to the Home Assistant media folder so files are available at /media/
+const WWW_PATH = '/media';
 const SCREENSHOTS_PATH = path.join(WWW_PATH, 'ha-screenshotter');
 
 /**
@@ -387,7 +387,7 @@ async function init() {
   // Ensure www and screenshots directories exist (served at /local/)
   await fs.ensureDir(WWW_PATH);
   await fs.ensureDir(SCREENSHOTS_PATH);
-  console.log('✅ WWW directory ensured at:', WWW_PATH);
+  console.log('✅ Media directory ensured at:', WWW_PATH);
   console.log('✅ Screenshots directory ensured at:', SCREENSHOTS_PATH);
     
     // Load configuration

@@ -9,7 +9,7 @@
 - **🎨 Image Processing** - Rotation, grayscale, and bit depth reduction with dithering
 - **🖥️ E-ink Optimized** - Perfect for Inkplate and e-paper displays
 - **🔄 Auto-Naming** - Predictable file naming (0.jpg, 1.jpg, etc.)
- - **📁 Shared Storage** - Screenshots saved to `/config/www/ha-screenshotter/` (served at `/local/ha-screenshotter/`)
+ - **📁 Media Storage** - Screenshots saved to `/media/ha-screenshotter/` (served at `/media/ha-screenshotter/`)
 
 ## ⚙️ Configuration
 
@@ -60,39 +60,34 @@ rotation_degrees: 90
 3. **Check Logs** for screenshot status
 4. **Access** screenshots in `/share/screenshots/` (numbered 0.jpg, 1.jpg, etc.)
 
-### 🔗 Exposing screenshots over HTTP (for Lovelace cards)
+### 🔗 Accessing screenshots over HTTP (for Lovelace cards)
 
-The `share` folder is not served over HTTP by default. If you'd like to display screenshots in a Lovelace card (via an image URL), here are common approaches:
+Screenshots are automatically saved to Home Assistant's media folder and are immediately accessible via `/media/` URLs for use in Lovelace cards and automations.
 
-1) Save/COPY screenshots to the `www` folder (recommended)
+**Current Configuration:**
+- Screenshots are saved to `/media/ha-screenshotter/` using the media mapping
+- Access screenshots at: `https://your-home-assistant/media/ha-screenshotter/yourfile.png`
+- Configuration uses:
+  ```yaml
+  map:
+    - type: media
+      read_only: false
+  ```
 
-	 - Files in Home Assistant's `config/www` folder are served at `/local/`.
-	 - Place or copy screenshots into `/config/www/screenshots` and access them at:
+**Alternative approaches (if needed):**
 
-		 `https://your-home-assistant/local/screenshots/yourfile.png`
+1) Save/COPY screenshots to the `www` folder (legacy approach)
+	 - Files in Home Assistant's `config/www` folder are served at `/local/`
+	 - Requires manual copying or symlinks
 
-2) Symlink from `www` to `share` (host-level, may not be allowed everywhere)
+2) Map `config/www` directly (deprecated)
+	 - The old approach used `"config/www:rw"` mapping
+	 - Screenshots were available at `/local/` URLs
 
-	 - On the host create a symlink so `/config/www/screenshots -> /config/share/screenshots` (paths depend on install). This makes screenshots available via `/local/` while being stored in `/share`.
-
-3) Map `config/www` in the add-on mapping (advanced)
-
-	 - Change the add-on `config.yaml` `map` entry so the addon writes directly to `config/www`, e.g.:
-
-		 ```yaml
-		 map:
-			 - "config/www:rw"
-		 ```
-
-	 - This makes screenshots immediately available via `/local/` without copying.
-
-Security notes
-
-- Only expose what you need; map minimal folders or use a dedicated subfolder (e.g. `/config/www/screenshots`).
-- Using `:rw` allows writing; prefer `:ro` where possible for safer operations.
-- If your instance is Internet-facing, protect access with authentication and do not blindly expose internal data.
-
-If you want, I can add an option to write directly to `/config/www/screenshots` and update the `config.yaml` mapping and docs accordingly.
+**Security notes:**
+- The media mapping provides secure access to media files
+- Screenshots are accessible to authenticated Home Assistant users
+- If your instance is Internet-facing, ensure proper authentication is configured
 
 ## 📊 Monitoring
 

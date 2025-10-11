@@ -26,14 +26,14 @@ on:
       grayscale:
         description: 'Enable grayscale'
         required: false
-        default: 'true'
+        default: true
         type: boolean
       bit_depth:
         description: 'Bit depth'
         required: false
         default: '4'
       screenshots_subfolder:
-        description: 'Subfolder name inside /config/www where screenshots are written'
+        description: 'Subfolder name inside /media where screenshots are written'
         required: false
         default: 'ha-screenshotter'
 
@@ -81,7 +81,7 @@ jobs:
           # Run container - it will exit automatically after taking screenshots
           docker run --rm \
             -v "${GITHUB_WORKSPACE}/test-data:/data" \
-            -v "${GITHUB_WORKSPACE}/test-share:/config/www" \
+            -v "${GITHUB_WORKSPACE}/test-share:/media" \
             ha-screenshotter-test
 
           echo "Container run completed"
@@ -92,8 +92,8 @@ jobs:
           ls -la "${GITHUB_WORKSPACE}/test-share" || true
           echo "Listing ha-screenshotter subdir inside repo:"
           ls -la "${GITHUB_WORKSPACE}/ha-screenshotter/test-share" || true
-          echo "Listing mounted config/www inside repo tree (if present):"
-          ls -la "${GITHUB_WORKSPACE}/ha-screenshotter/config/www" || true
+          echo "Listing mounted media inside repo tree (if present):"
+          ls -la "${GITHUB_WORKSPACE}/ha-screenshotter/media" || true
 
       - name: Verify screenshot output
         run: |
