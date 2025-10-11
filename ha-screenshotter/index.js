@@ -6,6 +6,7 @@
  */
 
 const fs = require('fs-extra');
+const path = require('path');
 const cron = require('node-cron');
 
 // Load package.json for version info
@@ -31,6 +32,19 @@ async function init() {
   await fs.ensureDir(SCREENSHOTS_PATH);
   console.log('✅ Media directory ensured at:', WWW_PATH);
   console.log('✅ Screenshots directory ensured at:', SCREENSHOTS_PATH);
+    
+    // Clean up existing screenshots to avoid stale files
+    console.log('🧹 Cleaning up existing screenshots...');
+    const files = await fs.readdir(SCREENSHOTS_PATH);
+    const pngFiles = files.filter(file => file.endsWith('.png'));
+    if (pngFiles.length > 0) {
+      for (const file of pngFiles) {
+        await fs.remove(path.join(SCREENSHOTS_PATH, file));
+      }
+      console.log(`✅ Deleted ${pngFiles.length} existing screenshot(s)`);
+    } else {
+      console.log('✅ No existing screenshots to clean up');
+    }
     
     // Load configuration
     const config = await loadConfiguration();
