@@ -46,16 +46,62 @@ on:
         default: 'ha-screenshotter'
 
 jobs:
+  # Shared setup job to build container and prepare tools
+  setup:
+    runs-on: ubuntu-latest
+    outputs:
+      container-tag: ${{ steps.build.outputs.container-tag }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install image analysis tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick file
+
+      - name: Build Docker container
+        id: build
+        run: |
+          cd ha-screenshotter
+          CONTAINER_TAG="ha-screenshotter-test:${{ github.sha }}"
+          docker build -t "$CONTAINER_TAG" .
+          echo "container-tag=$CONTAINER_TAG" >> $GITHUB_OUTPUT
+
+      - name: Save Docker image
+        run: |
+          docker save "${{ steps.build.outputs.container-tag }}" | gzip > ha-screenshotter-image.tar.gz
+
+      - name: Upload Docker image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image
+          path: ha-screenshotter-image.tar.gz
+          retention-days: 1
+
   # Single test job for manual dispatch when run_all_tests is false
   single-test:
     if: ${{ github.event_name == 'workflow_dispatch' && !fromJson(github.event.inputs.run_all_tests || 'true') }}
+    needs: setup
     runs-on: ubuntu-latest
     env:
       SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: |
+          docker load < ha-screenshotter-image.tar.gz
+
+      - name: Install image analysis tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick file
 
       - name: Set up test directories
         run: |
@@ -78,18 +124,13 @@ jobs:
           echo "Test configuration:"
           cat test-data/options.json
 
-      - name: Build Docker container
-        run: |
-          cd ha-screenshotter
-          docker build -t ha-screenshotter-test .
-
       - name: Test container startup and screenshot
         run: |
           echo "Starting container test with run_once mode..."
           docker run --rm \
             -v "${GITHUB_WORKSPACE}/test-data:/data" \
             -v "${GITHUB_WORKSPACE}/test-share:/media" \
-            ha-screenshotter-test
+            "${{ needs.setup.outputs.container-tag }}"
           echo "Container run completed"
 
       - name: Verify screenshot output
@@ -130,6 +171,7 @@ jobs:
   # Matrix test job for comprehensive testing
   matrix-test:
     if: ${{ github.event_name == 'pull_request' || (github.event_name == 'workflow_dispatch' && fromJson(github.event.inputs.run_all_tests || 'true')) }}
+    needs: setup
     runs-on: ubuntu-latest
     env:
       SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
@@ -229,8 +271,14 @@ jobs:
             expected_files: 0
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Download Docker image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image
+
+      - name: Load Docker image
+        run: |
+          docker load < ha-screenshotter-image.tar.gz
 
       - name: Install image analysis tools
         run: |
@@ -261,11 +309,6 @@ jobs:
           echo "Expected files: ${{ matrix.expected_files }}"
           cat test-data-${{ matrix.name }}/options.json
 
-      - name: Build Docker container
-        run: |
-          cd ha-screenshotter
-          docker build -t ha-screenshotter-test-${{ matrix.name }} .
-
       - name: Run container test
         id: container_test
         continue-on-error: true
@@ -278,7 +321,7 @@ jobs:
           docker run --rm \
             -v "${GITHUB_WORKSPACE}/test-data-${{ matrix.name }}:/data" \
             -v "${GITHUB_WORKSPACE}/test-share-${{ matrix.name }}:/media" \
-            ha-screenshotter-test-${{ matrix.name }} 2>&1 | tee container-output-${{ matrix.name }}.log
+            "${{ needs.setup.outputs.container-tag }}" 2>&1 | tee container-output-${{ matrix.name }}.log
           CONTAINER_EXIT_CODE=$?
           set -e
           
