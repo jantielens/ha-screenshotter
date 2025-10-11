@@ -49,8 +49,8 @@ jobs:
       
     - name: Set up test directories
       run: |
-    # Create test-data and the repo-root test-share subfolder where screenshots will be mounted
-    mkdir -p test-data test-share/$SCREENSHOT_SUBFOLDER
+        # Create test-data and the repo-root test-share subfolder where screenshots will be mounted
+        mkdir -p test-data test-share/$SCREENSHOT_SUBFOLDER
         
     - name: Create test configuration
       run: |
@@ -97,14 +97,14 @@ jobs:
         
     - name: Verify screenshot output
       run: |
-    echo "Checking for generated screenshots..."
-    ls -la test-share/$SCREENSHOT_SUBFOLDER/
+        echo "Checking for generated screenshots..."
+        ls -la test-share/$SCREENSHOT_SUBFOLDER/
 
-  if [ -f "test-share/$SCREENSHOT_SUBFOLDER/0.png" ]; then
+        if [ -f "test-share/$SCREENSHOT_SUBFOLDER/0.png" ]; then
           echo "✅ Screenshot generated successfully!"
 
           # Get image info
-          file test-share/$SCREENSHOT_SUBFOLDER/0.png
+          file test-share/$SCREENSHOT_SUBFOLDER/0.png || true
 
           # Check if we can get basic image dimensions (requires imagemagick)
           if command -v identify &> /dev/null; then
@@ -125,7 +125,7 @@ jobs:
 
         else
           echo "❌ No screenshot generated"
-          echo "Contents of '${{ github.event.inputs.screenshots_subfolder }}' directory:"
+          echo "Contents of '${SCREENSHOT_SUBFOLDER}' directory:"
           ls -la test-share/$SCREENSHOT_SUBFOLDER/
           exit 1
         fi
@@ -135,7 +135,7 @@ jobs:
       if: always()
       with:
         name: test-screenshots
-  path: test-share/$SCREENSHOT_SUBFOLDER/
+        path: test-share/$SCREENSHOT_SUBFOLDER/
         retention-days: 7
         
     - name: Test summary
