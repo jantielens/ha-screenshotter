@@ -77,8 +77,8 @@ jobs:
         
         # Run container - it will exit automatically after taking screenshots
         docker run --rm \
-          -v "$(pwd)/test-data:/data" \
-          -v "$(pwd)/test-share:/config/www" \
+          -v "${{ github.workspace }}/test-data:/data" \
+          -v "${{ github.workspace }}/test-share:/config/www" \
           ha-screenshotter-test
         
         echo "Container run completed"
