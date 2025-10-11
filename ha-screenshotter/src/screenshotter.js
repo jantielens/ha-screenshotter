@@ -149,6 +149,11 @@ async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, gray
   
   console.log('   └─────────────────────────────────────────────────────────────┘');
   console.log(`📊 Batch completed: ${successCount} successful, ${failureCount} failed`);
+  
+  // Throw error if any screenshots failed
+  if (failureCount > 0) {
+    throw new Error(`Screenshot batch failed: ${failureCount} out of ${urls.length} screenshots failed`);
+  }
 }
 
 module.exports = {
