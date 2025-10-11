@@ -238,7 +238,7 @@ jobs:
             resolution_height: 1080
             rotation_degrees: 0
             grayscale: false
-            bit_depth: 24
+            bit_depth: 8
             expected_result: "success"
             expected_files: 2
           
@@ -448,13 +448,13 @@ jobs:
                             fi
                             ;;
                           "per-url-array-with-objects")
-                            # First URL: 1024x768, Second URL: defaults (1366x768 rotated 90°)
+                            # First URL: 1024x768 rotated 90°, Second URL: defaults (1366x768) rotated 90°
                             if [ "$i" = "0" ]; then
-                              EXPECTED_WIDTH=1024
-                              EXPECTED_HEIGHT=768
+                              EXPECTED_WIDTH=768   # Rotated 90°: height becomes width
+                              EXPECTED_HEIGHT=1024 # Rotated 90°: width becomes height
                             else
-                              EXPECTED_WIDTH=768   # Rotated 90°
-                              EXPECTED_HEIGHT=1366 # Rotated 90°
+                              EXPECTED_WIDTH=768   # Rotated 90°: height becomes width
+                              EXPECTED_HEIGHT=1366 # Rotated 90°: width becomes height
                             fi
                             ;;
                           "per-url-mixed-settings")
