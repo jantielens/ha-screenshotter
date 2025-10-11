@@ -40,6 +40,8 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    env:
+      SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
     
     steps:
     - name: Checkout code
@@ -48,7 +50,7 @@ jobs:
     - name: Set up test directories
       run: |
         # Create test-data and the repo-root test-share subfolder where screenshots will be mounted
-        mkdir -p test-data test-share/${{ github.event.inputs.screenshots_subfolder }}
+  mkdir -p test-data test-share/$SCREENSHOT_SUBFOLDER
         
     - name: Create test configuration
       run: |
@@ -83,26 +85,35 @@ jobs:
           ha-screenshotter-test
         
         echo "Container run completed"
+
+    - name: Debug: list test-share locations
+      run: |
+        echo "Listing repository-root test-share:" 
+        ls -la ${{ github.workspace }}/test-share || true
+        echo "Listing ha-screenshotter subdir inside repo:" 
+        ls -la ${{ github.workspace }}/ha-screenshotter/test-share || true
+        echo "Listing mounted config/www inside repo tree (if present):"
+        ls -la ${{ github.workspace }}/ha-screenshotter/config/www || true
         
     - name: Verify screenshot output
       run: |
         echo "Checking for generated screenshots..."
-        ls -la test-share/${{ github.event.inputs.screenshots_subfolder }}/
+  ls -la test-share/$SCREENSHOT_SUBFOLDER/
 
-        if [ -f "test-share/${{ github.event.inputs.screenshots_subfolder }}/0.png" ]; then
+  if [ -f "test-share/$SCREENSHOT_SUBFOLDER/0.png" ]; then
           echo "✅ Screenshot generated successfully!"
 
           # Get image info
-          file test-share/${{ github.event.inputs.screenshots_subfolder }}/0.png
+          file test-share/$SCREENSHOT_SUBFOLDER/0.png
 
           # Check if we can get basic image dimensions (requires imagemagick)
           if command -v identify &> /dev/null; then
             echo "Image details:"
-            identify test-share/${{ github.event.inputs.screenshots_subfolder }}/0.png
+            identify test-share/$SCREENSHOT_SUBFOLDER/0.png
           fi
 
           # Check file size (should be > 0)
-          size=$(stat -c%s test-share/${{ github.event.inputs.screenshots_subfolder }}/0.png)
+          size=$(stat -c%s test-share/$SCREENSHOT_SUBFOLDER/0.png)
           echo "Screenshot file size: $size bytes"
 
           if [ "$size" -gt 1000 ]; then
@@ -115,7 +126,7 @@ jobs:
         else
           echo "❌ No screenshot generated"
           echo "Contents of '${{ github.event.inputs.screenshots_subfolder }}' directory:"
-          ls -la test-share/${{ github.event.inputs.screenshots_subfolder }}/
+          ls -la test-share/$SCREENSHOT_SUBFOLDER/
           exit 1
         fi
         
@@ -124,7 +135,7 @@ jobs:
       if: always()
       with:
         name: test-screenshots
-        path: test-share/${{ github.event.inputs.screenshots_subfolder }}/
+  path: test-share/$SCREENSHOT_SUBFOLDER/
         retention-days: 7
         
     - name: Test summary
