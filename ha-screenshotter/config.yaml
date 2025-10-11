@@ -1,6 +1,6 @@
 # Home Assistant Add-on Configuration
 name: "HA Screenshotter"
-version: "1.2.0"
+version: "1.3.0"
 slug: "ha-screenshotter"
 description: "Takes screenshots of web pages on a configurable schedule with rotation, grayscale, and bit depth support"
 url: "https://github.com/jantielens/ha-screenshotter"
@@ -24,6 +24,7 @@ options:
   rotation_degrees: 0
   grayscale: false
   bit_depth: 24
+  webserverport: 0
 schema:
   schedule: str?
   urls: str?
@@ -32,3 +33,4 @@ schema:
   rotation_degrees: int?
   grayscale: bool?
   bit_depth: int?
+  webserverport: int?
