@@ -21,6 +21,7 @@ async function loadConfiguration() {
     rotation_degrees: 0,
     grayscale: false,
     bit_depth: 24,
+    long_lived_access_token: "",
     run_once: false,
     webserverport: 0
   };
@@ -133,6 +134,7 @@ async function loadConfiguration() {
         rotation_degrees: rotation_degrees,
         grayscale: grayscale,
         bit_depth: bit_depth,
+        long_lived_access_token: config.long_lived_access_token || defaultConfig.long_lived_access_token,
         run_once: run_once,
         webserverport: webserverport
       };

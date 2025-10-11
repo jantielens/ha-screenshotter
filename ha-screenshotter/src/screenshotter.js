@@ -18,7 +18,7 @@ const { rotateImage, convertToGrayscale, reduceBitDepth } = require('./imageProc
  * @param {boolean} grayscale - Whether to convert the screenshot to grayscale
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
  */
-async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24) {
+async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, longLivedToken = '') {
   let browser = null;
   try {
     // Check if Chromium is available
@@ -47,6 +47,13 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     console.log('   │       ✅ Browser launched successfully');
 
     const page = await browser.newPage();
+    // If a Home Assistant long-lived access token is provided, set the Authorization header
+    if (longLivedToken && typeof longLivedToken === 'string' && longLivedToken.length > 0) {
+      console.log('   │       🔐 Using provided long-lived access token for authentication');
+      await page.setExtraHTTPHeaders({
+        'Authorization': `Bearer ${longLivedToken}`
+      });
+    }
     
     // Set viewport size for consistent screenshots
     console.log(`   │       📐 Setting viewport to ${width}x${height}`);
@@ -114,7 +121,7 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
  * @param {boolean} grayscale - Whether to convert the screenshots to grayscale
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
  */
-async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24) {
+async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, longLivedToken = '') {
   const rotationText = rotationDegrees > 0 ? ` with ${rotationDegrees}° rotation` : '';
   const grayscaleText = grayscale ? ' in grayscale' : '';
   const bitDepthText = bitDepth !== 24 ? ` at ${bitDepth}-bit depth` : '';
@@ -129,8 +136,8 @@ async function takeAllScreenshots(urls, width, height, rotationDegrees = 0, gray
     const urlNum = i + 1;
     console.log(`   │ 📸 [${urlNum}/${urls.length}] Processing: ${urls[i]}`);
     
-    try {
-      await takeScreenshot(urls[i], i, width, height, rotationDegrees, grayscale, bitDepth);
+  try {
+  await takeScreenshot(urls[i], i, width, height, rotationDegrees, grayscale, bitDepth, longLivedToken);
       const rotationNote = rotationDegrees > 0 ? ` (rotated ${rotationDegrees}°)` : '';
       const grayscaleNote = grayscale ? ' (grayscale)' : '';
       const bitDepthNote = bitDepth !== 24 ? ` (${bitDepth}-bit)` : '';

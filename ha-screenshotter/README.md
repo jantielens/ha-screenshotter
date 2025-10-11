@@ -25,6 +25,7 @@ Configure through the add-on **Configuration** tab:
 | `grayscale` | `false` | Convert to black & white |
 | `bit_depth` | `24` | Color depth: 1, 4, 8, 16, or 24 bits |
 | `webserverport` | `0` | Web server port (0 = disabled, >0 = enabled) |
+| `long_lived_access_token` | `""` | Optional Home Assistant Long-Lived Access Token for authenticated screenshots |
 
 ### 📋 Quick Examples
 

@@ -70,6 +70,7 @@ Configure the add-on through Home Assistant's add-on configuration page. All set
 | `grayscale` | boolean | `false` | Convert screenshots to grayscale |
 | `bit_depth` | integer | `24` | Color depth: `1`, `4`, `8`, `16`, or `24` bits |
 | `webserverport` | integer | `0` | Web server port (0 = disabled, >0 = enabled) |
+| `long_lived_access_token` | string | `""` | Optional Home Assistant Long-Lived Access Token for authenticated screenshots (Bearer token) |
 
 ### 📝 **Configuration Examples**
 
