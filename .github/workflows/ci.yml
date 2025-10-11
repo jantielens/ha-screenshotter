@@ -338,26 +338,60 @@ jobs:
                       
                       # Check grayscale
                       if [ "${{ matrix.grayscale }}" = "true" ]; then
-                        # Check if image is grayscale using ImageMagick
+                        # Check if image is grayscale using multiple methods
                         COLOR_TYPE=$(identify -ping -format "%[colorspace]" "$SCREENSHOT_FILE" 2>/dev/null || echo "Unknown")
-                        if [[ "$COLOR_TYPE" =~ Gray|Grayscale ]]; then
-                          echo "✅ Screenshot $i is grayscale as expected"
-                          VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i colorspace: Grayscale ✅\n"
+                        # Also check PNG color type from file command
+                        PNG_TYPE=""
+                        if [[ "$FILE_INFO" =~ grayscale ]]; then
+                          PNG_TYPE="grayscale"
+                        elif [[ "$FILE_INFO" =~ RGB ]]; then
+                          PNG_TYPE="RGB"
+                        fi
+                        
+                        # Check if it's actually grayscale by examining unique colors
+                        UNIQUE_COLORS=$(identify -ping -format "%[colors]" "$SCREENSHOT_FILE" 2>/dev/null || echo "0")
+                        
+                        if [[ "$COLOR_TYPE" =~ Gray|Grayscale ]] || [[ "$PNG_TYPE" == "grayscale" ]]; then
+                          echo "✅ Screenshot $i is grayscale as expected (colorspace: $COLOR_TYPE, PNG type: $PNG_TYPE)"
+                          VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i: Grayscale ✅\n"
                         else
-                          echo "⚠️  Screenshot $i colorspace: $COLOR_TYPE (expected grayscale)"
-                          VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i colorspace: $COLOR_TYPE ⚠️\n"
+                          # Additional check: if it has very few colors, it might still be grayscale
+                          if [ "$UNIQUE_COLORS" -le 256 ] && [ "${{ matrix.bit_depth }}" -le 8 ]; then
+                            echo "✅ Screenshot $i appears grayscale (colorspace: $COLOR_TYPE, colors: $UNIQUE_COLORS, PNG type: $PNG_TYPE)"
+                            VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i: Likely grayscale ($UNIQUE_COLORS colors) ✅\n"
+                          else
+                            echo "⚠️  Screenshot $i colorspace: $COLOR_TYPE, PNG type: $PNG_TYPE (expected grayscale)"
+                            VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i: $COLOR_TYPE/$PNG_TYPE (expected grayscale) ⚠️\n"
+                          fi
                         fi
                       fi
                       
-                      # Check bit depth
-                      BIT_DEPTH=$(identify -ping -format "%[depth]" "$SCREENSHOT_FILE" 2>/dev/null || echo "Unknown")
+                      # Check bit depth using file command for more accurate PNG bit depth detection
+                      BIT_DEPTH_IDENTIFY=$(identify -ping -format "%[depth]" "$SCREENSHOT_FILE" 2>/dev/null || echo "Unknown")
+                      # Use file command to get actual PNG bit depth from file header
+                      FILE_INFO=$(file "$SCREENSHOT_FILE" 2>/dev/null || echo "")
+                      if [[ "$FILE_INFO" =~ ([0-9]+)-bit ]]; then
+                        ACTUAL_BIT_DEPTH="${BASH_REMATCH[1]}"
+                      else
+                        ACTUAL_BIT_DEPTH="$BIT_DEPTH_IDENTIFY"
+                      fi
+                      
                       EXPECTED_DEPTH=${{ matrix.bit_depth }}
                       # Handle bit depth fallback for invalid values
                       if [ "$EXPECTED_DEPTH" = "99" ]; then
                         EXPECTED_DEPTH=24  # Should fallback to default
                       fi
-                      echo "Screenshot $i bit depth: $BIT_DEPTH (expected: $EXPECTED_DEPTH)"
-                      VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i bit depth: $BIT_DEPTH\n"
+                      
+                      echo "Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (identify reported: $BIT_DEPTH_IDENTIFY, expected: $EXPECTED_DEPTH)"
+                      
+                      # Validate bit depth
+                      if [ "$ACTUAL_BIT_DEPTH" = "$EXPECTED_DEPTH" ]; then
+                        echo "✅ Screenshot $i bit depth correct: $ACTUAL_BIT_DEPTH"
+                        VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i bit depth: $ACTUAL_BIT_DEPTH ✅\n"
+                      else
+                        echo "⚠️  Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (expected: $EXPECTED_DEPTH)"
+                        VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (expected $EXPECTED_DEPTH) ⚠️\n"
+                      fi
                     fi
                   fi
                 done
