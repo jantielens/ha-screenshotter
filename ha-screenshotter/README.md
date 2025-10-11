@@ -54,8 +54,22 @@ urls: '["http://homeassistant.local:8123/lovelace/dashboard"]'
 resolution_width: 1024
 resolution_height: 768
 webserverport: 3000
+long_lived_access_token: "YOUR_LONG_LIVED_TOKEN_HERE"
 ```
 *Picture frame can access: `http://your-ha-ip:3000/screenshots/0.png`*
+
+### 🔐 Using a Home Assistant Long-Lived Access Token
+
+If your dashboard requires authentication, you can supply a Home Assistant Long-Lived Access Token using the `long_lived_access_token` option in the add-on configuration. This token will be sent as a Bearer token in the Authorization header for each screenshot request.
+
+- Store the token securely in the add-on configuration (it is stored in the add-on config and visible to admins).
+- Example (do not commit tokens to source control):
+
+```yaml
+long_lived_access_token: "<long-lived-access-token>"
+```
+
+Only enable or store tokens in trusted environments.
 
 ### ⏰ Cron Schedule Examples
 

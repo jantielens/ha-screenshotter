@@ -114,6 +114,7 @@ urls: '["http://homeassistant.local:8123/lovelace/dashboard"]'
 resolution_width: 1024
 resolution_height: 768
 webserverport: 3000  # Enable web server
+long_lived_access_token: "YOUR_LONG_LIVED_TOKEN_HERE"
 ```
 
 **Usage with Picture Frames:**
