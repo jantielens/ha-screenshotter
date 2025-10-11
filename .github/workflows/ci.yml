@@ -49,8 +49,8 @@ jobs:
       
     - name: Set up test directories
       run: |
-        # Create test-data and the repo-root test-share subfolder where screenshots will be mounted
-  mkdir -p test-data test-share/$SCREENSHOT_SUBFOLDER
+    # Create test-data and the repo-root test-share subfolder where screenshots will be mounted
+    mkdir -p test-data test-share/$SCREENSHOT_SUBFOLDER
         
     - name: Create test configuration
       run: |
@@ -97,8 +97,8 @@ jobs:
         
     - name: Verify screenshot output
       run: |
-        echo "Checking for generated screenshots..."
-  ls -la test-share/$SCREENSHOT_SUBFOLDER/
+    echo "Checking for generated screenshots..."
+    ls -la test-share/$SCREENSHOT_SUBFOLDER/
 
   if [ -f "test-share/$SCREENSHOT_SUBFOLDER/0.png" ]; then
           echo "✅ Screenshot generated successfully!"
