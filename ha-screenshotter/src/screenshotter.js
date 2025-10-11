@@ -47,36 +47,40 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     console.log('   │       ✅ Browser launched successfully');
 
     const page = await browser.newPage();
-    // If a Home Assistant long-lived access token is provided, try to ensure it's applied to all requests
+    // If a Home Assistant long-lived access token is provided, inject it into localStorage
+    // for the Home Assistant origin so the frontend (and websockets) will pick it up.
     if (longLivedToken && typeof longLivedToken === 'string' && longLivedToken.length > 0) {
-      console.log('   │       🔐 Using provided long-lived access token for authentication');
-      // First, set extra HTTP headers (works for normal HTTP requests)
-      await page.setExtraHTTPHeaders({
-        'Authorization': `Bearer ${longLivedToken}`
-      });
-
-      // Additionally, enable request interception and attach the header to all requests including websocket handshake
       try {
-        await page.setRequestInterception(true);
-        page.on('request', (req) => {
-          try {
-            const headers = Object.assign({}, req.headers(), {
-              'Authorization': `Bearer ${longLivedToken}`
-            });
-            // Continue the request with modified headers
-            req.continue({ headers });
-          } catch (e) {
-            // If something goes wrong, just continue without modification
-            req.continue();
-          }
-        });
+        console.log('   │       🔐 Using provided long-lived access token for authentication (injecting into localStorage)');
+        // Derive the base origin from the target URL so we can set localStorage for that origin
+        const origin = new URL(url).origin;
+        // Navigate to the origin to get same-origin access to localStorage
+        await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 15000 });
 
-        // Log requests for debugging
-        page.on('request', (req) => {
-          console.log(`   │       🔁 Request: ${req.method()} ${req.url()} [headers: ${JSON.stringify(req.headers())}]`);
+        const hassTokens = {
+          hassUrl: origin,
+          access_token: longLivedToken,
+          token_type: 'Bearer'
+        };
+
+        // Inject the tokens and a default language into localStorage for the origin
+        await page.evaluate((tokens, selectedLanguage) => {
+          try {
+            localStorage.setItem('hassTokens', tokens);
+            localStorage.setItem('selectedLanguage', selectedLanguage);
+          } catch (e) {
+            // Ignore storage errors
+            // eslint-disable-next-line no-console
+            console.warn('   │       ⚠️ Could not set localStorage for authentication:', e && e.message ? e.message : e);
+          }
+        }, JSON.stringify(hassTokens), JSON.stringify('en'));
+
+        // Also set extra HTTP headers as a best-effort fallback for regular HTTP requests
+        await page.setExtraHTTPHeaders({
+          'Authorization': `Bearer ${longLivedToken}`
         });
       } catch (e) {
-        console.log('   │       ⚠️ Failed to enable request interception:', e.message);
+        console.log('   │       ⚠️ Failed to inject token into localStorage:', e.message);
       }
     }
     
