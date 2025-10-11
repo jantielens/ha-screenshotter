@@ -153,8 +153,8 @@ jobs:
           echo "- **Grayscale**: ${{ github.event.inputs.grayscale || true }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Bit Depth**: ${{ github.event.inputs.bit_depth || 4 }}" >> $GITHUB_STEP_SUMMARY
 
-          if [ -f "test-share/${{ github.event.inputs.screenshots_subfolder }}/0.png" ]; then
-            size=$(stat -c%s test-share/${{ github.event.inputs.screenshots_subfolder }}/0.png)
+          if [ -f "test-share/$SCREENSHOT_SUBFOLDER/0.png" ]; then
+            size=$(stat -c%s test-share/$SCREENSHOT_SUBFOLDER/0.png)
             echo "- **Screenshot**: ✅ Generated (${size} bytes)" >> $GITHUB_STEP_SUMMARY
           else
             echo "- **Screenshot**: ❌ Not generated" >> $GITHUB_STEP_SUMMARY
