@@ -148,7 +148,7 @@ jobs:
           # Valid parameter tests
           - name: "basic-test"
             description: "Single URL, no grayscale, full bit depth"
-            urls: '[\"https://example.com\"]'
+            urls: '[\\\"https://example.com\\\"]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -159,7 +159,7 @@ jobs:
           
           - name: "multi-grayscale-medium"
             description: "Two URLs, grayscale, medium bit depth"
-            urls: '[\"https://github.com/jantielens/ha-screenshotter\", \"https://example.com\"]'
+            urls: '[\\\"https://github.com/jantielens/ha-screenshotter\\\", \\\"https://example.com\\\"]'
             resolution_width: 1920
             resolution_height: 1080
             rotation_degrees: 90
@@ -170,7 +170,7 @@ jobs:
           
           - name: "multi-grayscale-minimal"
             description: "Two URLs, grayscale, minimal bit depth"
-            urls: '[\"https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html\", \"https://example.com\"]'
+            urls: '[\\\"https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html\\\", \\\"https://example.com\\\"]'
             resolution_width: 800
             resolution_height: 600
             rotation_degrees: 180
@@ -182,7 +182,7 @@ jobs:
           # Invalid parameter tests
           - name: "invalid-url"
             description: "Non-existent URL test"
-            urls: '[\"https://nonexistent-test-domain-12345.com\"]'
+            urls: '[\\\"https://nonexistent-test-domain-12345.com\\\"]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -204,7 +204,7 @@ jobs:
           
           - name: "invalid-bit-depth"
             description: "Invalid bit depth value"
-            urls: '[\"https://example.com\"]'
+            urls: '[\\\"https://example.com\\\"]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -215,7 +215,7 @@ jobs:
           
           - name: "invalid-resolution-width"
             description: "Invalid negative resolution width"
-            urls: '[\"https://example.com\"]'
+            urls: '[\\\"https://example.com\\\"]'
             resolution_width: -100
             resolution_height: 768
             rotation_degrees: 0
@@ -226,7 +226,7 @@ jobs:
           
           - name: "invalid-rotation"
             description: "Invalid rotation degrees"
-            urls: '[\"https://example.com\"]'
+            urls: '[\\\"https://example.com\\\"]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 45
@@ -238,7 +238,7 @@ jobs:
           # Per-URL configuration tests
           - name: "per-url-object-format"
             description: "Per-URL settings using object format"
-            urls: '{\"https://example.com\": {\"width\": 800, \"height\": 600, \"grayscale\": true}, \"https://github.com/jantielens/ha-screenshotter\": {\"rotation\": 90}}'
+            urls: '{\\\"https://example.com\\\": {\\\"width\\\": 800, \\\"height\\\": 600, \\\"grayscale\\\": true}, \\\"https://github.com/jantielens/ha-screenshotter\\\": {\\\"rotation\\\": 90}}'
             resolution_width: 1920
             resolution_height: 1080
             rotation_degrees: 0
@@ -249,7 +249,7 @@ jobs:
           
           - name: "per-url-array-with-objects"
             description: "Per-URL settings using array with objects format"
-            urls: '[{\"url\": \"https://example.com\", \"width\": 1024, \"height\": 768}, \"https://github.com/jantielens/ha-screenshotter\"]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"width\\\": 1024, \\\"height\\\": 768}, \\\"https://github.com/jantielens/ha-screenshotter\\\"]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 90
@@ -260,7 +260,7 @@ jobs:
           
           - name: "per-url-mixed-settings"
             description: "Per-URL with different bit depths and grayscale"
-            urls: '{\"https://example.com\": {\"bit_depth\": 1, \"grayscale\": true}, \"https://github.com/jantielens/ha-screenshotter\": {\"bit_depth\": 8, \"rotation\": 180}}'
+            urls: '{\\\"https://example.com\\\": {\\\"bit_depth\\\": 1, \\\"grayscale\\\": true}, \\\"https://github.com/jantielens/ha-screenshotter\\\": {\\\"bit_depth\\\": 8, \\\"rotation\\\": 180}}'
             resolution_width: 800
             resolution_height: 600
             rotation_degrees: 0
@@ -271,7 +271,7 @@ jobs:
           
           - name: "per-url-empty-settings"
             description: "Per-URL with empty settings (should use defaults)"
-            urls: '{\"https://example.com\": {}, \"https://github.com/jantielens/ha-screenshotter\": null}'
+            urls: '{\\\"https://example.com\\\": {}, \\\"https://github.com/jantielens/ha-screenshotter\\\": null}'
             resolution_width: 1200
             resolution_height: 800
             rotation_degrees: 270
@@ -283,7 +283,7 @@ jobs:
           # Per-URL validation tests
           - name: "per-url-invalid-width"
             description: "Per-URL with invalid width value"
-            urls: '{\"https://example.com\": {\"width\": -500}}'
+            urls: '{\\\"https://example.com\\\": {\\\"width\\\": -500}}'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -294,7 +294,7 @@ jobs:
           
           - name: "per-url-invalid-rotation"
             description: "Per-URL with invalid rotation value"
-            urls: '[{\"url\": \"https://example.com\", \"rotation\": 45}]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"rotation\\\": 45}]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -305,7 +305,7 @@ jobs:
           
           - name: "per-url-invalid-bit-depth"
             description: "Per-URL with invalid bit depth"
-            urls: '{\"https://example.com\": {\"bit_depth\": 32}}'
+            urls: '{\\\"https://example.com\\\": {\\\"bit_depth\\\": 32}}'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -316,7 +316,7 @@ jobs:
           
           - name: "per-url-malformed-json"
             description: "Per-URL with malformed JSON structure"
-            urls: '{\"https://example.com\": {\"width\": 800, \"height\": }}'
+            urls: '{\\\"https://example.com\\\": {\\\"width\\\": 800, \\\"height\\\": }}'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -328,7 +328,7 @@ jobs:
           # Cropping functionality tests
           - name: "basic-crop-test"
             description: "Single URL with basic cropping"
-            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 400, \"height\": 300}}]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"crop\\\": {\\\"x\\\": 100, \\\"y\\\": 50, \\\"width\\\": 400, \\\"height\\\": 300}}]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -342,7 +342,7 @@ jobs:
 
           - name: "crop-with-rotation"
             description: "Cropping after 90-degree rotation"
-            urls: '[{\"url\": \"https://example.com\", \"width\": 800, \"height\": 600, \"rotation\": 90, \"crop\": {\"x\": 50, \"y\": 100, \"width\": 200, \"height\": 300}}]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"width\\\": 800, \\\"height\\\": 600, \\\"rotation\\\": 90, \\\"crop\\\": {\\\"x\\\": 50, \\\"y\\\": 100, \\\"width\\\": 200, \\\"height\\\": 300}}]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -356,7 +356,7 @@ jobs:
 
           - name: "crop-header-only"
             description: "Crop to extract header section only"
-            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 0, \"y\": 0, \"width\": 1366, \"height\": 100}}]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"crop\\\": {\\\"x\\\": 0, \\\"y\\\": 0, \\\"width\\\": 1366, \\\"height\\\": 100}}]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -370,7 +370,7 @@ jobs:
 
           - name: "crop-with-grayscale"
             description: "Cropping with grayscale and bit depth reduction"
-            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 200, \"y\": 100, \"width\": 600, \"height\": 400}, \"grayscale\": true, \"bit_depth\": 8}]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"crop\\\": {\\\"x\\\": 200, \\\"y\\\": 100, \\\"width\\\": 600, \\\"height\\\": 400}, \\\"grayscale\\\": true, \\\"bit_depth\\\": 8}]'
             resolution_width: 1920
             resolution_height: 1080
             rotation_degrees: 0
@@ -384,7 +384,7 @@ jobs:
 
           - name: "multi-url-different-crops"
             description: "Multiple URLs with different crop settings"
-            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 0, \"y\": 0, \"width\": 400, \"height\": 300}}, {\"url\": \"https://github.com/jantielens/ha-screenshotter\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 800, \"height\": 600}}]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"crop\\\": {\\\"x\\\": 0, \\\"y\\\": 0, \\\"width\\\": 400, \\\"height\\\": 300}}, {\\\"url\\\": \\\"https://github.com/jantielens/ha-screenshotter\\\", \\\"crop\\\": {\\\"x\\\": 100, \\\"y\\\": 50, \\\"width\\\": 800, \\\"height\\\": 600}}]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -396,13 +396,13 @@ jobs:
 
           - name: "global-crop-setting"
             description: "Global crop setting applied to all URLs"
-            urls: '[\"https://example.com\", \"https://github.com/jantielens/ha-screenshotter\"]'
+            urls: '[\\\"https://example.com\\\", \\\"https://github.com/jantielens/ha-screenshotter\\\"]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
             grayscale: false
             bit_depth: 24
-            global_crop: '{\"x\": 50, \"y\": 25, \"width\": 500, \"height\": 400}'
+            global_crop: '{\\\"x\\\": 50, \\\"y\\\": 25, \\\"width\\\": 500, \\\"height\\\": 400}'
             expected_result: "success"
             expected_files: 2
             crop_test: true
@@ -411,13 +411,13 @@ jobs:
 
           - name: "crop-override-global"
             description: "Per-URL crop overriding global crop setting"
-            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 200, \"y\": 100, \"width\": 300, \"height\": 200}}, \"https://github.com/jantielens/ha-screenshotter\"]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"crop\\\": {\\\"x\\\": 200, \\\"y\\\": 100, \\\"width\\\": 300, \\\"height\\\": 200}}, \\\"https://github.com/jantielens/ha-screenshotter\\\"]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
             grayscale: false
             bit_depth: 24
-            global_crop: '{\"x\": 0, \"y\": 0, \"width\": 600, \"height\": 400}'
+            global_crop: '{\\\"x\\\": 0, \\\"y\\\": 0, \\\"width\\\": 600, \\\"height\\\": 400}'
             expected_result: "success"
             expected_files: 2
             crop_test: true
@@ -425,7 +425,7 @@ jobs:
           # Cropping error cases
           - name: "invalid-crop-negative-coords"
             description: "Invalid crop with negative coordinates"
-            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": -10, \"y\": 50, \"width\": 400, \"height\": 300}}]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"crop\\\": {\\\"x\\\": -10, \\\"y\\\": 50, \\\"width\\\": 400, \\\"height\\\": 300}}]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -436,7 +436,7 @@ jobs:
 
           - name: "invalid-crop-zero-dimensions"
             description: "Invalid crop with zero width/height"
-            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 0, \"height\": 300}}]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"crop\\\": {\\\"x\\\": 100, \\\"y\\\": 50, \\\"width\\\": 0, \\\"height\\\": 300}}]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -447,7 +447,7 @@ jobs:
 
           - name: "invalid-crop-exceeds-bounds"
             description: "Crop area exceeds image dimensions"
-            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 1000, \"y\": 500, \"width\": 800, \"height\": 600}}]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"crop\\\": {\\\"x\\\": 1000, \\\"y\\\": 500, \\\"width\\\": 800, \\\"height\\\": 600}}]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -458,7 +458,7 @@ jobs:
 
           - name: "invalid-crop-missing-fields"
             description: "Invalid crop configuration with missing required fields"
-            urls: '[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"width\": 400}}]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"crop\\\": {\\\"x\\\": 100, \\\"width\\\": 400}}]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
@@ -469,13 +469,13 @@ jobs:
 
           - name: "crop-disabled-per-url"
             description: "Crop explicitly disabled per URL with global crop enabled"
-            urls: '[{\"url\": \"https://example.com\", \"crop\": null}, \"https://github.com/jantielens/ha-screenshotter\"]'
+            urls: '[{\\\"url\\\": \\\"https://example.com\\\", \\\"crop\\\": null}, \\\"https://github.com/jantielens/ha-screenshotter\\\"]'
             resolution_width: 1366
             resolution_height: 768
             rotation_degrees: 0
             grayscale: false
             bit_depth: 24
-            global_crop: '{\"x\": 100, \"y\": 50, \"width\": 400, \"height\": 300}'
+            global_crop: '{\\\"x\\\": 100, \\\"y\\\": 50, \\\"width\\\": 400, \\\"height\\\": 300}'
             expected_result: "success"
             expected_files: 2
             crop_test: true
