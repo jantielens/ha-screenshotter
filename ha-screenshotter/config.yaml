@@ -26,6 +26,7 @@ options:
   grayscale: false
   bit_depth: 24
   webserverport: 3000
+  long_lived_access_token: ""
 schema:
   schedule: str?
   urls: str?
@@ -35,3 +36,4 @@ schema:
   grayscale: bool?
   bit_depth: int?
   webserverport: int?
+  long_lived_access_token: str?
