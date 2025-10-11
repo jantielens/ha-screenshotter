@@ -47,12 +47,37 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     console.log('   │       ✅ Browser launched successfully');
 
     const page = await browser.newPage();
-    // If a Home Assistant long-lived access token is provided, set the Authorization header
+    // If a Home Assistant long-lived access token is provided, try to ensure it's applied to all requests
     if (longLivedToken && typeof longLivedToken === 'string' && longLivedToken.length > 0) {
       console.log('   │       🔐 Using provided long-lived access token for authentication');
+      // First, set extra HTTP headers (works for normal HTTP requests)
       await page.setExtraHTTPHeaders({
         'Authorization': `Bearer ${longLivedToken}`
       });
+
+      // Additionally, enable request interception and attach the header to all requests including websocket handshake
+      try {
+        await page.setRequestInterception(true);
+        page.on('request', (req) => {
+          try {
+            const headers = Object.assign({}, req.headers(), {
+              'Authorization': `Bearer ${longLivedToken}`
+            });
+            // Continue the request with modified headers
+            req.continue({ headers });
+          } catch (e) {
+            // If something goes wrong, just continue without modification
+            req.continue();
+          }
+        });
+
+        // Log requests for debugging
+        page.on('request', (req) => {
+          console.log(`   │       🔁 Request: ${req.method()} ${req.url()} [headers: ${JSON.stringify(req.headers())}]`);
+        });
+      } catch (e) {
+        console.log('   │       ⚠️ Failed to enable request interception:', e.message);
+      }
     }
     
     // Set viewport size for consistent screenshots
