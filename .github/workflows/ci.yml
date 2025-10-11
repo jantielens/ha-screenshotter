@@ -360,8 +360,9 @@ jobs:
                             echo "✅ Screenshot $i appears grayscale (colorspace: $COLOR_TYPE, colors: $UNIQUE_COLORS, PNG type: $PNG_TYPE)"
                             VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i: Likely grayscale ($UNIQUE_COLORS colors) ✅\n"
                           else
-                            echo "⚠️  Screenshot $i colorspace: $COLOR_TYPE, PNG type: $PNG_TYPE (expected grayscale)"
-                            VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i: $COLOR_TYPE/$PNG_TYPE (expected grayscale) ⚠️\n"
+                            echo "❌ Screenshot $i colorspace: $COLOR_TYPE, PNG type: $PNG_TYPE (expected grayscale)"
+                            VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i: $COLOR_TYPE/$PNG_TYPE (expected grayscale) ❌\n"
+                            TEST_PASSED=false
                           fi
                         fi
                       fi
@@ -389,8 +390,9 @@ jobs:
                         echo "✅ Screenshot $i bit depth correct: $ACTUAL_BIT_DEPTH"
                         VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i bit depth: $ACTUAL_BIT_DEPTH ✅\n"
                       else
-                        echo "⚠️  Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (expected: $EXPECTED_DEPTH)"
-                        VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (expected $EXPECTED_DEPTH) ⚠️\n"
+                        echo "❌ Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (expected: $EXPECTED_DEPTH)"
+                        VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (expected $EXPECTED_DEPTH) ❌\n"
+                        TEST_PASSED=false
                       fi
                     fi
                   fi
