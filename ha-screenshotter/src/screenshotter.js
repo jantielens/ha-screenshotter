@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const { SCREENSHOTS_PATH } = require('./constants');
-const { rotateImage, convertToGrayscale, reduceBitDepth } = require('./imageProcessor');
+const { rotateImage, convertToGrayscale, cropImage, reduceBitDepth } = require('./imageProcessor');
 
 /**
  * Take a screenshot of a given URL
@@ -17,10 +17,11 @@ const { rotateImage, convertToGrayscale, reduceBitDepth } = require('./imageProc
  * @param {number} rotationDegrees - Degrees to rotate the screenshot (0, 90, 180, 270)
  * @param {boolean} grayscale - Whether to convert the screenshot to grayscale
  * @param {number} bitDepth - Target bit depth (1, 4, 8, 16, 24)
+ * @param {Object|null} cropConfig - Crop configuration object with x, y, width, height properties
  * @param {string} longLivedToken - Home Assistant long-lived access token
  * @param {string} language - Language setting for Home Assistant frontend
  */
-async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, longLivedToken = '', language = 'en') {
+async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, cropConfig = null, longLivedToken = '', language = 'en') {
   let browser = null;
   try {
     // Check if Chromium is available
@@ -116,7 +117,12 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
   const publicUrl = `/media/ha-screenshotter/${filename}`;
   console.log(`   │       🌐 Home Assistant URL: ${publicUrl}`);
     
-    // Apply rotation if needed
+    // Apply cropping if needed (BEFORE rotation - crop coordinates are relative to original image)
+    if (cropConfig !== null && cropConfig !== false) {
+      await cropImage(screenshotPath, cropConfig, '   │       ');
+    }
+    
+    // Apply rotation if needed (AFTER cropping - rotate the cropped image)
     if (rotationDegrees !== 0) {
       await rotateImage(screenshotPath, rotationDegrees, '   │       ');
     }
@@ -161,11 +167,12 @@ async function takeAllScreenshots(urls, longLivedToken = '', language = 'en') {
     const urlNum = i + 1;
     
     const rotationText = urlConfig.rotation > 0 ? ` with ${urlConfig.rotation}° rotation` : '';
+    const cropText = urlConfig.crop ? ` cropped to (${urlConfig.crop.x},${urlConfig.crop.y}) ${urlConfig.crop.width}x${urlConfig.crop.height}` : '';
     const grayscaleText = urlConfig.grayscale ? ' in grayscale' : '';
     const bitDepthText = urlConfig.bit_depth !== 24 ? ` at ${urlConfig.bit_depth}-bit depth` : '';
     
     console.log(`   │ 📸 [${urlNum}/${urls.length}] Processing: ${urlConfig.url}`);
-    console.log(`   │       📐 Resolution: ${urlConfig.width}x${urlConfig.height}${rotationText}${grayscaleText}${bitDepthText}`);
+    console.log(`   │       📐 Resolution: ${urlConfig.width}x${urlConfig.height}${rotationText}${cropText}${grayscaleText}${bitDepthText}`);
     
     try {
       await takeScreenshot(
@@ -176,14 +183,16 @@ async function takeAllScreenshots(urls, longLivedToken = '', language = 'en') {
         urlConfig.rotation, 
         urlConfig.grayscale, 
         urlConfig.bit_depth, 
+        urlConfig.crop,
         longLivedToken, 
         language
       );
       
       const rotationNote = urlConfig.rotation > 0 ? ` (rotated ${urlConfig.rotation}°)` : '';
+      const cropNote = urlConfig.crop ? ` (cropped ${urlConfig.crop.width}x${urlConfig.crop.height})` : '';
       const grayscaleNote = urlConfig.grayscale ? ' (grayscale)' : '';
       const bitDepthNote = urlConfig.bit_depth !== 24 ? ` (${urlConfig.bit_depth}-bit)` : '';
-      console.log(`   │    ✅ Screenshot ${i}.png saved${rotationNote}${grayscaleNote}${bitDepthNote}`);
+      console.log(`   │    ✅ Screenshot ${i}.png saved${rotationNote}${cropNote}${grayscaleNote}${bitDepthNote}`);
       successCount++;
     } catch (error) {
       console.log(`   │    ❌ Failed: ${error.message}`);

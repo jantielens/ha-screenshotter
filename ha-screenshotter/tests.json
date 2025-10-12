@@ -1,0 +1,434 @@
+[
+    {
+        "name": "Simple, 2 screenshots, grayscale, 1-bit depth, rotated 90 degrees",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html\", \"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 90,
+            "grayscale": true,
+            "bit_depth": 1,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 600,
+                    "height": 800,
+                    "grayscale": true,
+                    "bitDepth": 1
+                },
+                {
+                    "width": 600,
+                    "height": 800,
+                    "grayscale": true,
+                    "bitDepth": 1
+                }
+            ]
+        }
+    },
+    {
+        "name": "Simple, 1 screenshot, grayscale, 4-bit depth, rotated 180 degrees",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html\", \"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 180,
+            "grayscale": true,
+            "bit_depth": 4,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": true,
+                    "bitDepth": 4
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": true,
+                    "bitDepth": 4
+                }
+            ]
+        }
+    },
+    {
+        "name": "Simple, 1 screenshot, color, 4-bit depth",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://google.com\", \"https://github.com/jantielens/ha-screenshotter\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 4,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 4
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 4
+                }
+            ]
+        }
+    },
+    {
+        "name": "Cropping test - single URL with crop area",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 400, \"height\": 300}}]",
+            "resolution_width": 1366,
+            "resolution_height": 768,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 400,
+                    "height": 300,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Cropping test - single URL with crop area, 4-bit depth, grayscale",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 200, \"height\": 200}}]",
+            "resolution_width": 1366,
+            "resolution_height": 768,
+            "rotation_degrees": 0,
+            "grayscale": true,
+            "bit_depth": 4,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 200,
+                    "height": 200,
+                    "grayscale": true,
+                    "bitDepth": 4
+                }
+            ]
+        }
+    },
+        {
+        "name": "Cropping test - single URL with crop area, 4-bit depth, grayscale, rotate 90",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 100, \"height\": 200}}]",
+            "resolution_width": 1366,
+            "resolution_height": 768,
+            "rotation_degrees": 90,
+            "grayscale": true,
+            "bit_depth": 4,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 200,
+                    "height": 100,
+                    "grayscale": true,
+                    "bitDepth": 4
+                }
+            ]
+        }
+    },
+    {
+        "name": "Rotation 270 degrees",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 270,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 600,
+                    "height": 800,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "8-bit grayscale test",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 1024,
+            "resolution_height": 768,
+            "rotation_degrees": 0,
+            "grayscale": true,
+            "bit_depth": 8,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 1024,
+                    "height": 768,
+                    "grayscale": true,
+                    "bitDepth": 8
+                }
+            ]
+        }
+    },
+    {
+        "name": "Per-URL object format with different settings",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "{\"https://example.com\": {\"width\": 1024, \"height\": 768, \"grayscale\": true}, \"https://google.com\": {\"rotation\": 90}}",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 8,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 1024,
+                    "height": 768,
+                    "grayscale": true,
+                    "bitDepth": 8
+                },
+                {
+                    "width": 600,
+                    "height": 800,
+                    "grayscale": false,
+                    "bitDepth": 8
+                }
+            ]
+        }
+    },
+    {
+        "name": "Invalid crop parameters - negative coordinates",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"crop\": {\"x\": -10, \"y\": 50, \"width\": 400, \"height\": 300}}]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid crop parameters - exceeds image bounds",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"crop\": {\"x\": 700, \"y\": 500, \"width\": 400, \"height\": 400}}]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid bit depth",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": true,
+            "bit_depth": 99,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid resolution width - string value",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": "invalid",
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid resolution height - negative number",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": -600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid grayscale - string value",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": "yes",
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid bit depth - string value",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": "high",
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid run_once - number value",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": 1
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid rotation degrees - string value",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": "ninety",
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid rotation degrees - invalid angle",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 45,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid URLs - not a string or array",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": 12345,
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid URL",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html\", \"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 180,
+            "grayscale": true,
+            "bit_depth": 1,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    }
+]

@@ -5,6 +5,7 @@
 ## ✨ Features
 
 - **📱 Multiple URLs** - Screenshot multiple web pages simultaneously
+- **✂️ Image Cropping** - Extract specific regions from web pages using pixel coordinates
 - **⏰ Cron Scheduling** - Flexible timing with full cron expression support
 - **🎨 Image Processing** - Rotation, grayscale, and bit depth reduction with dithering
 - **🔄 Auto-Naming** - Predictable file naming (0.jpg, 1.jpg, etc.)
@@ -63,6 +64,7 @@ Mix simple URLs with URLs that have custom settings.
 - `rotation` - Rotation degrees (0, 90, 180, 270)
 - `grayscale` - Boolean for grayscale conversion
 - `bit_depth` - Color depth (1, 4, 8, 16, 24)
+- `crop` - Crop region object with `x`, `y`, `width`, `height` properties
 
 ### 📋 Quick Examples
 
@@ -131,6 +133,27 @@ language: "fr"  # French Home Assistant UI
 grayscale: true
 bit_depth: 4
 ```
+
+**Cropping Examples:**
+```yaml
+# Crop dashboard header only
+urls: '[{
+  "url": "http://homeassistant.local:8123/lovelace/dashboard",
+  "width": 1920,
+  "height": 1080,
+  "crop": {"x": 0, "y": 0, "width": 1920, "height": 200}
+}]'
+```
+
+```yaml
+# Mixed cropping - sidebar and main content
+urls: '[
+  {"url": "http://homeassistant.local:8123/sidebar", "crop": {"x": 0, "y": 100, "width": 300, "height": 800}},
+  {"url": "http://homeassistant.local:8123/main", "crop": {"x": 300, "y": 100, "width": 1620, "height": 800}}
+]'
+```
+
+📖 **[View detailed cropping documentation](../CROP_DOCUMENTATION.md)** for complete configuration guide and use cases.
 
 ### 🔐 Using a Home Assistant Long-Lived Access Token
 
