@@ -2,13 +2,6 @@
 
 A powerful Home Assistant add-on that takes screenshots of web pages on a configurable schedule with advanced image processing capabilities and a local web server. Perfect for e-ink displays, dashboards, and automated monitoring.
 
-## 🤖 For Developers & Agents
-
-**⚠️ IMPORTANT:** This repository has strict validation requirements. All PRs with functional changes must:
-- Bump version in both `ha-screenshotter/package.json` and `ha-screenshotter/config.yaml`  
-- Update `CHANGELOG.md` with proper formatting
-- See [AGENT_INSTRUCTIONS.md](AGENT_INSTRUCTIONS.md) for detailed requirements
-
 ## Installation
 
 1. In your Home Assistant, go to **Settings** → **Add-ons** → **Add-on Store**
@@ -285,6 +278,13 @@ The add-on automatically prevents overlapping executions, so skipped runs are lo
 ## Support
 
 If you encounter any issues, please check the add-on logs in Home Assistant and report issues on the [GitHub repository](https://github.com/jantielens/ha-screenshotter/issues).
+
+## 🤖 For Developers & Agents
+
+**⚠️ IMPORTANT:** This repository has strict validation requirements. All PRs with functional changes must:
+- Bump version in both `ha-screenshotter/package.json` and `ha-screenshotter/config.yaml`  
+- Update `CHANGELOG.md` with proper formatting
+- See [AGENT_INSTRUCTIONS.md](AGENT_INSTRUCTIONS.md) for detailed requirements
 
 ## License
 
