@@ -580,7 +580,7 @@
                     "width": 568,
                     "height": 320,
                     "grayscale": true,
-                    "bitDepth": 24
+                    "bitDepth": 8
                 }
             ]
         }

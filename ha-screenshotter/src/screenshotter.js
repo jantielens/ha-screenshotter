@@ -78,13 +78,13 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
           const viewportConfig = {
             width: width, // Always use configured resolution, not mobileViewport dimensions
             height: height, // Always use configured resolution, not mobileViewport dimensions
-            deviceScaleFactor: mobileViewport.device_scale_factor || 1,
+            deviceScaleFactor: 1, // Always 1 to prevent scaling up the screenshot
             isMobile: true,
             hasTouch: mobileViewport.touch_enabled !== undefined ? mobileViewport.touch_enabled : true,
             isLandscape: mobileViewport.is_landscape || false
           };
           
-          console.log(`   │       📐 Custom viewport: ${width}x${height} with mobile settings (scale: ${viewportConfig.deviceScaleFactor}x)`);
+          console.log(`   │       📐 Custom viewport: ${width}x${height} with mobile settings (no scaling)`);
           await page.setViewport(viewportConfig);
           
           // Set custom user agent if provided
