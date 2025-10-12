@@ -53,11 +53,18 @@ jobs:
             TEST_NAME=$(echo "$test_case" | jq -r '.name')
             TEST_CONFIG=$(echo "$test_case" | jq -c '.config')
             TEST_VALIDATION=$(echo "$test_case" | jq -c '.validation')
-            EXPECTED_SUCCESS=$(echo "$test_validation" | jq -r 'if .success == true then "true" else "false" end')
+            
+            # Debug the success extraction step by step
+            echo "DEBUG: Raw test case: $test_case"
+            echo "DEBUG: Validation JSON: $TEST_VALIDATION"
+            echo "DEBUG: Success field raw: $(echo "$TEST_VALIDATION" | jq '.success')"
+            echo "DEBUG: Success field type: $(echo "$TEST_VALIDATION" | jq 'type_of(.success)')"
+            
+            EXPECTED_SUCCESS=$(echo "$TEST_VALIDATION" | jq -r 'if .success == true then "true" else "false" end')
             
             echo "===================="
             echo "Running test: $TEST_NAME"
-            echo "Expected success: $EXPECTED_SUCCESS"
+            echo "Expected success: '$EXPECTED_SUCCESS'"
             echo "Validation JSON: $TEST_VALIDATION"
             echo "===================="
             
