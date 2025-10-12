@@ -44,6 +44,7 @@ A powerful Home Assistant add-on that takes screenshots of web pages on a config
 - **Configurable Intervals** - From every minute to monthly schedules
 - **Automatic Execution** - Runs continuously in the background
 - **Startup Screenshots** - Takes initial screenshots immediately on start
+- **Overlap Prevention** - Automatically skips scheduled runs if previous execution is still in progress
 
 ### 🎨 **Advanced Image Processing**
 - **Screenshot Rotation** - Rotate images by 0°, 90°, 180°, or 270° for different display orientations
@@ -256,6 +257,23 @@ The `schedule` field uses standard cron format:
 - `"0 * * * *"` - Every hour
 - `"0 8,20 * * *"` - Twice daily (8 AM and 8 PM)
 - `"0 0 * * 0"` - Weekly on Sunday at midnight
+
+## Troubleshooting
+
+### Skipped Executions
+
+If you see messages like "⏸️ EXECUTION SKIPPED" in the logs, this means the previous screenshot execution was still running when the next scheduled run was triggered. This is expected behavior and protects against:
+- Resource conflicts (multiple Puppeteer instances)
+- File overwrites
+- Increased system load
+
+**Solutions:**
+- Increase the interval between scheduled runs (e.g., change from `* * * * *` to `*/5 * * * *`)
+- Reduce the number of URLs being processed
+- Optimize page load times for your URLs
+- Check the execution duration in logs to understand how long screenshots take
+
+The add-on automatically prevents overlapping executions, so skipped runs are logged but will not cause errors.
 
 ## Support
 

@@ -19,6 +19,9 @@ const { displaySystemInfo } = require('./src/systemInfo');
 const { takeAllScreenshots } = require('./src/screenshotter');
 const { setupWebServer } = require('./src/webServer');
 
+// Global flag to prevent overlapping executions
+let isExecuting = false;
+
 /**
  * Initialize the add-on
  */
@@ -72,6 +75,23 @@ async function init() {
     // Set up cron scheduler
     console.log(`⏰ Setting up scheduler with pattern: ${config.schedule}`);
     cron.schedule(config.schedule, async () => {
+      // Check if a previous execution is still running
+      if (isExecuting) {
+        const now = new Date();
+        console.log('');
+        console.log('┌─────────────────────────────────────────────────────────────┐');
+        console.log('│                  ⏸️  EXECUTION SKIPPED                        │');
+        console.log('└─────────────────────────────────────────────────────────────┘');
+        console.log(`⏰ Skipped at: ${now.toISOString()}`);
+        console.log('⚠️  Previous execution still in progress');
+        console.log('💡 Consider adjusting your cron schedule to allow more time');
+        console.log('');
+        return;
+      }
+      
+      // Set the lock
+      isExecuting = true;
+      
       const startTime = new Date();
       console.log('');
       console.log('┌─────────────────────────────────────────────────────────────┐');
@@ -105,8 +125,13 @@ async function init() {
         console.log(`⚡ Duration: ${duration} seconds`);
         console.log(`❌ Error: ${error.message}`);
         console.log('');
+        // Release lock before shutting down (for completeness, even though process exits)
+        isExecuting = false;
         console.log('🛑 Shutting down container to allow Home Assistant restart...');
         process.exit(1);
+      } finally {
+        // Always release the lock (for successful execution path)
+        isExecuting = false;
       }
     });
     
