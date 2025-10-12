@@ -465,8 +465,8 @@
             "success": true,
             "screenshots": [
                 {
-                    "width": 375,
-                    "height": 667,
+                    "width": 320,
+                    "height": 568,
                     "grayscale": false,
                     "bitDepth": 24
                 }
@@ -513,8 +513,8 @@
                     "bitDepth": 24
                 },
                 {
-                    "width": 375,
-                    "height": 667,
+                    "width": 320,
+                    "height": 568,
                     "grayscale": false,
                     "bitDepth": 24
                 }
@@ -571,8 +571,8 @@
             "success": true,
             "screenshots": [
                 {
-                    "width": 667,
-                    "height": 375,
+                    "width": 568,
+                    "height": 320,
                     "grayscale": true,
                     "bitDepth": 24
                 }
