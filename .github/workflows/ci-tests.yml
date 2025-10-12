@@ -33,7 +33,7 @@ jobs:
       - name: Load and run test cases
         run: |
           # Read test cases from tests.json
-          TEST_CASES=$(jq -c '.[]' tests.json)
+          TEST_CASES=$(jq -c '.[]' ha-screenshotter/tests.json)
           
           # Initialize counters
           TOTAL_TESTS=0

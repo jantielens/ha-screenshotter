@@ -12,6 +12,14 @@ A powerful Home Assistant add-on that takes screenshots of web pages on a config
 
 ## Features
 
+- **📸 [Screenshot Capabilities](#-screenshot-capabilities)** - Multiple URLs, flexible configuration formats, high-quality rendering
+- **✂️ [Image Cropping](#-image-cropping)** - Extract specific regions from web pages for focused content  
+- **⏰ [Flexible Scheduling](#-flexible-scheduling)** - Cron-based automation with configurable intervals
+- **🎨 [Advanced Image Processing](#-advanced-image-processing)** - Rotation, grayscale, bit depth reduction with dithering
+- **🏠 [Home Assistant Integration](#-home-assistant-integration)** - Native add-on with UI configuration and authentication
+- **🌐 [Optional Web Server](#-optional-web-server)** - External access with gallery interface for displays
+- **🖥️ [Perfect for E-ink Displays](#-perfect-for-e-ink-displays)** - Optimized output for e-paper and low-color displays
+
 ### 📸 **Screenshot Capabilities**
 - **Multiple URL Support** - Screenshot multiple web pages simultaneously
 - **Per-URL Configuration** - Individual resolution, rotation, and processing settings for each URL
@@ -20,6 +28,16 @@ A powerful Home Assistant add-on that takes screenshots of web pages on a config
 - **High-Quality Output** - Uses Chromium browser engine via Puppeteer for accurate rendering
 - **Predictable File Naming** - Outputs numbered files (0.jpg, 1.jpg, etc.) for easy integration
 - **Backward Compatibility** - Existing configurations continue to work unchanged
+
+### ✂️ **Image Cropping**
+- **Precise Region Selection** - Extract specific areas from screenshots using pixel coordinates
+- **Per-URL Crop Settings** - Individual crop configurations for each URL
+- **Dashboard Sections** - Focus on headers, sidebars, widgets, or specific panels
+- **Mobile View Support** - Crop out status bars and unwanted UI elements
+- **Processing Order** - Cropping applied before rotation and color processing for predictable results
+- **Coordinate Validation** - Automatic validation ensures crop areas fit within image bounds
+
+📖 **[View detailed cropping documentation](CROP_DOCUMENTATION.md)** for configuration examples and use cases.
 
 ### ⏰ **Flexible Scheduling**
 - **Cron-Based Scheduling** - Full cron expression support for precise timing
