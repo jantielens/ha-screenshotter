@@ -162,6 +162,260 @@
         }
     },
     {
+        "name": "Rotation 270 degrees",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 270,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 600,
+                    "height": 800,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "8-bit grayscale test",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 1024,
+            "resolution_height": 768,
+            "rotation_degrees": 0,
+            "grayscale": true,
+            "bit_depth": 8,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 1024,
+                    "height": 768,
+                    "grayscale": true,
+                    "bitDepth": 8
+                }
+            ]
+        }
+    },
+    {
+        "name": "Per-URL object format with different settings",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "{\"https://example.com\": {\"width\": 1024, \"height\": 768, \"grayscale\": true}, \"https://google.com\": {\"rotation\": 90}}",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 8,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 1024,
+                    "height": 768,
+                    "grayscale": true,
+                    "bitDepth": 8
+                },
+                {
+                    "width": 600,
+                    "height": 800,
+                    "grayscale": false,
+                    "bitDepth": 8
+                }
+            ]
+        }
+    },
+    {
+        "name": "Invalid crop parameters - negative coordinates",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"crop\": {\"x\": -10, \"y\": 50, \"width\": 400, \"height\": 300}}]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid crop parameters - exceeds image bounds",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"crop\": {\"x\": 700, \"y\": 500, \"width\": 400, \"height\": 400}}]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid bit depth",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": true,
+            "bit_depth": 99,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid resolution width - string value",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": "invalid",
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid resolution height - negative number",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": -600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid grayscale - string value",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": "yes",
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid bit depth - string value",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": "high",
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid run_once - number value",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": 1
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid rotation degrees - string value",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": "ninety",
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid rotation degrees - invalid angle",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 45,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
+        "name": "Invalid URLs - not a string or array",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": 12345,
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    },
+    {
         "name": "Invalid URL",
         "config": {
             "schedule": "*/1 * * * *",
