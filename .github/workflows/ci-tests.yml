@@ -54,18 +54,11 @@ jobs:
             TEST_CONFIG=$(echo "$test_case" | jq -c '.config')
             TEST_VALIDATION=$(echo "$test_case" | jq -c '.validation')
             
-            # Debug the success extraction step by step
-            echo "DEBUG: Raw test case: $test_case"
-            echo "DEBUG: Validation JSON: $TEST_VALIDATION"
-            echo "DEBUG: Success field raw: $(echo "$TEST_VALIDATION" | jq '.success')"
-            echo "DEBUG: Success field type: $(echo "$TEST_VALIDATION" | jq 'type_of(.success)')"
-            
             EXPECTED_SUCCESS=$(echo "$TEST_VALIDATION" | jq -r 'if .success == true then "true" else "false" end')
             
             echo "===================="
             echo "Running test: $TEST_NAME"
-            echo "Expected success: '$EXPECTED_SUCCESS'"
-            echo "Validation JSON: $TEST_VALIDATION"
+            echo "Expected to succeed: $EXPECTED_SUCCESS"
             echo "===================="
             
             # Create test directories
@@ -102,7 +95,7 @@ jobs:
               else
                 # Count screenshots
                 ACTUAL_SCREENSHOTS=$(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" | wc -l)
-                EXPECTED_SCREENSHOTS=$(echo "$test_validation" | jq -r '.screenshots | length')
+                EXPECTED_SCREENSHOTS=$(echo "$TEST_VALIDATION" | jq -r '.screenshots | length')
                 
                 if [ "$ACTUAL_SCREENSHOTS" -ne "$EXPECTED_SCREENSHOTS" ]; then
                   TEST_PASSED=false
@@ -115,10 +108,10 @@ jobs:
                     
                     if [ -f "$SCREENSHOT_FILE" ]; then
                       # Get expected properties for this screenshot
-                      EXPECTED_WIDTH=$(echo "$test_validation" | jq -r ".screenshots[$SCREENSHOT_INDEX].width")
-                      EXPECTED_HEIGHT=$(echo "$test_validation" | jq -r ".screenshots[$SCREENSHOT_INDEX].height")
-                      EXPECTED_GRAYSCALE=$(echo "$test_validation" | jq -r ".screenshots[$SCREENSHOT_INDEX].grayscale")
-                      EXPECTED_BIT_DEPTH=$(echo "$test_validation" | jq -r ".screenshots[$SCREENSHOT_INDEX].bitDepth")
+                      EXPECTED_WIDTH=$(echo "$TEST_VALIDATION" | jq -r ".screenshots[$SCREENSHOT_INDEX].width")
+                      EXPECTED_HEIGHT=$(echo "$TEST_VALIDATION" | jq -r ".screenshots[$SCREENSHOT_INDEX].height")
+                      EXPECTED_GRAYSCALE=$(echo "$TEST_VALIDATION" | jq -r ".screenshots[$SCREENSHOT_INDEX].grayscale // false" | sed 's/^null$/false/')
+                      EXPECTED_BIT_DEPTH=$(echo "$TEST_VALIDATION" | jq -r ".screenshots[$SCREENSHOT_INDEX].bitDepth")
                       
                       # Get actual properties using ImageMagick
                       ACTUAL_WIDTH=$(identify -ping -format "%w" "$SCREENSHOT_FILE")
