@@ -80,6 +80,12 @@ jobs:
               CONTAINER_SUCCESS=false
             fi
             
+            # Wait a moment for any file operations to complete
+            sleep 2
+            
+            # Sync filesystem to ensure all writes are complete
+            sync
+            
             # Validate results
             TEST_PASSED=true
             VALIDATION_DETAILS=""
@@ -113,22 +119,41 @@ jobs:
                       EXPECTED_GRAYSCALE=$(echo "$TEST_VALIDATION" | jq -r ".screenshots[$SCREENSHOT_INDEX].grayscale // false" | sed 's/^null$/false/')
                       EXPECTED_BIT_DEPTH=$(echo "$TEST_VALIDATION" | jq -r ".screenshots[$SCREENSHOT_INDEX].bitDepth")
                       
-                      # Get actual properties using ImageMagick
+                      # Get actual properties using multiple ImageMagick methods
                       ACTUAL_WIDTH=$(identify -ping -format "%w" "$SCREENSHOT_FILE")
                       ACTUAL_HEIGHT=$(identify -ping -format "%h" "$SCREENSHOT_FILE")
                       COLORSPACE=$(identify -ping -format "%[colorspace]" "$SCREENSHOT_FILE")
                       DEPTH=$(identify -ping -format "%[depth]" "$SCREENSHOT_FILE")
                       
-                      # Check if grayscale
+                      # Additional checks for PNG-specific properties
+                      PNG_COLORTYPE=$(identify -ping -format "%[png:color-type]" "$SCREENSHOT_FILE" 2>/dev/null || echo "unknown")
+                      FILE_INFO=$(file "$SCREENSHOT_FILE" 2>/dev/null || echo "")
+                      
+                      # More robust grayscale detection
                       ACTUAL_GRAYSCALE="false"
+                      # Method 1: Check colorspace
                       if [[ "$COLORSPACE" =~ Gray|Grayscale ]] || [[ "$COLORSPACE" == "Gray" ]]; then
                         ACTUAL_GRAYSCALE="true"
+                      # Method 2: Check PNG color type (0 = grayscale, 2 = RGB, 3 = palette, 4 = grayscale+alpha, 6 = RGBA)
+                      elif [[ "$PNG_COLORTYPE" == "0" ]] || [[ "$PNG_COLORTYPE" == "4" ]]; then
+                        ACTUAL_GRAYSCALE="true"
+                      # Method 3: Check file command output
+                      elif [[ "$FILE_INFO" =~ grayscale|"1-bit"|"2-bit"|"4-bit"|"8-bit grayscale" ]]; then
+                        ACTUAL_GRAYSCALE="true"
+                      fi
+                      
+                      # More accurate bit depth detection for PNG files
+                      if [[ "$FILE_INFO" =~ ([0-9]+)-bit ]]; then
+                        ACTUAL_BIT_DEPTH="${BASH_REMATCH[1]}"
+                      else
+                        ACTUAL_BIT_DEPTH="$DEPTH"
                       fi
                       
                       echo "Screenshot $SCREENSHOT_INDEX validation:"
                       echo "  Dimensions: ${ACTUAL_WIDTH}x${ACTUAL_HEIGHT} (expected: ${EXPECTED_WIDTH}x${EXPECTED_HEIGHT})"
-                      echo "  Colorspace: $COLORSPACE (grayscale: $ACTUAL_GRAYSCALE, expected: $EXPECTED_GRAYSCALE)"
-                      echo "  Bit depth: $DEPTH (expected: $EXPECTED_BIT_DEPTH)"
+                      echo "  Colorspace: $COLORSPACE, PNG type: $PNG_COLORTYPE (grayscale: $ACTUAL_GRAYSCALE, expected: $EXPECTED_GRAYSCALE)"
+                      echo "  Bit depth: ImageMagick=$DEPTH, File=$ACTUAL_BIT_DEPTH (expected: $EXPECTED_BIT_DEPTH)"
+                      echo "  File info: $FILE_INFO"
                       
                       # Validate dimensions
                       if [ "$ACTUAL_WIDTH" != "$EXPECTED_WIDTH" ] || [ "$ACTUAL_HEIGHT" != "$EXPECTED_HEIGHT" ]; then
@@ -143,9 +168,9 @@ jobs:
                       fi
                       
                       # Validate bit depth (for grayscale images)
-                      if [ "$EXPECTED_GRAYSCALE" = "true" ] && [ "$DEPTH" != "$EXPECTED_BIT_DEPTH" ]; then
+                      if [ "$EXPECTED_GRAYSCALE" = "true" ] && [ "$ACTUAL_BIT_DEPTH" != "$EXPECTED_BIT_DEPTH" ]; then
                         TEST_PASSED=false
-                        VALIDATION_DETAILS="${VALIDATION_DETAILS}Screenshot $SCREENSHOT_INDEX: Wrong bit depth ($DEPTH vs $EXPECTED_BIT_DEPTH). "
+                        VALIDATION_DETAILS="${VALIDATION_DETAILS}Screenshot $SCREENSHOT_INDEX: Wrong bit depth ($ACTUAL_BIT_DEPTH vs $EXPECTED_BIT_DEPTH). "
                       fi
                       
                     else
