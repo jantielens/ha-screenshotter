@@ -402,7 +402,6 @@ jobs:
         if: always()
         run: |
           if [ -f webserver_summary.md ]; then
-            echo "## 🌐 Webserver Test Results" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             cat webserver_summary.md >> $GITHUB_STEP_SUMMARY
           fi
