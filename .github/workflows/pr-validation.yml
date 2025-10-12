@@ -21,7 +21,30 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Check if only documentation files changed
+        id: doc-only-check
+        run: |
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only origin/main..HEAD)
+          
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Check if only documentation/CI files were modified (excluding CHANGELOG.md)
+          NON_DOC_FILES=$(echo "$CHANGED_FILES" | grep -v -E "(README|\.md$|\.yml$|\.yaml$|LICENSE|\.gitignore)" | grep -v "CHANGELOG.md" || echo "")
+          
+          if [ -z "$NON_DOC_FILES" ]; then
+            echo "doc-only=true" >> $GITHUB_OUTPUT
+            echo "✅ Only documentation/CI files changed - skipping version validation"
+          else
+            echo "doc-only=false" >> $GITHUB_OUTPUT
+            echo "📦 Code/configuration files changed - version validation required"
+            echo "Non-documentation files:"
+            echo "$NON_DOC_FILES"
+          fi
+
       - name: Get base branch version
+        if: steps.doc-only-check.outputs.doc-only != 'true'
         id: base-version
         run: |
           # Get the base branch (main) version
@@ -37,6 +60,7 @@ jobs:
           echo "  config.yaml: $BASE_CONFIG_VERSION"
 
       - name: Get PR branch version
+        if: steps.doc-only-check.outputs.doc-only != 'true'
         id: pr-version
         run: |
           # Switch back to PR branch
@@ -53,6 +77,7 @@ jobs:
           echo "  config.yaml: $PR_CONFIG_VERSION"
 
       - name: Validate version consistency
+        if: steps.doc-only-check.outputs.doc-only != 'true'
         run: |
           BASE_PACKAGE="${{ steps.base-version.outputs.base-package-version }}"
           BASE_CONFIG="${{ steps.base-version.outputs.base-config-version }}"
@@ -92,6 +117,7 @@ jobs:
           echo "NEW_VERSION=$PR_PACKAGE" >> $GITHUB_ENV
 
       - name: Validate semantic versioning
+        if: steps.doc-only-check.outputs.doc-only != 'true'
         run: |
           BASE_VERSION="${{ steps.base-version.outputs.base-package-version }}"
           NEW_VERSION="${{ steps.pr-version.outputs.pr-package-version }}"
@@ -130,6 +156,7 @@ jobs:
           fi
 
       - name: Validate changelog update
+        if: steps.doc-only-check.outputs.doc-only != 'true'
         run: |
           NEW_VERSION="${{ steps.pr-version.outputs.pr-package-version }}"
           
@@ -192,6 +219,7 @@ jobs:
           echo "" >> validation_results.md
 
       - name: Check for unreleased changes
+        if: steps.doc-only-check.outputs.doc-only != 'true'
         run: |
           # Check if there's an [Unreleased] section that should be moved
           if grep -q "## \[Unreleased\]" CHANGELOG.md; then
@@ -200,6 +228,23 @@ jobs:
           else
             echo "✅ **No unreleased section:** Changelog appears properly updated" >> validation_results.md
           fi
+          echo "" >> validation_results.md
+
+      - name: Documentation-only change detected
+        if: steps.doc-only-check.outputs.doc-only == 'true'
+        run: |
+          echo "## Documentation-Only Change Detected" >> validation_results.md
+          echo "" >> validation_results.md
+          echo "✅ **This PR only modifies documentation files**" >> validation_results.md
+          echo "" >> validation_results.md
+          echo "Version bump and changelog updates are **not required** for:" >> validation_results.md
+          echo "- README updates" >> validation_results.md
+          echo "- Documentation (*.md files)" >> validation_results.md
+          echo "- CI configuration (*.yml, *.yaml)" >> validation_results.md
+          echo "- License files" >> validation_results.md
+          echo "- .gitignore changes" >> validation_results.md
+          echo "" >> validation_results.md
+          echo "Skipping version validation checks as per repository guidelines." >> validation_results.md
           echo "" >> validation_results.md
 
       - name: Final validation summary
@@ -233,14 +278,38 @@ jobs:
               const fs = require('fs');
               const validationResults = fs.readFileSync('validation_results.md', 'utf8');
               
-              await github.rest.issues.createComment({
+              // Check for existing comments from this workflow
+              const comments = await github.rest.issues.listComments({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: validationResults
               });
               
-              console.log('✅ Successfully posted validation results as PR comment');
+              // Look for existing validation comment from github-actions bot
+              const botComment = comments.data.find(comment => 
+                comment.user.type === 'Bot' && 
+                (comment.body.includes('Documentation-Only Change Detected') || comment.body.includes('Version Validation Results'))
+              );
+              
+              if (botComment) {
+                // Update existing comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: validationResults
+                });
+                console.log('✅ Updated existing validation comment');
+              } else {
+                // Create new comment
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: validationResults
+                });
+                console.log('✅ Successfully posted validation results as PR comment');
+              }
             } catch (error) {
               console.log('⚠️ Could not post PR comment (likely permissions issue):', error.message);
               console.log('📋 Validation results are still available in the job summary and logs');
