@@ -8,7 +8,7 @@ assignees: []
 
 ## 🤖 Agent Task Request
 
-**⚠️ IMPORTANT FOR AGENTS: This repository requires version bumps and changelog updates for all functional changes. See [AGENT_INSTRUCTIONS.md](../AGENT_INSTRUCTIONS.md) for detailed requirements.**
+**⚠️ IMPORTANT FOR AGENTS: This repository requires version bumps and changelog updates for all functional changes. See [AGENT_INSTRUCTIONS.md](../../AGENT_INSTRUCTIONS.md) for detailed requirements.**
 
 ### Task Description
 <!-- Clearly describe what needs to be implemented -->
