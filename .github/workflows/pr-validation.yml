@@ -278,14 +278,38 @@ jobs:
               const fs = require('fs');
               const validationResults = fs.readFileSync('validation_results.md', 'utf8');
               
-              await github.rest.issues.createComment({
+              // Check for existing comments from this workflow
+              const comments = await github.rest.issues.listComments({
                 issue_number: context.issue.number,
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                body: validationResults
               });
               
-              console.log('✅ Successfully posted validation results as PR comment');
+              // Look for existing validation comment from github-actions bot
+              const botComment = comments.data.find(comment => 
+                comment.user.type === 'Bot' && 
+                (comment.body.includes('Documentation-Only Change Detected') || comment.body.includes('Version Validation Results'))
+              );
+              
+              if (botComment) {
+                // Update existing comment
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id,
+                  body: validationResults
+                });
+                console.log('✅ Updated existing validation comment');
+              } else {
+                // Create new comment
+                await github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: validationResults
+                });
+                console.log('✅ Successfully posted validation results as PR comment');
+              }
             } catch (error) {
               console.log('⚠️ Could not post PR comment (likely permissions issue):', error.message);
               console.log('📋 Validation results are still available in the job summary and logs');
