@@ -13,6 +13,7 @@ A powerful Home Assistant add-on that takes screenshots of web pages on a config
 ## Features
 
 - **📸 [Screenshot Capabilities](#-screenshot-capabilities)** - Multiple URLs, flexible configuration formats, high-quality rendering
+- **📱 [Mobile Device Emulation](#-mobile-device-emulation)** - Capture responsive mobile layouts for small displays and e-ink screens
 - **✂️ [Image Cropping](#-image-cropping)** - Extract specific regions from web pages for focused content  
 - **⏰ [Flexible Scheduling](#-flexible-scheduling)** - Cron-based automation with configurable intervals
 - **🎨 [Advanced Image Processing](#-advanced-image-processing)** - Rotation, grayscale, bit depth reduction with dithering
@@ -22,12 +23,21 @@ A powerful Home Assistant add-on that takes screenshots of web pages on a config
 
 ### 📸 **Screenshot Capabilities**
 - **Multiple URL Support** - Screenshot multiple web pages simultaneously
-- **Per-URL Configuration** - Individual resolution, rotation, and processing settings for each URL
+- **Per-URL Configuration** - Individual resolution, rotation, device emulation, and processing settings for each URL
 - **Flexible Formats** - Support for simple arrays, objects, and mixed configurations
 - **Configurable Resolution** - Set custom width and height (e.g., 1920x1080, 1366x768, 800x600)
 - **High-Quality Output** - Uses Chromium browser engine via Puppeteer for accurate rendering
 - **Predictable File Naming** - Outputs numbered files (0.jpg, 1.jpg, etc.) for easy integration
 - **Backward Compatibility** - Existing configurations continue to work unchanged
+
+### 📱 **Mobile Device Emulation**
+- **Built-in Device Presets** - 100+ device presets including iPhone, iPad, Android, and tablets
+- **Responsive Layout Support** - Capture mobile-optimized layouts designed for small screens
+- **Per-URL Emulation** - Mix desktop and mobile screenshots in the same configuration
+- **Custom Viewports** - Define custom mobile viewport dimensions and settings
+- **E-ink Optimization** - Mobile layouts are cleaner with less clutter, perfect for e-paper displays
+- **User Agent Control** - Set device-specific user agents for accurate rendering
+- **Touch Events** - Enable touch events for sites with touch-specific features
 
 ### ✂️ **Image Cropping**
 - **Precise Region Selection** - Extract specific areas from screenshots using pixel coordinates
@@ -93,6 +103,8 @@ Configure the add-on through Home Assistant's add-on configuration page. All set
 | `rotation_degrees` | integer | `0` | Rotation angle: `0`, `90`, `180`, or `270` degrees |
 | `grayscale` | boolean | `false` | Convert screenshots to grayscale |
 | `bit_depth` | integer | `24` | Color depth: `1`, `4`, `8`, `16`, or `24` bits |
+| `device_emulation` | string | `"desktop"` | Device preset name for mobile emulation (e.g., "iPhone 12", "iPad", "Pixel 5") or "desktop"/"custom" |
+| `mobile_viewport` | object | `null` | Custom mobile viewport settings (width, height, device_scale_factor, user_agent, touch_enabled, is_landscape) |
 | `webserverport` | integer | `0` | Web server port (0 = disabled, >0 = enabled) |
 | `long_lived_access_token` | string | `""` | Optional Home Assistant Long-Lived Access Token for authenticated screenshots (Bearer token) |
 | `language` | string | `"en"` | Language code for Home Assistant frontend (e.g., "en", "es", "fr", "de") - used when taking screenshots of HA dashboards |
@@ -134,6 +146,136 @@ Mix simple URLs with URLs that have custom settings.
 - `rotation` - Rotation degrees (0, 90, 180, 270)
 - `grayscale` - Boolean for grayscale conversion
 - `bit_depth` - Color depth (1, 4, 8, 16, 24)
+- `device_emulation` - Device preset name or "desktop"/"custom"
+- `mobile_viewport` - Custom mobile viewport settings (when `device_emulation` is "custom")
+
+### 📱 **Mobile Device Emulation**
+
+Capture responsive mobile layouts optimized for small screens. Perfect for e-ink displays, picture frames, and mobile-optimized content.
+
+#### **Why Use Mobile Emulation?**
+- **Small Display Optimization** - Mobile layouts designed for small screens with larger text and simplified navigation
+- **Responsive Design Support** - Websites look completely different on mobile vs desktop
+- **E-ink Enhancement** - Mobile layouts are cleaner with less clutter, ideal for e-paper displays
+- **Better Readability** - Simplified single-column layouts with improved contrast
+
+#### **Configuration Options:**
+
+**1. Global Device Emulation (applies to all URLs):**
+```yaml
+device_emulation: "iPhone 12"  # Use built-in device preset
+```
+
+**2. Per-URL Device Emulation:**
+```yaml
+urls: '[
+  {"url": "https://dashboard.local", "device_emulation": "desktop"},
+  {"url": "https://mobile-site.com", "device_emulation": "iPhone SE"}
+]'
+```
+
+**3. Custom Mobile Viewport:**
+```yaml
+urls: '[
+  {
+    "url": "https://weather.com",
+    "device_emulation": "custom",
+    "mobile_viewport": {
+      "width": 414,
+      "height": 896,
+      "device_scale_factor": 2,
+      "user_agent": "iPhone",
+      "touch_enabled": true,
+      "is_landscape": false
+    }
+  }
+]'
+```
+
+#### **Available Device Presets:**
+
+**iPhone Models:**
+- `iPhone 12`, `iPhone 12 Mini`, `iPhone 12 Pro`, `iPhone 12 Pro Max`
+- `iPhone 13`, `iPhone 13 Mini`, `iPhone 13 Pro`, `iPhone 13 Pro Max`
+- `iPhone SE`, `iPhone 11`, `iPhone 11 Pro`, `iPhone 11 Pro Max`
+- `iPhone X`, `iPhone XR`, `iPhone 8`, `iPhone 8 Plus`, `iPhone 7`, `iPhone 7 Plus`, `iPhone 6`, `iPhone 6 Plus`
+
+**iPad Models:**
+- `iPad`, `iPad Mini`, `iPad Pro`, `iPad Pro 11`, `iPad (gen 6)`, `iPad (gen 7)`
+
+**Android Devices:**
+- `Pixel 5`, `Pixel 4`, `Pixel 4a (5G)`, `Pixel 3`, `Pixel 2`, `Pixel 2 XL`
+- `Galaxy S9+`, `Galaxy S8`, `Galaxy S5`, `Galaxy S III`
+- `Galaxy Note 3`, `Galaxy Note II`, `Galaxy Tab S4`
+- `Nexus 10`, `Nexus 7`, `Nexus 6P`, `Nexus 6`, `Nexus 5X`, `Nexus 5`, `Nexus 4`
+
+**Other Devices:**
+- `BlackBerry Z30`, `Blackberry PlayBook`
+- `Kindle Fire HDX`, `Microsoft Lumia 950`, `Moto G4`
+
+💡 **Tip:** Add ` landscape` to any device name for landscape orientation (e.g., `"iPhone 12 landscape"`).
+
+#### **Mobile Viewport Properties:**
+When using `device_emulation: "custom"`, you can configure:
+- `width` - Viewport width in pixels (required)
+- `height` - Viewport height in pixels (required)
+- `device_scale_factor` - Device pixel ratio (default: 1)
+- `user_agent` - User agent preset ("iPhone", "iPad", "Android") or custom string
+- `touch_enabled` - Enable touch events (default: true)
+- `is_landscape` - Landscape orientation (default: false)
+
+#### **Device Emulation Examples:**
+
+**E-ink Display with Mobile Layout:**
+```yaml
+schedule: "*/10 * * * *"
+urls: '[
+  {
+    "url": "http://homeassistant.local:8123/lovelace/mobile",
+    "device_emulation": "iPhone SE",
+    "grayscale": true,
+    "bit_depth": 1
+  }
+]'
+```
+Result: Clean mobile layout with large text, perfect for e-ink displays.
+
+**Compare Desktop vs Mobile:**
+```yaml
+urls: '[
+  {"url": "https://dashboard.local", "device_emulation": "desktop"},
+  {"url": "https://dashboard.local", "device_emulation": "iPhone 12"}
+]'
+```
+Result: Two screenshots - desktop (complex) and mobile (simplified) layouts.
+
+**Picture Frame with Tablet Layout:**
+```yaml
+urls: '[
+  {
+    "url": "https://weather.dashboard.com",
+    "device_emulation": "iPad Mini",
+    "rotation": 90
+  }
+]'
+webserverport: 3000
+```
+Result: Tablet-optimized layout with readable text for 7-inch displays.
+
+**Custom Viewport for Specialized Display:**
+```yaml
+urls: '[
+  {
+    "url": "https://custom-dashboard.com",
+    "device_emulation": "custom",
+    "mobile_viewport": {
+      "width": 320,
+      "height": 480,
+      "device_scale_factor": 1
+    }
+  }
+]'
+```
 
 ### 📝 **Configuration Examples**
 
