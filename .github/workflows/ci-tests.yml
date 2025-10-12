@@ -405,3 +405,286 @@ jobs:
             echo "" >> $GITHUB_STEP_SUMMARY
             cat webserver_summary.md >> $GITHUB_STEP_SUMMARY
           fi
+
+  test-webserver-customport:
+    runs-on: ubuntu-latest
+    env:
+      SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker container
+        run: |
+          cd ha-screenshotter
+          docker build -t ha-screenshotter-webserver-customport-test .
+
+      - name: Set up test directories
+        run: |
+          mkdir -p webserver-customport-test/data webserver-customport-test/share/$SCREENSHOT_SUBFOLDER
+
+      - name: Create webserver test configuration with custom port
+        run: |
+          cat > webserver-customport-test/data/options.json << 'EOF'
+          {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": false,
+            "webserverport": 6666
+          }
+          EOF
+          
+          echo "Webserver custom port test configuration:"
+          cat webserver-customport-test/data/options.json
+
+      - name: Start container in background
+        run: |
+          echo "Starting container with webserver on custom port 6666..."
+          docker run -d \
+            --name ha-screenshotter-webserver-customport \
+            -v "${GITHUB_WORKSPACE}/webserver-customport-test/data:/data" \
+            -v "${GITHUB_WORKSPACE}/webserver-customport-test/share:/media" \
+            -p 6666:6666 \
+            ha-screenshotter-webserver-customport-test
+          
+          echo "Container started, waiting for initialization..."
+
+      - name: Wait for screenshot and webserver startup
+        run: |
+          echo "Waiting 30 seconds for container to take screenshot and start webserver..."
+          sleep 30
+          
+          echo "Checking container status..."
+          docker logs ha-screenshotter-webserver-customport || true
+          
+          echo "Checking if screenshot was created..."
+          ls -la webserver-customport-test/share/$SCREENSHOT_SUBFOLDER/ || echo "No screenshots directory found"
+
+      - name: Test webserver on custom port and download image
+        run: |
+          echo "Testing webserver endpoint on port 6666..."
+          
+          # Check if webserver is responding
+          if curl -f -s "http://localhost:6666" > /dev/null; then
+            echo "✅ Webserver is responding on port 6666"
+          else
+            echo "❌ Webserver is not responding on port 6666"
+            docker logs ha-screenshotter-webserver-customport
+            exit 1
+          fi
+          
+          # Try to download the screenshot via webserver
+          if curl -f -s "http://localhost:6666/screenshots/0.png" -o "downloaded-screenshot-customport.png"; then
+            echo "✅ Successfully downloaded screenshot via webserver on port 6666"
+            
+            # Validate the downloaded file
+            file downloaded-screenshot-customport.png
+            size=$(stat -c%s downloaded-screenshot-customport.png)
+            echo "Downloaded file size: $size bytes"
+            
+            if [ "$size" -gt 1000 ]; then
+              echo "✅ Downloaded screenshot appears valid (size > 1KB)"
+            else
+              echo "❌ Downloaded screenshot seems too small"
+              exit 1
+            fi
+          else
+            echo "❌ Failed to download screenshot via webserver on port 6666"
+            echo "Available files on webserver:"
+            curl -s "http://localhost:6666" || true
+            exit 1
+          fi
+
+      - name: Generate webserver custom port test summary
+        if: always()
+        run: |
+          echo "| Test Component | Result |" > webserver_customport_summary.md
+          echo "|----------------|--------|" >> webserver_customport_summary.md
+          
+          # Check if container started
+          if docker ps -a --format "table {{.Names}}" | grep -q "ha-screenshotter-webserver-customport"; then
+            echo "| Container Startup | ✅ |" >> webserver_customport_summary.md
+          else
+            echo "| Container Startup | ❌ Container failed to start |" >> webserver_customport_summary.md
+          fi
+          
+          # Check if webserver responded on custom port
+          if curl -f -s "http://localhost:6666" > /dev/null 2>&1; then
+            echo "| Webserver Response (Port 6666) | ✅ |" >> webserver_customport_summary.md
+          else
+            echo "| Webserver Response (Port 6666) | ❌ Webserver not responding |" >> webserver_customport_summary.md
+          fi
+          
+          # Check if screenshot was downloaded
+          if [ -f "downloaded-screenshot-customport.png" ]; then
+            SIZE=$(stat -c%s downloaded-screenshot-customport.png 2>/dev/null || echo "0")
+            if [ "$SIZE" -gt 1000 ]; then
+              echo "| Screenshot Download | ✅ ($SIZE bytes) |" >> webserver_customport_summary.md
+            else
+              echo "| Screenshot Download | ❌ File too small ($SIZE bytes) |" >> webserver_customport_summary.md
+            fi
+          else
+            echo "| Screenshot Download | ❌ File not found |" >> webserver_customport_summary.md
+          fi
+          
+          # Check if screenshots were created in filesystem
+          SCREENSHOT_COUNT=$(find webserver-customport-test/share/ha-screenshotter/ -name "*.png" 2>/dev/null | wc -l)
+          if [ "$SCREENSHOT_COUNT" -gt 0 ]; then
+            echo "| Screenshot Generation | ✅ ($SCREENSHOT_COUNT files) |" >> webserver_customport_summary.md
+          else
+            echo "| Screenshot Generation | ❌ No screenshots found |" >> webserver_customport_summary.md
+          fi
+          
+          echo ""
+          echo "## Webserver Custom Port Test Summary"
+          cat webserver_customport_summary.md
+
+      - name: Cleanup container
+        if: always()
+        run: |
+          echo "Stopping and removing container..."
+          docker stop ha-screenshotter-webserver-customport || true
+          docker rm ha-screenshotter-webserver-customport || true
+
+      - name: Upload webserver custom port test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webserver-customport-test-results
+          path: |
+            webserver-customport-test/
+            downloaded-screenshot-customport.png
+            webserver_customport_summary.md
+          retention-days: 7
+
+      - name: Add webserver custom port summary to job summary
+        if: always()
+        run: |
+          if [ -f webserver_customport_summary.md ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat webserver_customport_summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+  test-webserver-invalidport:
+    runs-on: ubuntu-latest
+    env:
+      SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker container
+        run: |
+          cd ha-screenshotter
+          docker build -t ha-screenshotter-webserver-invalidport-test .
+
+      - name: Set up test directories
+        run: |
+          mkdir -p webserver-invalidport-test/data webserver-invalidport-test/share/$SCREENSHOT_SUBFOLDER
+
+      - name: Create webserver test configuration with invalid port
+        run: |
+          cat > webserver-invalidport-test/data/options.json << 'EOF'
+          {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": false,
+            "webserverport": "abcd"
+          }
+          EOF
+          
+          echo "Webserver invalid port test configuration:"
+          cat webserver-invalidport-test/data/options.json
+
+      - name: Run container and expect failure
+        run: |
+          echo "Running container with invalid webserver port (should fail)..."
+          
+          # Run container and capture exit code
+          set +e
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/webserver-invalidport-test/data:/data" \
+            -v "${GITHUB_WORKSPACE}/webserver-invalidport-test/share:/media" \
+            ha-screenshotter-webserver-invalidport-test 2>&1 | tee webserver-invalidport-test/container.log
+          EXIT_CODE=$?
+          set -e
+          
+          echo "Container exit code: $EXIT_CODE"
+          
+          # Container should fail (non-zero exit code)
+          if [ $EXIT_CODE -ne 0 ]; then
+            echo "✅ Container failed as expected with invalid port configuration"
+            
+            # Verify error message contains expected validation error
+            if grep -q "Invalid webserverport setting" webserver-invalidport-test/container.log; then
+              echo "✅ Error message contains expected validation message"
+            else
+              echo "⚠️ Warning: Expected validation error message not found in logs"
+              echo "Container log:"
+              cat webserver-invalidport-test/container.log
+            fi
+          else
+            echo "❌ Container should have failed but succeeded"
+            echo "Container log:"
+            cat webserver-invalidport-test/container.log
+            exit 1
+          fi
+
+      - name: Generate webserver invalid port test summary
+        if: always()
+        run: |
+          echo "| Test Component | Result |" > webserver_invalidport_summary.md
+          echo "|----------------|--------|" >> webserver_invalidport_summary.md
+          
+          # Check if container failed as expected
+          if [ -f webserver-invalidport-test/container.log ]; then
+            if grep -q "Invalid webserverport setting" webserver-invalidport-test/container.log; then
+              echo "| Container Validation | ✅ Failed with expected error |" >> webserver_invalidport_summary.md
+            else
+              echo "| Container Validation | ⚠️ Failed but error message unexpected |" >> webserver_invalidport_summary.md
+            fi
+          else
+            echo "| Container Validation | ❌ Log file not found |" >> webserver_invalidport_summary.md
+          fi
+          
+          # Verify no screenshots were created (container should fail before taking screenshots)
+          SCREENSHOT_COUNT=$(find webserver-invalidport-test/share/ -name "*.png" 2>/dev/null | wc -l)
+          if [ "$SCREENSHOT_COUNT" -eq 0 ]; then
+            echo "| No Screenshots Created | ✅ |" >> webserver_invalidport_summary.md
+          else
+            echo "| No Screenshots Created | ❌ Found $SCREENSHOT_COUNT screenshots |" >> webserver_invalidport_summary.md
+          fi
+          
+          echo ""
+          echo "## Webserver Invalid Port Test Summary"
+          cat webserver_invalidport_summary.md
+
+      - name: Upload webserver invalid port test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webserver-invalidport-test-results
+          path: |
+            webserver-invalidport-test/
+            webserver_invalidport_summary.md
+          retention-days: 7
+
+      - name: Add webserver invalid port summary to job summary
+        if: always()
+        run: |
+          if [ -f webserver_invalidport_summary.md ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat webserver_invalidport_summary.md >> $GITHUB_STEP_SUMMARY
+          fi
