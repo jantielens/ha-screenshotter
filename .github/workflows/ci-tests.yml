@@ -618,7 +618,7 @@ jobs:
             -v "${GITHUB_WORKSPACE}/webserver-invalidport-test/data:/data" \
             -v "${GITHUB_WORKSPACE}/webserver-invalidport-test/share:/media" \
             ha-screenshotter-webserver-invalidport-test 2>&1 | tee webserver-invalidport-test/container.log
-          EXIT_CODE=$?
+          EXIT_CODE=${PIPESTATUS[0]}
           set -e
           
           echo "Container exit code: $EXIT_CODE"
