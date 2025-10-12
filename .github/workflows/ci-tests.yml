@@ -11,7 +11,7 @@ on:
         default: 'ha-screenshotter'
 
 jobs:
-  test:
+  test-screenshot-configurations:
     runs-on: ubuntu-latest
     env:
       SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
@@ -242,3 +242,115 @@ jobs:
           if [ -f test_summary.md ]; then
             cat test_summary.md >> $GITHUB_STEP_SUMMARY
           fi
+
+  test-webserver:
+    runs-on: ubuntu-latest
+    env:
+      SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker container
+        run: |
+          cd ha-screenshotter
+          docker build -t ha-screenshotter-webserver-test .
+
+      - name: Set up test directories
+        run: |
+          mkdir -p webserver-test/data webserver-test/share/$SCREENSHOT_SUBFOLDER
+
+      - name: Create webserver test configuration
+        run: |
+          cat > webserver-test/data/options.json << 'EOF'
+          {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": false,
+            "webserverport": 3000
+          }
+          EOF
+          
+          echo "Webserver test configuration:"
+          cat webserver-test/data/options.json
+
+      - name: Start container in background
+        run: |
+          echo "Starting container with webserver enabled..."
+          docker run -d \
+            --name ha-screenshotter-webserver \
+            -v "${GITHUB_WORKSPACE}/webserver-test/data:/data" \
+            -v "${GITHUB_WORKSPACE}/webserver-test/share:/media" \
+            -p 3000:3000 \
+            ha-screenshotter-webserver-test
+          
+          echo "Container started, waiting for initialization..."
+
+      - name: Wait for screenshot and webserver startup
+        run: |
+          echo "Waiting 30 seconds for container to take screenshot and start webserver..."
+          sleep 30
+          
+          echo "Checking container status..."
+          docker logs ha-screenshotter-webserver || true
+          
+          echo "Checking if screenshot was created..."
+          ls -la webserver-test/share/$SCREENSHOT_SUBFOLDER/ || echo "No screenshots directory found"
+
+      - name: Test webserver and download image
+        run: |
+          echo "Testing webserver endpoint..."
+          
+          # Check if webserver is responding
+          if curl -f -s "http://localhost:3000" > /dev/null; then
+            echo "✅ Webserver is responding"
+          else
+            echo "❌ Webserver is not responding"
+            docker logs ha-screenshotter-webserver
+            exit 1
+          fi
+          
+          # Try to download the screenshot via webserver
+          if curl -f -s "http://localhost:3000/0.png" -o "downloaded-screenshot.png"; then
+            echo "✅ Successfully downloaded screenshot via webserver"
+            
+            # Validate the downloaded file
+            file downloaded-screenshot.png
+            size=$(stat -c%s downloaded-screenshot.png)
+            echo "Downloaded file size: $size bytes"
+            
+            if [ "$size" -gt 1000 ]; then
+              echo "✅ Downloaded screenshot appears valid (size > 1KB)"
+            else
+              echo "❌ Downloaded screenshot seems too small"
+              exit 1
+            fi
+          else
+            echo "❌ Failed to download screenshot via webserver"
+            echo "Available files on webserver:"
+            curl -s "http://localhost:3000" || true
+            exit 1
+          fi
+
+      - name: Cleanup container
+        if: always()
+        run: |
+          echo "Stopping and removing container..."
+          docker stop ha-screenshotter-webserver || true
+          docker rm ha-screenshotter-webserver || true
+
+      - name: Upload webserver test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webserver-test-results
+          path: |
+            webserver-test/
+            downloaded-screenshot.png
+          retention-days: 7
