@@ -157,6 +157,53 @@ async function loadConfiguration() {
         }
       }
       
+      // Handle device_emulation configuration (BEFORE URLs parsing)
+      let device_emulation = defaultConfig.device_emulation;
+      if (config.device_emulation !== undefined) {
+        if (typeof config.device_emulation === 'string') {
+          device_emulation = config.device_emulation;
+          console.log('✅ Device emulation setting from configuration:', device_emulation);
+        } else {
+          console.error('❌ Invalid device_emulation setting:', config.device_emulation);
+          throw new Error(`Invalid device_emulation setting: ${config.device_emulation}. Must be a string.`);
+        }
+      }
+      
+      // Handle mobile_viewport configuration (BEFORE URLs parsing)
+      let mobile_viewport = defaultConfig.mobile_viewport;
+      if (config.mobile_viewport !== undefined) {
+        if (config.mobile_viewport === null || config.mobile_viewport === false) {
+          mobile_viewport = null;
+          console.log('✅ Mobile viewport disabled from configuration');
+        } else if (typeof config.mobile_viewport === 'object' && config.mobile_viewport !== null) {
+          // Validate mobile viewport object
+          if (config.mobile_viewport.width !== undefined && (!Number.isInteger(config.mobile_viewport.width) || config.mobile_viewport.width <= 0)) {
+            throw new Error(`Invalid mobile_viewport width: ${config.mobile_viewport.width}. Must be a positive integer.`);
+          }
+          if (config.mobile_viewport.height !== undefined && (!Number.isInteger(config.mobile_viewport.height) || config.mobile_viewport.height <= 0)) {
+            throw new Error(`Invalid mobile_viewport height: ${config.mobile_viewport.height}. Must be a positive integer.`);
+          }
+          if (config.mobile_viewport.device_scale_factor !== undefined && (typeof config.mobile_viewport.device_scale_factor !== 'number' || config.mobile_viewport.device_scale_factor <= 0)) {
+            throw new Error(`Invalid mobile_viewport device_scale_factor: ${config.mobile_viewport.device_scale_factor}. Must be a positive number.`);
+          }
+          if (config.mobile_viewport.touch_enabled !== undefined && typeof config.mobile_viewport.touch_enabled !== 'boolean') {
+            throw new Error(`Invalid mobile_viewport touch_enabled: ${config.mobile_viewport.touch_enabled}. Must be a boolean.`);
+          }
+          if (config.mobile_viewport.is_landscape !== undefined && typeof config.mobile_viewport.is_landscape !== 'boolean') {
+            throw new Error(`Invalid mobile_viewport is_landscape: ${config.mobile_viewport.is_landscape}. Must be a boolean.`);
+          }
+          if (config.mobile_viewport.user_agent !== undefined && typeof config.mobile_viewport.user_agent !== 'string') {
+            throw new Error(`Invalid mobile_viewport user_agent: ${config.mobile_viewport.user_agent}. Must be a string.`);
+          }
+          
+          mobile_viewport = config.mobile_viewport;
+          console.log('✅ Mobile viewport setting from configuration:', JSON.stringify(mobile_viewport));
+        } else {
+          console.error('❌ Invalid mobile_viewport setting:', config.mobile_viewport);
+          throw new Error(`Invalid mobile_viewport setting: ${config.mobile_viewport}. Must be null, false, or an object.`);
+        }
+      }
+      
       // Parse URLs with per-URL settings (using global settings as defaults)
       let urls = defaultConfig.urls;
       if (config.urls) {
@@ -386,53 +433,6 @@ async function loadConfiguration() {
         } else {
           console.error('❌ Invalid language setting:', config.language);
           throw new Error(`Invalid language setting: ${config.language}. Must be a non-empty string.`);
-        }
-      }
-      
-      // Handle device_emulation configuration
-      let device_emulation = defaultConfig.device_emulation;
-      if (config.device_emulation !== undefined) {
-        if (typeof config.device_emulation === 'string') {
-          device_emulation = config.device_emulation;
-          console.log('✅ Device emulation setting from configuration:', device_emulation);
-        } else {
-          console.error('❌ Invalid device_emulation setting:', config.device_emulation);
-          throw new Error(`Invalid device_emulation setting: ${config.device_emulation}. Must be a string.`);
-        }
-      }
-      
-      // Handle mobile_viewport configuration
-      let mobile_viewport = defaultConfig.mobile_viewport;
-      if (config.mobile_viewport !== undefined) {
-        if (config.mobile_viewport === null || config.mobile_viewport === false) {
-          mobile_viewport = null;
-          console.log('✅ Mobile viewport disabled from configuration');
-        } else if (typeof config.mobile_viewport === 'object' && config.mobile_viewport !== null) {
-          // Validate mobile viewport object
-          if (config.mobile_viewport.width !== undefined && (!Number.isInteger(config.mobile_viewport.width) || config.mobile_viewport.width <= 0)) {
-            throw new Error(`Invalid mobile_viewport width: ${config.mobile_viewport.width}. Must be a positive integer.`);
-          }
-          if (config.mobile_viewport.height !== undefined && (!Number.isInteger(config.mobile_viewport.height) || config.mobile_viewport.height <= 0)) {
-            throw new Error(`Invalid mobile_viewport height: ${config.mobile_viewport.height}. Must be a positive integer.`);
-          }
-          if (config.mobile_viewport.device_scale_factor !== undefined && (typeof config.mobile_viewport.device_scale_factor !== 'number' || config.mobile_viewport.device_scale_factor <= 0)) {
-            throw new Error(`Invalid mobile_viewport device_scale_factor: ${config.mobile_viewport.device_scale_factor}. Must be a positive number.`);
-          }
-          if (config.mobile_viewport.touch_enabled !== undefined && typeof config.mobile_viewport.touch_enabled !== 'boolean') {
-            throw new Error(`Invalid mobile_viewport touch_enabled: ${config.mobile_viewport.touch_enabled}. Must be a boolean.`);
-          }
-          if (config.mobile_viewport.is_landscape !== undefined && typeof config.mobile_viewport.is_landscape !== 'boolean') {
-            throw new Error(`Invalid mobile_viewport is_landscape: ${config.mobile_viewport.is_landscape}. Must be a boolean.`);
-          }
-          if (config.mobile_viewport.user_agent !== undefined && typeof config.mobile_viewport.user_agent !== 'string') {
-            throw new Error(`Invalid mobile_viewport user_agent: ${config.mobile_viewport.user_agent}. Must be a string.`);
-          }
-          
-          mobile_viewport = config.mobile_viewport;
-          console.log('✅ Mobile viewport setting from configuration:', JSON.stringify(mobile_viewport));
-        } else {
-          console.error('❌ Invalid mobile_viewport setting:', config.mobile_viewport);
-          throw new Error(`Invalid mobile_viewport setting: ${config.mobile_viewport}. Must be null, false, or an object.`);
         }
       }
       
