@@ -40,10 +40,8 @@ jobs:
           PASSED_TESTS=0
           FAILED_TESTS=0
           
-          echo "# Test Results Summary" >> test_summary.md
-          echo "" >> test_summary.md
-          echo "| Test Case | Expected | Actual | Status |" >> test_summary.md
-          echo "|-----------|----------|--------|--------|" >> test_summary.md
+          echo "| Test Case | Result |" >> test_summary.md
+          echo "|-----------|--------|" >> test_summary.md
           
           # Process each test case
           while IFS= read -r test_case; do
@@ -191,12 +189,12 @@ jobs:
             if [ "$TEST_PASSED" = "true" ]; then
               echo "✅ Test PASSED: $TEST_NAME"
               PASSED_TESTS=$((PASSED_TESTS + 1))
-              echo "| $TEST_NAME | $([ "$EXPECTED_SUCCESS" = "true" ] && echo "Success" || echo "Failure") | $([ "$TEST_PASSED" = "true" ] && echo "✅ Pass" || echo "❌ Fail") | ✅ |" >> test_summary.md
+              echo "| $TEST_NAME | ✅ |" >> test_summary.md
             else
               echo "❌ Test FAILED: $TEST_NAME"
               echo "   Details: $VALIDATION_DETAILS"
               FAILED_TESTS=$((FAILED_TESTS + 1))
-              echo "| $TEST_NAME | $([ "$EXPECTED_SUCCESS" = "true" ] && echo "Success" || echo "Failure") | ❌ $VALIDATION_DETAILS | ❌ |" >> test_summary.md
+              echo "| $TEST_NAME | ❌ $VALIDATION_DETAILS |" >> test_summary.md
             fi
             
             echo ""
@@ -213,7 +211,7 @@ jobs:
           echo "Failed: $FAILED_TESTS"
           
           echo "" >> test_summary.md
-          echo "## Summary" >> test_summary.md
+          echo "Summary: " >> test_summary.md
           echo "- **Total tests:** $TOTAL_TESTS" >> test_summary.md
           echo "- **Passed:** $PASSED_TESTS" >> test_summary.md
           echo "- **Failed:** $FAILED_TESTS" >> test_summary.md
@@ -338,6 +336,50 @@ jobs:
             exit 1
           fi
 
+      - name: Generate webserver test summary
+        if: always()
+        run: |
+          echo "| Test Component | Result |" > webserver_summary.md
+          echo "|----------------|--------|" >> webserver_summary.md
+          
+          # Check if container started
+          if docker ps -a --format "table {{.Names}}" | grep -q "ha-screenshotter-webserver"; then
+            echo "| Container Startup | ✅ |" >> webserver_summary.md
+          else
+            echo "| Container Startup | ❌ Container failed to start |" >> webserver_summary.md
+          fi
+          
+          # Check if webserver responded
+          if curl -f -s "http://localhost:3000" > /dev/null 2>&1; then
+            echo "| Webserver Response | ✅ |" >> webserver_summary.md
+          else
+            echo "| Webserver Response | ❌ Webserver not responding |" >> webserver_summary.md
+          fi
+          
+          # Check if screenshot was downloaded
+          if [ -f "downloaded-screenshot.png" ]; then
+            SIZE=$(stat -c%s downloaded-screenshot.png 2>/dev/null || echo "0")
+            if [ "$SIZE" -gt 1000 ]; then
+              echo "| Screenshot Download | ✅ ($SIZE bytes) |" >> webserver_summary.md
+            else
+              echo "| Screenshot Download | ❌ File too small ($SIZE bytes) |" >> webserver_summary.md
+            fi
+          else
+            echo "| Screenshot Download | ❌ File not found |" >> webserver_summary.md
+          fi
+          
+          # Check if screenshots were created in filesystem
+          SCREENSHOT_COUNT=$(find webserver-test/share/ha-screenshotter/ -name "*.png" 2>/dev/null | wc -l)
+          if [ "$SCREENSHOT_COUNT" -gt 0 ]; then
+            echo "| Screenshot Generation | ✅ ($SCREENSHOT_COUNT files) |" >> webserver_summary.md
+          else
+            echo "| Screenshot Generation | ❌ No screenshots found |" >> webserver_summary.md
+          fi
+          
+          echo ""
+          echo "## Webserver Test Summary"
+          cat webserver_summary.md
+
       - name: Cleanup container
         if: always()
         run: |
@@ -353,4 +395,14 @@ jobs:
           path: |
             webserver-test/
             downloaded-screenshot.png
+            webserver_summary.md
           retention-days: 7
+
+      - name: Add webserver summary to job summary
+        if: always()
+        run: |
+          if [ -f webserver_summary.md ]; then
+            echo "## 🌐 Webserver Test Results" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat webserver_summary.md >> $GITHUB_STEP_SUMMARY
+          fi
