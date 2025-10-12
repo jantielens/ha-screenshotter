@@ -76,15 +76,15 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
         // Use custom mobile viewport settings
         if (mobileViewport) {
           const viewportConfig = {
-            width: mobileViewport.width || width,
-            height: mobileViewport.height || height,
+            width: width, // Always use configured resolution, not mobileViewport dimensions
+            height: height, // Always use configured resolution, not mobileViewport dimensions
             deviceScaleFactor: mobileViewport.device_scale_factor || 1,
             isMobile: true,
             hasTouch: mobileViewport.touch_enabled !== undefined ? mobileViewport.touch_enabled : true,
             isLandscape: mobileViewport.is_landscape || false
           };
           
-          console.log(`   │       📐 Custom viewport: ${viewportConfig.width}x${viewportConfig.height} (scale: ${viewportConfig.deviceScaleFactor}x)`);
+          console.log(`   │       📐 Custom viewport: ${width}x${height} with mobile settings (scale: ${viewportConfig.deviceScaleFactor}x)`);
           await page.setViewport(viewportConfig);
           
           // Set custom user agent if provided
@@ -101,8 +101,18 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
         // Use Puppeteer built-in device preset
         const device = puppeteer.devices[deviceEmulation];
         if (device) {
-          console.log(`   │       📱 Using device preset: ${deviceEmulation} (${device.viewport.width}x${device.viewport.height})`);
-          await page.emulate(device);
+          console.log(`   │       📱 Using device preset: ${deviceEmulation} with ${width}x${height} viewport`);
+          // Set viewport to our configured resolution, not the device's native resolution
+          await page.setViewport({ 
+            width: width, 
+            height: height,
+            deviceScaleFactor: device.viewport.deviceScaleFactor || 1,
+            isMobile: device.viewport.isMobile || true,
+            hasTouch: device.viewport.hasTouch || true,
+            isLandscape: device.viewport.isLandscape || false
+          });
+          // Set the user agent for mobile behavior without changing viewport dimensions
+          await page.setUserAgent(device.userAgent);
         } else {
           console.log(`   │       ⚠️  Unknown device preset: ${deviceEmulation}, using desktop mode`);
           await page.setViewport({ width: width, height: height });
