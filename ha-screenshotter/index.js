@@ -125,10 +125,12 @@ async function init() {
         console.log(`⚡ Duration: ${duration} seconds`);
         console.log(`❌ Error: ${error.message}`);
         console.log('');
+        // Release lock before shutting down (for completeness, even though process exits)
+        isExecuting = false;
         console.log('🛑 Shutting down container to allow Home Assistant restart...');
         process.exit(1);
       } finally {
-        // Always release the lock
+        // Always release the lock (for successful execution path)
         isExecuting = false;
       }
     });
