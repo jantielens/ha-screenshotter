@@ -63,7 +63,7 @@
         "name": "Simple, 1 screenshot, color, 4-bit depth",
         "config": {
             "schedule": "*/1 * * * *",
-            "urls": "[\"https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html\", \"https://example.com\"]",
+            "urls": "[\"https://google.com\", \"https://github.com/jantielens/ha-screenshotter\"]",
             "resolution_width": 800,
             "resolution_height": 600,
             "rotation_degrees": 0,
