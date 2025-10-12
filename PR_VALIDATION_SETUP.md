@@ -21,33 +21,42 @@ This repository now includes automatic validation for Pull Requests to ensure pr
 - ℹ️ Documentation-only changes (*.md, *.yml, LICENSE, etc.) don't require version bumps
 - ✅ Provides clear feedback on which files were modified
 
-## GitHub Branch Protection
+## 🛡️ **Branch Protection Setup**
 
-To enforce these validations, set up branch protection rules for the `main` branch:
+To enforce these checks before merging, you need to:
 
-### Via GitHub Web UI:
-1. Go to Settings → Branches
-2. Add rule for `main` branch
-3. Enable "Require status checks to pass before merging"
-4. Add these required checks:
-   - `validate-version-and-changelog`
-   - `validate-files-changed`
-   - `test-screenshot-configurations` (existing)
-   - `test-webserver` (existing)
+1. **Via GitHub Web UI:**
+   - Go to Settings → Branches → Add rule for `main`
+   - Enable "Require status checks to pass before merging"
+   - Add required checks: `validate-version-and-changelog`, `validate-files-changed`
 
-### Via GitHub CLI:
-```bash
-# Install GitHub CLI if not already installed
-# https://cli.github.com/
+2. **Via GitHub CLI:**
+   ```bash
+   gh api repos/jantielens/ha-screenshotter/branches/main/protection \
+     --method PUT \
+     --field required_status_checks='{"strict":true,"contexts":["validate-version-and-changelog","validate-files-changed","test-screenshot-configurations","test-webserver"]}'
+   ```
 
-# Enable branch protection with required status checks
-gh api repos/:owner/:repo/branches/main/protection \
-  --method PUT \
-  --field required_status_checks='{"strict":true,"contexts":["validate-version-and-changelog","validate-files-changed","test-screenshot-configurations","test-webserver"]}' \
-  --field enforce_admins=false \
-  --field required_pull_request_reviews='{"required_approving_review_count":1}' \
-  --field restrictions=null
-```
+## 🔒 **Permissions Setup**
+
+The PR validation workflow requires these permissions:
+- `contents: read` - To checkout and read repository files (default)
+- `pull-requests: write` - To comment on pull requests  
+- `issues: write` - To comment on issues/PRs
+
+**If you see permission errors (403 "Resource not accessible"):**
+
+### Option 1: Enable Write Permissions (Recommended)
+1. **Repository Settings** → **Actions** → **General**
+2. Under "Workflow permissions", select **"Read and write permissions"**
+3. ⚠️ **Do NOT check** "Allow GitHub Actions to create and approve pull requests" (not needed)
+
+### Option 2: Keep Read-Only (Comments Disabled)
+- Keep "Read repository contents and packages permissions" 
+- Workflow will still validate but won't comment on PRs
+- Results visible in Actions tab and job summary
+
+**The validation works either way - comments are just a convenience feature!**
 
 ### Via Repository Settings (Manual):
 ```json

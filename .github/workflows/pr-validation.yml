@@ -1,8 +1,15 @@
 name: PR Validation
+
 on:
   pull_request:
     branches: [ main ]
     types: [opened, synchronize, reopened]
+
+# Permissions for commenting on PRs and reading repository content
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
 
 jobs:
   validate-version-and-changelog:
@@ -217,19 +224,27 @@ jobs:
           cat validation_results.md >> $GITHUB_STEP_SUMMARY
 
       - name: Comment PR with validation results
-        if: always()
+        if: always() && github.event_name == 'pull_request'
         uses: actions/github-script@v7
+        continue-on-error: true
         with:
           script: |
-            const fs = require('fs');
-            const validationResults = fs.readFileSync('validation_results.md', 'utf8');
-            
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: validationResults
-            });
+            try {
+              const fs = require('fs');
+              const validationResults = fs.readFileSync('validation_results.md', 'utf8');
+              
+              await github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: validationResults
+              });
+              
+              console.log('✅ Successfully posted validation results as PR comment');
+            } catch (error) {
+              console.log('⚠️ Could not post PR comment (likely permissions issue):', error.message);
+              console.log('📋 Validation results are still available in the job summary and logs');
+            }
 
   # This job will be required for merging
   validate-files-changed:
