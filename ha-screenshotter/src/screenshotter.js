@@ -103,10 +103,11 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
         if (device) {
           console.log(`   │       📱 Using device preset: ${deviceEmulation} with ${width}x${height} viewport`);
           // Set viewport to our configured resolution, not the device's native resolution
+          // Force deviceScaleFactor to 1 to ensure screenshot matches exact configured dimensions
           await page.setViewport({ 
             width: width, 
             height: height,
-            deviceScaleFactor: device.viewport.deviceScaleFactor || 1,
+            deviceScaleFactor: 1, // Always 1 to prevent scaling up the screenshot
             isMobile: device.viewport.isMobile || true,
             hasTouch: device.viewport.hasTouch || true,
             isLandscape: device.viewport.isLandscape || false
