@@ -50,6 +50,11 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     console.log('   │       ✅ Browser launched successfully');
 
     const page = await browser.newPage();
+    
+    // Set viewport size early for consistent screenshots
+    console.log(`   │       📐 Setting viewport to ${width}x${height}`);
+    await page.setViewport({ width: width, height: height });
+    
     // If a Home Assistant long-lived access token is provided, inject it into localStorage
     // for the Home Assistant origin so the frontend (and websockets) will pick it up.
     if (longLivedToken && typeof longLivedToken === 'string' && longLivedToken.length > 0) {
@@ -57,8 +62,10 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
         console.log('   │       🔐 Using provided long-lived access token for authentication (injecting into localStorage)');
         // Derive the base origin from the target URL so we can set localStorage for that origin
         const origin = new URL(url).origin;
+        
         // Navigate to the origin to get same-origin access to localStorage
-        await page.goto(origin, { waitUntil: 'domcontentloaded', timeout: 15000 });
+        // Wait for network to be idle to ensure page is stable before injecting localStorage
+        await page.goto(origin, { waitUntil: 'networkidle0', timeout: 15000 });
 
         const hassTokens = {
           hassUrl: origin,
@@ -67,6 +74,9 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
         };
 
         // Inject the tokens and configured language into localStorage for the origin
+        // Use a more robust approach with waitForFunction to ensure page is ready
+        await page.waitForFunction(() => document.readyState === 'complete', { timeout: 5000 }).catch(() => {});
+        
         await page.evaluate((tokens, selectedLanguage) => {
           try {
             localStorage.setItem('hassTokens', tokens);
@@ -86,10 +96,6 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
         console.log('   │       ⚠️ Failed to inject token into localStorage:', e.message);
       }
     }
-    
-    // Set viewport size for consistent screenshots
-    console.log(`   │       📐 Setting viewport to ${width}x${height}`);
-    await page.setViewport({ width: width, height: height });
     
     // Navigate to the URL with timeout
     console.log(`   │       🌐 Navigating to URL...`);
