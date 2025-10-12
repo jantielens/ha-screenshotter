@@ -232,7 +232,7 @@ jobs:
         with:
           name: test-results
           path: |
-            test-*/
+            [0-9][0-9][0-9]-*/
             test_summary.md
           retention-days: 7
 
