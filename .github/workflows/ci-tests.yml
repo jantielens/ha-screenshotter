@@ -134,11 +134,12 @@ jobs:
                       # Method 1: Check colorspace
                       if [[ "$COLORSPACE" =~ Gray|Grayscale ]] || [[ "$COLORSPACE" == "Gray" ]]; then
                         ACTUAL_GRAYSCALE="true"
-                      # Method 2: Check PNG color type (0 = grayscale, 2 = RGB, 3 = palette, 4 = grayscale+alpha, 6 = RGBA)
+                      # Method 2: Check PNG color type (0 = grayscale, 4 = grayscale+alpha)
                       elif [[ "$PNG_COLORTYPE" == "0" ]] || [[ "$PNG_COLORTYPE" == "4" ]]; then
                         ACTUAL_GRAYSCALE="true"
-                      # Method 3: Check file command output
-                      elif [[ "$FILE_INFO" =~ grayscale|"1-bit"|"2-bit"|"4-bit"|"8-bit grayscale" ]]; then
+                      # Method 3: Check file command output for explicit grayscale indicators
+                      # Note: "colormap" indicates a palette-based color image, not grayscale
+                      elif [[ "$FILE_INFO" =~ "grayscale" ]] && [[ ! "$FILE_INFO" =~ "colormap" ]]; then
                         ACTUAL_GRAYSCALE="true"
                       fi
                       
