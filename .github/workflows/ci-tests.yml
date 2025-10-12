@@ -1,0 +1,221 @@
+name: CI Tests
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      screenshots_subfolder:
+        description: 'Subfolder name inside /media where screenshots are written'
+        required: false
+        default: 'ha-screenshotter'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install ImageMagick for image validation
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y imagemagick jq
+
+      - name: Build Docker container
+        run: |
+          cd ha-screenshotter
+          docker build -t ha-screenshotter-test .
+
+      - name: Load and run test cases
+        run: |
+          # Read test cases from tests.json
+          TEST_CASES=$(jq -c '.[]' tests.json)
+          
+          # Initialize counters
+          TOTAL_TESTS=0
+          PASSED_TESTS=0
+          FAILED_TESTS=0
+          
+          echo "# Test Results Summary" >> test_summary.md
+          echo "" >> test_summary.md
+          echo "| Test Case | Expected | Actual | Status |" >> test_summary.md
+          echo "|-----------|----------|--------|--------|" >> test_summary.md
+          
+          # Process each test case
+          while IFS= read -r test_case; do
+            TOTAL_TESTS=$((TOTAL_TESTS + 1))
+            
+            # Extract test data
+            TEST_NAME=$(echo "$test_case" | jq -r '.name')
+            TEST_CONFIG=$(echo "$test_case" | jq -c '.config')
+            TEST_VALIDATION=$(echo "$test_case" | jq -c '.validation')
+            EXPECTED_SUCCESS=$(echo "$test_validation" | jq -r '.success')
+            
+            echo "===================="
+            echo "Running test: $TEST_NAME"
+            echo "===================="
+            
+            # Create test directories
+            TEST_DIR="test-$TOTAL_TESTS"
+            mkdir -p "$TEST_DIR/data" "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER"
+            
+            # Create options.json from config
+            echo "$TEST_CONFIG" > "$TEST_DIR/data/options.json"
+            
+            echo "Test configuration:"
+            cat "$TEST_DIR/data/options.json"
+            
+            # Run container and capture result
+            CONTAINER_SUCCESS=true
+            if ! docker run --rm \
+              -v "${GITHUB_WORKSPACE}/$TEST_DIR/data:/data" \
+              -v "${GITHUB_WORKSPACE}/$TEST_DIR/share:/media" \
+              ha-screenshotter-test 2>&1 | tee "$TEST_DIR/container.log"; then
+              CONTAINER_SUCCESS=false
+            fi
+            
+            # Validate results
+            TEST_PASSED=true
+            VALIDATION_DETAILS=""
+            
+            if [ "$EXPECTED_SUCCESS" = "true" ]; then
+              # Test should succeed
+              if [ "$CONTAINER_SUCCESS" = "false" ]; then
+                TEST_PASSED=false
+                VALIDATION_DETAILS="Container failed unexpectedly"
+              else
+                # Count screenshots
+                ACTUAL_SCREENSHOTS=$(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" | wc -l)
+                EXPECTED_SCREENSHOTS=$(echo "$test_validation" | jq -r '.screenshots | length')
+                
+                if [ "$ACTUAL_SCREENSHOTS" -ne "$EXPECTED_SCREENSHOTS" ]; then
+                  TEST_PASSED=false
+                  VALIDATION_DETAILS="Expected $EXPECTED_SCREENSHOTS screenshots, got $ACTUAL_SCREENSHOTS"
+                else
+                  # Validate each screenshot
+                  SCREENSHOT_INDEX=0
+                  while [ $SCREENSHOT_INDEX -lt $ACTUAL_SCREENSHOTS ]; do
+                    SCREENSHOT_FILE="$TEST_DIR/share/$SCREENSHOT_SUBFOLDER/$SCREENSHOT_INDEX.png"
+                    
+                    if [ -f "$SCREENSHOT_FILE" ]; then
+                      # Get expected properties for this screenshot
+                      EXPECTED_WIDTH=$(echo "$test_validation" | jq -r ".screenshots[$SCREENSHOT_INDEX].width")
+                      EXPECTED_HEIGHT=$(echo "$test_validation" | jq -r ".screenshots[$SCREENSHOT_INDEX].height")
+                      EXPECTED_GRAYSCALE=$(echo "$test_validation" | jq -r ".screenshots[$SCREENSHOT_INDEX].grayscale")
+                      EXPECTED_BIT_DEPTH=$(echo "$test_validation" | jq -r ".screenshots[$SCREENSHOT_INDEX].bitDepth")
+                      
+                      # Get actual properties using ImageMagick
+                      ACTUAL_WIDTH=$(identify -ping -format "%w" "$SCREENSHOT_FILE")
+                      ACTUAL_HEIGHT=$(identify -ping -format "%h" "$SCREENSHOT_FILE")
+                      COLORSPACE=$(identify -ping -format "%[colorspace]" "$SCREENSHOT_FILE")
+                      DEPTH=$(identify -ping -format "%[depth]" "$SCREENSHOT_FILE")
+                      
+                      # Check if grayscale
+                      ACTUAL_GRAYSCALE="false"
+                      if [[ "$COLORSPACE" =~ Gray|Grayscale ]] || [[ "$COLORSPACE" == "Gray" ]]; then
+                        ACTUAL_GRAYSCALE="true"
+                      fi
+                      
+                      echo "Screenshot $SCREENSHOT_INDEX validation:"
+                      echo "  Dimensions: ${ACTUAL_WIDTH}x${ACTUAL_HEIGHT} (expected: ${EXPECTED_WIDTH}x${EXPECTED_HEIGHT})"
+                      echo "  Colorspace: $COLORSPACE (grayscale: $ACTUAL_GRAYSCALE, expected: $EXPECTED_GRAYSCALE)"
+                      echo "  Bit depth: $DEPTH (expected: $EXPECTED_BIT_DEPTH)"
+                      
+                      # Validate dimensions
+                      if [ "$ACTUAL_WIDTH" != "$EXPECTED_WIDTH" ] || [ "$ACTUAL_HEIGHT" != "$EXPECTED_HEIGHT" ]; then
+                        TEST_PASSED=false
+                        VALIDATION_DETAILS="${VALIDATION_DETAILS}Screenshot $SCREENSHOT_INDEX: Wrong dimensions (${ACTUAL_WIDTH}x${ACTUAL_HEIGHT} vs ${EXPECTED_WIDTH}x${EXPECTED_HEIGHT}). "
+                      fi
+                      
+                      # Validate grayscale
+                      if [ "$ACTUAL_GRAYSCALE" != "$EXPECTED_GRAYSCALE" ]; then
+                        TEST_PASSED=false
+                        VALIDATION_DETAILS="${VALIDATION_DETAILS}Screenshot $SCREENSHOT_INDEX: Wrong colorspace (grayscale: $ACTUAL_GRAYSCALE vs $EXPECTED_GRAYSCALE). "
+                      fi
+                      
+                      # Validate bit depth (for grayscale images)
+                      if [ "$EXPECTED_GRAYSCALE" = "true" ] && [ "$DEPTH" != "$EXPECTED_BIT_DEPTH" ]; then
+                        TEST_PASSED=false
+                        VALIDATION_DETAILS="${VALIDATION_DETAILS}Screenshot $SCREENSHOT_INDEX: Wrong bit depth ($DEPTH vs $EXPECTED_BIT_DEPTH). "
+                      fi
+                      
+                    else
+                      TEST_PASSED=false
+                      VALIDATION_DETAILS="${VALIDATION_DETAILS}Screenshot $SCREENSHOT_INDEX missing. "
+                    fi
+                    
+                    SCREENSHOT_INDEX=$((SCREENSHOT_INDEX + 1))
+                  done
+                fi
+              fi
+            else
+              # Test should fail
+              if [ "$CONTAINER_SUCCESS" = "true" ]; then
+                # Check if screenshots were created (they shouldn't be for failed tests)
+                ACTUAL_SCREENSHOTS=$(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" | wc -l)
+                if [ "$ACTUAL_SCREENSHOTS" -gt 0 ]; then
+                  TEST_PASSED=false
+                  VALIDATION_DETAILS="Container should have failed but created $ACTUAL_SCREENSHOTS screenshots"
+                fi
+              fi
+            fi
+            
+            # Record result
+            if [ "$TEST_PASSED" = "true" ]; then
+              echo "✅ Test PASSED: $TEST_NAME"
+              PASSED_TESTS=$((PASSED_TESTS + 1))
+              echo "| $TEST_NAME | $([ "$EXPECTED_SUCCESS" = "true" ] && echo "Success" || echo "Failure") | $([ "$TEST_PASSED" = "true" ] && echo "✅ Pass" || echo "❌ Fail") | ✅ |" >> test_summary.md
+            else
+              echo "❌ Test FAILED: $TEST_NAME"
+              echo "   Details: $VALIDATION_DETAILS"
+              FAILED_TESTS=$((FAILED_TESTS + 1))
+              echo "| $TEST_NAME | $([ "$EXPECTED_SUCCESS" = "true" ] && echo "Success" || echo "Failure") | ❌ $VALIDATION_DETAILS | ❌ |" >> test_summary.md
+            fi
+            
+            echo ""
+            
+          done <<< "$TEST_CASES"
+          
+          # Final summary
+          echo ""
+          echo "===================="
+          echo "FINAL TEST SUMMARY"
+          echo "===================="
+          echo "Total tests: $TOTAL_TESTS"
+          echo "Passed: $PASSED_TESTS"
+          echo "Failed: $FAILED_TESTS"
+          
+          echo "" >> test_summary.md
+          echo "## Summary" >> test_summary.md
+          echo "- **Total tests:** $TOTAL_TESTS" >> test_summary.md
+          echo "- **Passed:** $PASSED_TESTS" >> test_summary.md
+          echo "- **Failed:** $FAILED_TESTS" >> test_summary.md
+          
+          # Fail the job if any tests failed
+          if [ $FAILED_TESTS -gt 0 ]; then
+            echo "❌ $FAILED_TESTS test(s) failed"
+            exit 1
+          else
+            echo "✅ All tests passed!"
+          fi
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            test-*/
+            test_summary.md
+          retention-days: 7
+
+      - name: Add test summary to job summary
+        if: always()
+        run: |
+          if [ -f test_summary.md ]; then
+            cat test_summary.md >> $GITHUB_STEP_SUMMARY
+          fi

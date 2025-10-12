@@ -10,11 +10,8 @@ name: CI - Build and Test
 #      - Global crop settings vs per-URL overrides
 #      - Error validation for invalid crop parameters
 
-# Trigger on pull requests and manual dispatch
+# Trigger on manual dispatch only
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: [main]
   workflow_dispatch:
     inputs:
       run_all_tests:

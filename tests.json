@@ -1,0 +1,108 @@
+[
+    {
+        "name": "Simple, 2 screenshots, grayscale, 1-bit depth, rotated 90 degrees",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html\", \"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 90,
+            "grayscale": true,
+            "bit_depth": 1,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 600,
+                    "height": 800,
+                    "grayscale": true,
+                    "bitDepth": 1
+                },
+                {
+                    "width": 600,
+                    "height": 800,
+                    "grayscale": true,
+                    "bitDepth": 1
+                }
+            ]
+        }
+    },
+    {
+        "name": "Simple, 1 screenshot, grayscale, 4-bit depth, rotated 180 degrees",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html\", \"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 180,
+            "grayscale": true,
+            "bit_depth": 4,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": true,
+                    "bitDepth": 4
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": true,
+                    "bitDepth": 4
+                }
+            ]
+        }
+    },
+        {
+        "name": "Simple, 1 screenshot, color, 4-bit depth",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html\", \"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 4,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 4
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 4
+                }
+            ]
+        }
+    },
+    {
+        "name": "Invalid URL",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[https://phet-dev.colorado.edu/html/build-an-atom/0.0.0-3/simple-text-only-test-page.html\", \"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 180,
+            "grayscale": true,
+            "bit_depth": 1,
+            "run_once": true
+        },
+        "validation": {
+            "success": false
+        }
+    }
+]
