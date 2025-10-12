@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.0] - 2025-10-12
+
+### Added
+- **PR Validation System**: Automatic validation of version bumps and changelog updates in GitHub Actions
+- **Agent Instructions**: Comprehensive documentation for GitHub Copilot and automated agents (`AGENT_INSTRUCTIONS.md`)
+- **GitHub Templates**: Issue and PR templates with agent-specific guidance and checklists
+- **Version Bump Helper Script**: Interactive script (`scripts/bump_version.sh`) for proper version management
+- **Developer Documentation**: Setup guides and validation requirements documentation
+
+### Changed
+- Enhanced README with prominent developer and agent requirements notice
+- Improved repository structure with organized documentation for contributors
+
+
 ## [1.11.0] - 2025-10-12
 
 ### Added
