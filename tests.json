@@ -59,7 +59,7 @@
             ]
         }
     },
-        {
+    {
         "name": "Simple, 1 screenshot, color, 4-bit depth",
         "config": {
             "schedule": "*/1 * * * *",
@@ -84,6 +84,78 @@
                     "width": 800,
                     "height": 600,
                     "grayscale": false,
+                    "bitDepth": 4
+                }
+            ]
+        }
+    },
+    {
+        "name": "Cropping test - single URL with crop area",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 400, \"height\": 300}}]",
+            "resolution_width": 1366,
+            "resolution_height": 768,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 400,
+                    "height": 300,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Cropping test - single URL with crop area, 4-bit depth, grayscale",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 200, \"height\": 200}}]",
+            "resolution_width": 1366,
+            "resolution_height": 768,
+            "rotation_degrees": 0,
+            "grayscale": true,
+            "bit_depth": 4,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 200,
+                    "height": 200,
+                    "grayscale": true,
+                    "bitDepth": 4
+                }
+            ]
+        }
+    },
+        {
+        "name": "Cropping test - single URL with crop area, 4-bit depth, grayscale, rotate 90",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"crop\": {\"x\": 100, \"y\": 50, \"width\": 100, \"height\": 200}}]",
+            "resolution_width": 1366,
+            "resolution_height": 768,
+            "rotation_degrees": 90,
+            "grayscale": true,
+            "bit_depth": 4,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 200,
+                    "height": 100,
+                    "grayscale": true,
                     "bitDepth": 4
                 }
             ]

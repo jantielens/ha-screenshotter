@@ -61,8 +61,10 @@ jobs:
             echo "Expected to succeed: $EXPECTED_SUCCESS"
             echo "===================="
             
-            # Create test directories
-            TEST_DIR="test-$TOTAL_TESTS"
+            # Create test directories with pattern "001-test-name"
+            PADDED_TEST_NUMBER=$(printf "%03d" $TOTAL_TESTS)
+            SAFE_TEST_NAME=$(echo "$TEST_NAME" | sed 's/[^a-zA-Z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+            TEST_DIR="${PADDED_TEST_NUMBER}-${SAFE_TEST_NAME}"
             mkdir -p "$TEST_DIR/data" "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER"
             
             # Create options.json from config
