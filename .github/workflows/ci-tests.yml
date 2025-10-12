@@ -317,7 +317,7 @@ jobs:
           fi
           
           # Try to download the screenshot via webserver
-          if curl -f -s "http://localhost:3000/0.png" -o "downloaded-screenshot.png"; then
+          if curl -f -s "http://localhost:3000/screenshots/0.png" -o "downloaded-screenshot.png"; then
             echo "✅ Successfully downloaded screenshot via webserver"
             
             # Validate the downloaded file
