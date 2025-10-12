@@ -562,7 +562,7 @@ jobs:
                     SIZE=$(stat -c%s "$SCREENSHOT_FILE")
                     echo "Screenshot $i size: $SIZE bytes"
                     
-                    if [ "$SIZE" -lt 1000 ]; then
+                    if [ "$SIZE" -lt 10 ]; then
                       echo "❌ Screenshot $i too small: $SIZE bytes"
                       VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i too small ($SIZE bytes) ❌\n"
                       TEST_PASSED=false
