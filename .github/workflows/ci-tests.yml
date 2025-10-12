@@ -57,6 +57,8 @@ jobs:
             
             echo "===================="
             echo "Running test: $TEST_NAME"
+            echo "Expected success: $EXPECTED_SUCCESS"
+            echo "Validation JSON: $TEST_VALIDATION"
             echo "===================="
             
             # Create test directories
@@ -82,7 +84,10 @@ jobs:
             TEST_PASSED=true
             VALIDATION_DETAILS=""
             
+            echo "DEBUG: EXPECTED_SUCCESS='$EXPECTED_SUCCESS', CONTAINER_SUCCESS='$CONTAINER_SUCCESS'"
+            
             if [ "$EXPECTED_SUCCESS" = "true" ]; then
+              echo "DEBUG: Taking SUCCESS validation path"
               # Test should succeed
               if [ "$CONTAINER_SUCCESS" = "false" ]; then
                 TEST_PASSED=false
@@ -154,6 +159,7 @@ jobs:
               fi
             else
               # Test should fail
+              echo "DEBUG: Taking FAILURE validation path"
               if [ "$CONTAINER_SUCCESS" = "true" ]; then
                 # Check if screenshots were created (they shouldn't be for failed tests)
                 ACTUAL_SCREENSHOTS=$(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" | wc -l)
