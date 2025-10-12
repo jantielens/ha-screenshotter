@@ -119,7 +119,7 @@ cat > /tmp/changelog_entry << EOF
 EOF
 
 # Insert after the header (line 6)
-sed -i '6r /tmp/changelog_entry' CHANGELOG.md
+sed -i '6r /tmp/changelog_entry' ha-screenshotter/CHANGELOG.md
 rm /tmp/changelog_entry
 
 echo -e "${GREEN}✅ CHANGELOG.md updated with template entry${NC}"
@@ -134,6 +134,6 @@ echo -e "   New version: ${GREEN}$NEW_VERSION${NC}"
 echo "   Files updated:"
 echo "   - ha-screenshotter/package.json"  
 echo "   - ha-screenshotter/config.yaml"
-echo "   - CHANGELOG.md (template added)"
+echo "   - ha-screenshotter/CHANGELOG.md (template added)"
 echo ""
-echo -e "${YELLOW}⚠️  Remember to edit CHANGELOG.md with your actual changes before committing!${NC}"
+echo -e "${YELLOW}⚠️  Remember to edit ha-screenshotter/CHANGELOG.md with your actual changes before committing!${NC}"

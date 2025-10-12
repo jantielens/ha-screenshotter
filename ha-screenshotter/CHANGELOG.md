@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.2] - 2025-10-12
+
+### Fixed
+- Fixed changelog visibility in Home Assistant by moving CHANGELOG.md to add-on directory
+- Updated all documentation and scripts to reference correct changelog location
+
+
 ## [1.12.1] - 2025-10-12
 
 ### Fixed

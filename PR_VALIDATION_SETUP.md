@@ -11,7 +11,7 @@ This repository now includes automatic validation for Pull Requests to ensure pr
 - ✅ New version must follow semantic versioning (higher than base)
 
 ### 2. Changelog Validation
-- ✅ `CHANGELOG.md` must be updated with the new version
+- ✅ `ha-screenshotter/CHANGELOG.md` must be updated with the new version
 - ✅ Changelog entry must have proper format: `## [X.Y.Z] - YYYY-MM-DD`
 - ✅ Changelog entry must contain categorized changes (Added/Changed/Fixed/etc.)
 - ⚠️ Warns if date is not today (but doesn't fail)
@@ -96,7 +96,7 @@ sed -i 's/^version: "1.11.0"/version: "1.12.0"/' ha-screenshotter/config.yaml
 ```
 
 ### 2. Update Changelog
-Add entry to top of `CHANGELOG.md`:
+Add entry to top of `ha-screenshotter/CHANGELOG.md`:
 ```markdown
 ## [1.12.0] - 2025-10-12
 
