@@ -1,0 +1,312 @@
+name: PR Validation
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+
+jobs:
+  validate-version-and-changelog:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get base branch version
+        id: base-version
+        run: |
+          # Get the base branch (main) version
+          git checkout origin/main
+          BASE_PACKAGE_VERSION=$(jq -r '.version' ha-screenshotter/package.json)
+          BASE_CONFIG_VERSION=$(grep '^version:' ha-screenshotter/config.yaml | cut -d' ' -f2 | tr -d '"')
+          
+          echo "base-package-version=$BASE_PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "base-config-version=$BASE_CONFIG_VERSION" >> $GITHUB_OUTPUT
+          
+          echo "Base versions:"
+          echo "  package.json: $BASE_PACKAGE_VERSION"
+          echo "  config.yaml: $BASE_CONFIG_VERSION"
+
+      - name: Get PR branch version
+        id: pr-version
+        run: |
+          # Switch back to PR branch
+          git checkout ${{ github.head_ref }}
+          
+          PR_PACKAGE_VERSION=$(jq -r '.version' ha-screenshotter/package.json)
+          PR_CONFIG_VERSION=$(grep '^version:' ha-screenshotter/config.yaml | cut -d' ' -f2 | tr -d '"')
+          
+          echo "pr-package-version=$PR_PACKAGE_VERSION" >> $GITHUB_OUTPUT
+          echo "pr-config-version=$PR_CONFIG_VERSION" >> $GITHUB_OUTPUT
+          
+          echo "PR versions:"
+          echo "  package.json: $PR_PACKAGE_VERSION"
+          echo "  config.yaml: $PR_CONFIG_VERSION"
+
+      - name: Validate version consistency
+        run: |
+          BASE_PACKAGE="${{ steps.base-version.outputs.base-package-version }}"
+          BASE_CONFIG="${{ steps.base-version.outputs.base-config-version }}"
+          PR_PACKAGE="${{ steps.pr-version.outputs.pr-package-version }}"
+          PR_CONFIG="${{ steps.pr-version.outputs.pr-config-version }}"
+          
+          echo "## Version Validation Results" >> validation_results.md
+          echo "" >> validation_results.md
+          
+          # Check if versions are consistent between files in PR
+          if [ "$PR_PACKAGE" != "$PR_CONFIG" ]; then
+            echo "❌ **Version mismatch between files in PR:**" >> validation_results.md
+            echo "- package.json: $PR_PACKAGE" >> validation_results.md
+            echo "- config.yaml: $PR_CONFIG" >> validation_results.md
+            echo "" >> validation_results.md
+            echo "::error::Version mismatch: package.json ($PR_PACKAGE) != config.yaml ($PR_CONFIG)"
+            exit 1
+          else
+            echo "✅ **Version consistency:** Both files have version $PR_PACKAGE" >> validation_results.md
+            echo "" >> validation_results.md
+          fi
+          
+          # Check if version was bumped from base
+          if [ "$PR_PACKAGE" = "$BASE_PACKAGE" ]; then
+            echo "❌ **Version not bumped:**" >> validation_results.md
+            echo "- Base version: $BASE_PACKAGE" >> validation_results.md
+            echo "- PR version: $PR_PACKAGE" >> validation_results.md
+            echo "" >> validation_results.md
+            echo "::error::Version was not bumped. Current: $PR_PACKAGE, Base: $BASE_PACKAGE"
+            exit 1
+          else
+            echo "✅ **Version bumped:** $BASE_PACKAGE → $PR_PACKAGE" >> validation_results.md
+            echo "" >> validation_results.md
+          fi
+          
+          # Store new version for changelog check
+          echo "NEW_VERSION=$PR_PACKAGE" >> $GITHUB_ENV
+
+      - name: Validate semantic versioning
+        run: |
+          BASE_VERSION="${{ steps.base-version.outputs.base-package-version }}"
+          NEW_VERSION="${{ steps.pr-version.outputs.pr-package-version }}"
+          
+          # Function to compare semantic versions
+          compare_versions() {
+            local base_major=$(echo $1 | cut -d. -f1)
+            local base_minor=$(echo $1 | cut -d. -f2)
+            local base_patch=$(echo $1 | cut -d. -f3)
+            
+            local new_major=$(echo $2 | cut -d. -f1)
+            local new_minor=$(echo $2 | cut -d. -f2)
+            local new_patch=$(echo $2 | cut -d. -f3)
+            
+            # Check if new version is higher
+            if [ $new_major -gt $base_major ]; then
+              return 0
+            elif [ $new_major -eq $base_major ] && [ $new_minor -gt $base_minor ]; then
+              return 0
+            elif [ $new_major -eq $base_major ] && [ $new_minor -eq $base_minor ] && [ $new_patch -gt $base_patch ]; then
+              return 0
+            else
+              return 1
+            fi
+          }
+          
+          if compare_versions "$BASE_VERSION" "$NEW_VERSION"; then
+            echo "✅ **Semantic versioning:** Valid bump from $BASE_VERSION to $NEW_VERSION" >> validation_results.md
+            echo "" >> validation_results.md
+          else
+            echo "❌ **Invalid version bump:** $BASE_VERSION → $NEW_VERSION" >> validation_results.md
+            echo "New version should be higher than base version according to semantic versioning." >> validation_results.md
+            echo "" >> validation_results.md
+            echo "::error::Invalid semantic version bump from $BASE_VERSION to $NEW_VERSION"
+            exit 1
+          fi
+
+      - name: Validate changelog update
+        run: |
+          NEW_VERSION="${{ steps.pr-version.outputs.pr-package-version }}"
+          
+          # Check if CHANGELOG.md exists
+          if [ ! -f "CHANGELOG.md" ]; then
+            echo "❌ **CHANGELOG.md not found**" >> validation_results.md
+            echo "" >> validation_results.md
+            echo "::error::CHANGELOG.md file not found"
+            exit 1
+          fi
+          
+          # Get today's date in YYYY-MM-DD format
+          TODAY=$(date +%Y-%m-%d)
+          
+          # Check if new version is mentioned in changelog
+          if grep -q "## \[$NEW_VERSION\]" CHANGELOG.md; then
+            echo "✅ **Changelog version entry:** Found entry for version $NEW_VERSION" >> validation_results.md
+            
+            # Check if the date is today (optional - comment out if too strict)
+            if grep -q "## \[$NEW_VERSION\] - $TODAY" CHANGELOG.md; then
+              echo "✅ **Changelog date:** Entry has today's date ($TODAY)" >> validation_results.md
+            else
+              echo "⚠️ **Changelog date:** Entry doesn't have today's date" >> validation_results.md
+              echo "Expected: \`## [$NEW_VERSION] - $TODAY\`" >> validation_results.md
+              # Uncomment the next two lines if you want to enforce today's date
+              # echo "::error::Changelog entry should have today's date: $TODAY"
+              # exit 1
+            fi
+            
+            # Check if the changelog entry has content
+            if grep -A 10 "## \[$NEW_VERSION\]" CHANGELOG.md | grep -q "### \(Added\|Changed\|Fixed\|Removed\|Security\|Deprecated\)"; then
+              echo "✅ **Changelog content:** Entry has categorized changes" >> validation_results.md
+            else
+              echo "❌ **Changelog content:** Entry missing categorized changes (Added/Changed/Fixed/Removed/etc.)" >> validation_results.md
+              echo "::error::Changelog entry for $NEW_VERSION should include categorized changes"
+              exit 1
+            fi
+            
+          else
+            echo "❌ **Changelog missing:** No entry found for version $NEW_VERSION" >> validation_results.md
+            echo "" >> validation_results.md
+            echo "Please add a changelog entry like:" >> validation_results.md
+            echo "\`\`\`markdown" >> validation_results.md
+            echo "## [$NEW_VERSION] - $TODAY" >> validation_results.md
+            echo "" >> validation_results.md
+            echo "### Added" >> validation_results.md
+            echo "- New feature description" >> validation_results.md
+            echo "" >> validation_results.md
+            echo "### Changed" >> validation_results.md
+            echo "- Changed feature description" >> validation_results.md
+            echo "" >> validation_results.md
+            echo "### Fixed" >> validation_results.md
+            echo "- Bug fix description" >> validation_results.md
+            echo "\`\`\`" >> validation_results.md
+            echo "" >> validation_results.md
+            echo "::error::CHANGELOG.md missing entry for version $NEW_VERSION"
+            exit 1
+          fi
+          
+          echo "" >> validation_results.md
+
+      - name: Check for unreleased changes
+        run: |
+          # Check if there's an [Unreleased] section that should be moved
+          if grep -q "## \[Unreleased\]" CHANGELOG.md; then
+            echo "⚠️ **Unreleased section:** Found [Unreleased] section in changelog" >> validation_results.md
+            echo "Consider moving unreleased changes to the new version section." >> validation_results.md
+          else
+            echo "✅ **No unreleased section:** Changelog appears properly updated" >> validation_results.md
+          fi
+          echo "" >> validation_results.md
+
+      - name: Final validation summary
+        if: always()
+        run: |
+          echo "## Summary" >> validation_results.md
+          echo "" >> validation_results.md
+          
+          if [ $? -eq 0 ]; then
+            echo "🎉 **All validations passed!** This PR is ready for review." >> validation_results.md
+          else
+            echo "❌ **Some validations failed.** Please address the issues above before merging." >> validation_results.md
+          fi
+          
+          echo "" >> validation_results.md
+          echo "---" >> validation_results.md
+          echo "*This validation ensures that version numbers are bumped and changelog is updated for every release.*" >> validation_results.md
+
+      - name: Add validation results to job summary
+        if: always()
+        run: |
+          cat validation_results.md >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment PR with validation results
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const validationResults = fs.readFileSync('validation_results.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: validationResults
+            });
+
+  # This job will be required for merging
+  validate-files-changed:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check changed files
+        run: |
+          echo "## Changed Files Analysis" >> file_changes.md
+          echo "" >> file_changes.md
+          
+          # Get list of changed files
+          CHANGED_FILES=$(git diff --name-only origin/main..HEAD)
+          
+          echo "**Files changed in this PR:**" >> file_changes.md
+          echo "" >> file_changes.md
+          for file in $CHANGED_FILES; do
+            echo "- \`$file\`" >> file_changes.md
+          done
+          echo "" >> file_changes.md
+          
+          # Check if version files were modified
+          VERSION_FILES_CHANGED=false
+          CHANGELOG_CHANGED=false
+          
+          if echo "$CHANGED_FILES" | grep -q "ha-screenshotter/package.json"; then
+            echo "✅ **package.json** was modified" >> file_changes.md
+            VERSION_FILES_CHANGED=true
+          else
+            echo "❌ **package.json** was NOT modified" >> file_changes.md
+          fi
+          
+          if echo "$CHANGED_FILES" | grep -q "ha-screenshotter/config.yaml"; then
+            echo "✅ **config.yaml** was modified" >> file_changes.md
+            VERSION_FILES_CHANGED=true
+          else
+            echo "❌ **config.yaml** was NOT modified" >> file_changes.md
+          fi
+          
+          if echo "$CHANGED_FILES" | grep -q "CHANGELOG.md"; then
+            echo "✅ **CHANGELOG.md** was modified" >> file_changes.md
+            CHANGELOG_CHANGED=true
+          else
+            echo "❌ **CHANGELOG.md** was NOT modified" >> file_changes.md
+          fi
+          
+          echo "" >> file_changes.md
+          
+          # Only require version bump if this looks like a feature/fix PR (not just docs/ci)
+          NON_VERSION_FILES=$(echo "$CHANGED_FILES" | grep -v -E "(README|\.md$|\.yml$|\.yaml$|LICENSE|\.gitignore)" | grep -v "CHANGELOG.md" || echo "")
+          
+          if [ -n "$NON_VERSION_FILES" ]; then
+            echo "**Code/configuration files were modified - version bump required:**" >> file_changes.md
+            echo "" >> file_changes.md
+            for file in $NON_VERSION_FILES; do
+              echo "- \`$file\`" >> file_changes.md
+            done
+            echo "" >> file_changes.md
+            
+            if [ "$VERSION_FILES_CHANGED" = false ] || [ "$CHANGELOG_CHANGED" = false ]; then
+              echo "::error::Code changes detected but version files or changelog not updated"
+              echo "❌ **This PR modifies code but doesn't update version files and/or changelog**" >> file_changes.md
+              exit 1
+            else
+              echo "✅ **Version files and changelog updated appropriately**" >> file_changes.md
+            fi
+          else
+            echo "ℹ️ **Only documentation/CI files changed - version bump not required**" >> file_changes.md
+          fi
+
+      - name: Add file changes to job summary
+        if: always()
+        run: |
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat file_changes.md >> $GITHUB_STEP_SUMMARY
