@@ -31,7 +31,7 @@ jobs:
           echo "$CHANGED_FILES"
           
           # Check if only documentation/CI files were modified (excluding CHANGELOG.md)
-          NON_DOC_FILES=$(echo "$CHANGED_FILES" | grep -v -E "(README|\.md$|\.yml$|\.yaml$|LICENSE|\.gitignore)" | grep -v "CHANGELOG.md" || echo "")
+          NON_DOC_FILES=$(echo "$CHANGED_FILES" | grep -v -E "(README|\.md$|\.yml$|\.yaml$|LICENSE|\.gitignore)" | grep -v "ha-screenshotter/CHANGELOG.md" || echo "")
           
           if [ -z "$NON_DOC_FILES" ]; then
             echo "doc-only=true" >> $GITHUB_OUTPUT
@@ -161,7 +161,7 @@ jobs:
           NEW_VERSION="${{ steps.pr-version.outputs.pr-package-version }}"
           
           # Check if CHANGELOG.md exists
-          if [ ! -f "CHANGELOG.md" ]; then
+          if [ ! -f "ha-screenshotter/CHANGELOG.md" ]; then
             echo "❌ **CHANGELOG.md not found**" >> validation_results.md
             echo "" >> validation_results.md
             echo "::error::CHANGELOG.md file not found"
@@ -172,11 +172,11 @@ jobs:
           TODAY=$(date +%Y-%m-%d)
           
           # Check if new version is mentioned in changelog
-          if grep -q "## \[$NEW_VERSION\]" CHANGELOG.md; then
+          if grep -q "## \[$NEW_VERSION\]" ha-screenshotter/CHANGELOG.md; then
             echo "✅ **Changelog version entry:** Found entry for version $NEW_VERSION" >> validation_results.md
             
             # Check if the date is today (optional - comment out if too strict)
-            if grep -q "## \[$NEW_VERSION\] - $TODAY" CHANGELOG.md; then
+            if grep -q "## \[$NEW_VERSION\] - $TODAY" ha-screenshotter/CHANGELOG.md; then
               echo "✅ **Changelog date:** Entry has today's date ($TODAY)" >> validation_results.md
             else
               echo "⚠️ **Changelog date:** Entry doesn't have today's date" >> validation_results.md
@@ -187,7 +187,7 @@ jobs:
             fi
             
             # Check if the changelog entry has content
-            if grep -A 10 "## \[$NEW_VERSION\]" CHANGELOG.md | grep -q "### \(Added\|Changed\|Fixed\|Removed\|Security\|Deprecated\)"; then
+            if grep -A 10 "## \[$NEW_VERSION\]" ha-screenshotter/CHANGELOG.md | grep -q "### \(Added\|Changed\|Fixed\|Removed\|Security\|Deprecated\)"; then
               echo "✅ **Changelog content:** Entry has categorized changes" >> validation_results.md
             else
               echo "❌ **Changelog content:** Entry missing categorized changes (Added/Changed/Fixed/Removed/etc.)" >> validation_results.md

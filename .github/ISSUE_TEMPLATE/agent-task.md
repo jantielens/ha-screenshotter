@@ -52,4 +52,4 @@ The repository has automatic validation that will **block the PR** if:
 **📚 Required Reading for Agents:**
 - [AGENT_INSTRUCTIONS.md](../AGENT_INSTRUCTIONS.md) - Complete agent workflow guide
 - [PR_VALIDATION_SETUP.md](../PR_VALIDATION_SETUP.md) - Validation system details
-- [CHANGELOG.md](../CHANGELOG.md) - Example changelog format
+- [CHANGELOG.md](../../ha-screenshotter/CHANGELOG.md) - Example changelog format

@@ -20,7 +20,7 @@
 
 2. **📝 Changelog Update (REQUIRED)**
    ```markdown
-   # Add to top of CHANGELOG.md:
+   # Add to top of ha-screenshotter/CHANGELOG.md:
    ## [NEW_VERSION] - YYYY-MM-DD
    
    ### Added
@@ -39,7 +39,7 @@
 3. **🔍 Files to Always Update for Feature/Fix PRs:**
    - `ha-screenshotter/package.json` (version field)
    - `ha-screenshotter/config.yaml` (version field) 
-   - `CHANGELOG.md` (new entry at top)
+   - `ha-screenshotter/CHANGELOG.md` (new entry at top)
 
 ## 🚨 VALIDATION RULES
 
@@ -102,7 +102,7 @@ sed -i 's/^version: "'$CURRENT_VERSION'"/version: "'$NEW_VERSION'"/' ha-screensh
 
 # 5. Update changelog (add to top, after line 6)
 TODAY=$(date +%Y-%m-%d)
-sed -i '7i\\n## ['$NEW_VERSION'] - '$TODAY'\n\n### Added\n- Your new feature description\n\n### Fixed\n- Your bug fix description' CHANGELOG.md
+sed -i '7i\\n## ['$NEW_VERSION'] - '$TODAY'\n\n### Added\n- Your new feature description\n\n### Fixed\n- Your bug fix description' ha-screenshotter/CHANGELOG.md
 ```
 
 ## 🔧 DEBUGGING VALIDATION FAILURES
@@ -117,7 +117,7 @@ If your PR fails validation:
    sed -i 's/^version: .*/version: "X.Y.Z"/' ha-screenshotter/config.yaml
    
    # Add missing changelog entry
-   # Edit CHANGELOG.md manually or use sed commands above
+   # Edit ha-screenshotter/CHANGELOG.md manually or use sed commands above
    ```
 
 ## 💡 TIPS FOR AGENTS
