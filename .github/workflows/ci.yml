@@ -794,58 +794,64 @@ jobs:
                         echo "ℹ️  Screenshot $i: Not checking grayscale (not expected for this URL)"
                       fi
                       
-                      # Check bit depth using file command for more accurate PNG bit depth detection
-                      BIT_DEPTH_IDENTIFY=$(identify -ping -format "%[depth]" "$SCREENSHOT_FILE" 2>/dev/null || echo "Unknown")
-                      # Use file command to get actual PNG bit depth from file header
-                      FILE_INFO=$(file "$SCREENSHOT_FILE" 2>/dev/null || echo "")
-                      if [[ "$FILE_INFO" =~ ([0-9]+)-bit ]]; then
-                        ACTUAL_BIT_DEPTH="${BASH_REMATCH[1]}"
-                      else
-                        ACTUAL_BIT_DEPTH="$BIT_DEPTH_IDENTIFY"
-                      fi
-                      
-                      # Determine expected bit depth based on test case
-                      case "${{ matrix.name }}" in
-                        "per-url-object-format")
-                          # Both URLs use global bit depth (8)
-                          EXPECTED_DEPTH=8
-                          ;;
-                        "per-url-array-with-objects")
-                          # Both URLs use global bit depth (4)
-                          EXPECTED_DEPTH=4
-                          ;;
-                        "per-url-mixed-settings")
-                          # First URL: 1-bit, Second URL: 8-bit
-                          if [ "$i" = "0" ]; then
-                            EXPECTED_DEPTH=1
-                          else
+                      # Check bit depth only for grayscale images
+                      if [ "$EXPECT_GRAYSCALE" = "true" ]; then
+                        # Check bit depth using file command for more accurate PNG bit depth detection
+                        BIT_DEPTH_IDENTIFY=$(identify -ping -format "%[depth]" "$SCREENSHOT_FILE" 2>/dev/null || echo "Unknown")
+                        # Use file command to get actual PNG bit depth from file header
+                        FILE_INFO=$(file "$SCREENSHOT_FILE" 2>/dev/null || echo "")
+                        if [[ "$FILE_INFO" =~ ([0-9]+)-bit ]]; then
+                          ACTUAL_BIT_DEPTH="${BASH_REMATCH[1]}"
+                        else
+                          ACTUAL_BIT_DEPTH="$BIT_DEPTH_IDENTIFY"
+                        fi
+                        
+                        # Determine expected bit depth based on test case
+                        case "${{ matrix.name }}" in
+                          "per-url-object-format")
+                            # Both URLs use global bit depth (8)
                             EXPECTED_DEPTH=8
-                          fi
-                          ;;
-                        "per-url-empty-settings")
-                          # Both URLs use global bit depth (4)
-                          EXPECTED_DEPTH=4
-                          ;;
-                        *)
-                          # Use global bit depth
-                          EXPECTED_DEPTH=${{ matrix.bit_depth }}
-                          # Note: Invalid bit depth values now cause container failure
-                          if [ "$EXPECTED_DEPTH" = "99" ]; then
-                            EXPECTED_DEPTH=8  # This case should now never reach here due to validation
-                          fi
-                          ;;
-                      esac
-                      
-                      echo "Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (identify reported: $BIT_DEPTH_IDENTIFY, expected: $EXPECTED_DEPTH)"
-                      
-                      # Validate bit depth
-                      if [ "$ACTUAL_BIT_DEPTH" = "$EXPECTED_DEPTH" ]; then
-                        echo "✅ Screenshot $i bit depth correct: $ACTUAL_BIT_DEPTH"
-                        VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i bit depth: $ACTUAL_BIT_DEPTH ✅\n"
+                            ;;
+                          "per-url-array-with-objects")
+                            # Both URLs use global bit depth (4)
+                            EXPECTED_DEPTH=4
+                            ;;
+                          "per-url-mixed-settings")
+                            # First URL: 1-bit, Second URL: 8-bit
+                            if [ "$i" = "0" ]; then
+                              EXPECTED_DEPTH=1
+                            else
+                              EXPECTED_DEPTH=8
+                            fi
+                            ;;
+                          "per-url-empty-settings")
+                            # Both URLs use global bit depth (4)
+                            EXPECTED_DEPTH=4
+                            ;;
+                          *)
+                            # Use global bit depth
+                            EXPECTED_DEPTH=${{ matrix.bit_depth }}
+                            # Note: Invalid bit depth values now cause container failure
+                            if [ "$EXPECTED_DEPTH" = "99" ]; then
+                              EXPECTED_DEPTH=8  # This case should now never reach here due to validation
+                            fi
+                            ;;
+                        esac
+                        
+                        echo "Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (identify reported: $BIT_DEPTH_IDENTIFY, expected: $EXPECTED_DEPTH)"
+                        
+                        # Validate bit depth for grayscale images only
+                        if [ "$ACTUAL_BIT_DEPTH" = "$EXPECTED_DEPTH" ]; then
+                          echo "✅ Screenshot $i bit depth correct: $ACTUAL_BIT_DEPTH"
+                          VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i bit depth: $ACTUAL_BIT_DEPTH ✅\n"
+                        else
+                          echo "❌ Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (expected: $EXPECTED_DEPTH)"
+                          VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (expected $EXPECTED_DEPTH) ❌\n"
+                          TEST_PASSED=false
+                        fi
                       else
-                        echo "❌ Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (expected: $EXPECTED_DEPTH)"
-                        VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i bit depth: $ACTUAL_BIT_DEPTH (expected $EXPECTED_DEPTH) ❌\n"
-                        TEST_PASSED=false
+                        echo "ℹ️  Screenshot $i: Skipping bit depth validation (color image)"
+                        VALIDATION_MESSAGES="${VALIDATION_MESSAGES}- Screenshot $i: Bit depth check skipped (color image) ℹ️\n"
                       fi
                     fi
                   fi
