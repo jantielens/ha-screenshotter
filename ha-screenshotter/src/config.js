@@ -199,6 +199,16 @@ async function loadConfiguration() {
                   if (!Number.isInteger(urlCrop.height) || urlCrop.height <= 0) {
                     throw new Error(`Invalid crop height for URL ${urlItem.url}: ${urlCrop.height}. Must be a positive integer.`);
                   }
+                  
+                  // Validate crop area fits within image dimensions
+                  const urlWidth = urlItem.width || resolution_width;
+                  const urlHeight = urlItem.height || resolution_height;
+                  if (urlCrop.x + urlCrop.width > urlWidth) {
+                    throw new Error(`Invalid crop area for URL ${urlItem.url}: crop extends beyond image width. Crop area (${urlCrop.x + urlCrop.width}) exceeds image width (${urlWidth}).`);
+                  }
+                  if (urlCrop.y + urlCrop.height > urlHeight) {
+                    throw new Error(`Invalid crop area for URL ${urlItem.url}: crop extends beyond image height. Crop area (${urlCrop.y + urlCrop.height}) exceeds image height (${urlHeight}).`);
+                  }
                 } else if (urlCrop !== null && urlCrop !== false) {
                   throw new Error(`Invalid crop setting for URL ${urlItem.url}: ${urlCrop}. Must be null, false, or an object with x, y, width, and height properties.`);
                 }
@@ -243,6 +253,16 @@ async function loadConfiguration() {
                   }
                   if (!Number.isInteger(urlCrop.height) || urlCrop.height <= 0) {
                     throw new Error(`Invalid crop height for URL ${url}: ${urlCrop.height}. Must be a positive integer.`);
+                  }
+                  
+                  // Validate crop area fits within image dimensions
+                  const urlWidth = settings.width || resolution_width;
+                  const urlHeight = settings.height || resolution_height;
+                  if (urlCrop.x + urlCrop.width > urlWidth) {
+                    throw new Error(`Invalid crop area for URL ${url}: crop extends beyond image width. Crop area (${urlCrop.x + urlCrop.width}) exceeds image width (${urlWidth}).`);
+                  }
+                  if (urlCrop.y + urlCrop.height > urlHeight) {
+                    throw new Error(`Invalid crop area for URL ${url}: crop extends beyond image height. Crop area (${urlCrop.y + urlCrop.height}) exceeds image height (${urlHeight}).`);
                   }
                 } else if (urlCrop !== null && urlCrop !== false) {
                   throw new Error(`Invalid crop setting for URL ${url}: ${urlCrop}. Must be null, false, or an object with x, y, width, and height properties.`);
