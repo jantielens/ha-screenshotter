@@ -117,14 +117,14 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
   const publicUrl = `/media/ha-screenshotter/${filename}`;
   console.log(`   │       🌐 Home Assistant URL: ${publicUrl}`);
     
-    // Apply rotation if needed
-    if (rotationDegrees !== 0) {
-      await rotateImage(screenshotPath, rotationDegrees, '   │       ');
-    }
-    
-    // Apply cropping if needed (after rotation to work with final dimensions)
+    // Apply cropping if needed (BEFORE rotation - crop coordinates are relative to original image)
     if (cropConfig !== null && cropConfig !== false) {
       await cropImage(screenshotPath, cropConfig, '   │       ');
+    }
+    
+    // Apply rotation if needed (AFTER cropping - rotate the cropped image)
+    if (rotationDegrees !== 0) {
+      await rotateImage(screenshotPath, rotationDegrees, '   │       ');
     }
     
     // Apply grayscale conversion if needed
