@@ -444,8 +444,8 @@
             "success": true,
             "screenshots": [
                 {
-                    "width": 390,
-                    "height": 844,
+                    "width": 1024,
+                    "height": 768,
                     "grayscale": false,
                     "bitDepth": 24
                 }
@@ -465,8 +465,8 @@
             "success": true,
             "screenshots": [
                 {
-                    "width": 320,
-                    "height": 568,
+                    "width": 1024,
+                    "height": 768,
                     "grayscale": false,
                     "bitDepth": 24
                 }
@@ -486,8 +486,8 @@
             "success": true,
             "screenshots": [
                 {
-                    "width": 414,
-                    "height": 896,
+                    "width": 1024,
+                    "height": 768,
                     "grayscale": false,
                     "bitDepth": 24
                 }
@@ -513,8 +513,8 @@
                     "bitDepth": 24
                 },
                 {
-                    "width": 320,
-                    "height": 568,
+                    "width": 1024,
+                    "height": 768,
                     "grayscale": false,
                     "bitDepth": 24
                 }
@@ -526,14 +526,16 @@
         "config": {
             "schedule": "*/1 * * * *",
             "urls": "[{\"url\": \"https://example.com\", \"device_emulation\": \"iPad\"}]",
+            "resolution_width": 400,
+            "resolution_height": 800,
             "run_once": true
         },
         "validation": {
             "success": true,
             "screenshots": [
                 {
-                    "width": 768,
-                    "height": 1024,
+                    "width": 400,
+                    "height": 800,
                     "grayscale": false,
                     "bitDepth": 24
                 }
@@ -546,14 +548,16 @@
             "schedule": "*/1 * * * *",
             "urls": "[\"https://example.com\"]",
             "device_emulation": "iPhone 12",
+            "resolution_width": 900,
+            "resolution_height": 600,
             "run_once": true
         },
         "validation": {
             "success": true,
             "screenshots": [
                 {
-                    "width": 390,
-                    "height": 844,
+                    "width": 900,
+                    "height": 600,
                     "grayscale": false,
                     "bitDepth": 24
                 }
@@ -565,6 +569,8 @@
         "config": {
             "schedule": "*/1 * * * *",
             "urls": "[{\"url\": \"https://example.com\", \"device_emulation\": \"iPhone SE\", \"rotation\": 90, \"grayscale\": true}]",
+            "resolution_width": 320,
+            "resolution_height": 568,
             "run_once": true
         },
         "validation": {
