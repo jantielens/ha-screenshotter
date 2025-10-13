@@ -254,24 +254,31 @@ jobs:
             # Get test name from directory name (remove number prefix)
             TEST_NAME=$(echo "$TEST_DIR" | sed 's/^[0-9][0-9][0-9]-//')
             
+            # Check if this test passed by looking in the test summary
+            TEST_PASSED=true
+            if [ -f test_summary.md ]; then
+              if grep -q "| $TEST_NAME | ❌" test_summary.md; then
+                TEST_PASSED=false
+              fi
+            fi
+            
+            # Skip failed tests
+            if [ "$TEST_PASSED" = "false" ]; then
+              echo "  Skipping failed test: $TEST_NAME"
+              continue
+            fi
+            
             # Find all screenshots in this test directory
             SCREENSHOTS=($(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" 2>/dev/null | sort -V))
             
             if [ ${#SCREENSHOTS[@]} -eq 0 ]; then
-              echo "  No screenshots found for $TEST_DIR"
-              
-              # Create a placeholder image for failed/no-screenshot tests
-              convert -size 400x300 xc:lightgray \
-                      -font DejaVu-Sans -pointsize 14 -fill black \
-                      -gravity center -annotate +0+0 "No Screenshots\n$TEST_NAME" \
-                      "combined_processing/row_${TEST_DIR}.png"
-              ROW_IMAGES+=("combined_processing/row_${TEST_DIR}.png")
+              echo "  No screenshots found for $TEST_DIR, skipping..."
               continue
             fi
             
             echo "  Found ${#SCREENSHOTS[@]} screenshots"
             
-            # Resize all screenshots to a consistent height for better layout
+            # Resize all screenshots to a consistent height for better layout and add index numbers
             RESIZED_SCREENSHOTS=()
             ROW_HEIGHT=200
             
@@ -286,14 +293,24 @@ jobs:
               # Calculate new width maintaining aspect ratio
               NEW_WIDTH=$(echo "scale=0; $ORIGINAL_WIDTH * $ROW_HEIGHT / $ORIGINAL_HEIGHT" | bc)
               
-              # Resize the image
-              convert "$SCREENSHOT" -resize "${NEW_WIDTH}x${ROW_HEIGHT}!" "$RESIZED_FILE"
+              # Resize the image first
+              convert "$SCREENSHOT" -resize "${NEW_WIDTH}x${ROW_HEIGHT}!" "temp_resized.png"
+              
+              # Add red index number in top-right corner
+              convert "temp_resized.png" \
+                      -font DejaVu-Sans-Bold -pointsize 16 -fill red -stroke white -strokewidth 1 \
+                      -gravity northeast -annotate +5+5 "$i" \
+                      "$RESIZED_FILE"
+              
+              # Clean up temp file
+              rm -f "temp_resized.png"
+              
               RESIZED_SCREENSHOTS+=("$RESIZED_FILE")
             done
             
-            # Create a label for this test
+            # Create a label for this test (make it twice as wide)
             LABEL_FILE="combined_processing/label_${TEST_DIR}.png"
-            convert -size 200x${ROW_HEIGHT} xc:white \
+            convert -size 400x${ROW_HEIGHT} xc:white \
                     -font DejaVu-Sans -pointsize 10 -fill black \
                     -gravity center -annotate +0+0 "$TEST_NAME" \
                     "$LABEL_FILE"
@@ -341,8 +358,19 @@ jobs:
             
             for TEST_DIR in "${TEST_DIRS[@]}"; do
               TEST_NAME=$(echo "$TEST_DIR" | sed 's/^[0-9][0-9][0-9]-//')
-              SCREENSHOT_COUNT=$(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" 2>/dev/null | wc -l)
-              echo "  - $TEST_NAME ($SCREENSHOT_COUNT screenshots)" >> combined_image_summary.md
+              
+              # Check if this test passed
+              TEST_PASSED=true
+              if [ -f test_summary.md ]; then
+                if grep -q "| $TEST_NAME | ❌" test_summary.md; then
+                  TEST_PASSED=false
+                fi
+              fi
+              
+              if [ "$TEST_PASSED" = "true" ]; then
+                SCREENSHOT_COUNT=$(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" 2>/dev/null | wc -l)
+                echo "  - $TEST_NAME ($SCREENSHOT_COUNT screenshots)" >> combined_image_summary.md
+              fi
             done
             
           else
