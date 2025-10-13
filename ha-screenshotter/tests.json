@@ -137,7 +137,7 @@
             ]
         }
     },
-        {
+    {
         "name": "Cropping test - single URL with crop area, 4-bit depth, grayscale, rotate 90",
         "config": {
             "schedule": "*/1 * * * *",
@@ -794,6 +794,141 @@
                     "height": 600,
                     "grayscale": true,
                     "bitDepth": 8
+                }
+            ]
+        }
+    },
+    {
+        "name": "Advanced processing - contrast adjustment steps",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.0},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.2},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.4},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.6},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.8},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 2.0},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"gamma_correction\": 1.0},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"gamma_correction\": 1.4},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"gamma_correction\": 1.8},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"gamma_correction\": 2.2},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"black_level\": \"0%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"black_level\": \"25%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"black_level\": \"50%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"black_level\": \"75%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"black_level\": \"100%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"white_level\": \"0%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"white_level\": \"25%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"white_level\": \"50%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"white_level\": \"75%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"white_level\": \"100%\"}]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
                 }
             ]
         }
