@@ -22,7 +22,8 @@ async function loadConfiguration() {
         grayscale: false,
         bit_depth: 24,
         crop: null,
-        device_emulation: "desktop"
+        device_emulation: "desktop",
+        advanced_processing: null
       },
       {
         url: "https://time.now/",
@@ -32,7 +33,8 @@ async function loadConfiguration() {
         grayscale: false,
         bit_depth: 24,
         crop: null,
-        device_emulation: "desktop"
+        device_emulation: "desktop",
+        advanced_processing: null
       }
     ],
     resolution_width: 1920,
