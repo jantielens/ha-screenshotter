@@ -2,7 +2,7 @@
  * Screenshot capture functionality
  */
 
-const fs = require('fs');
+const fs = require('fs-extra');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const { SCREENSHOTS_PATH } = require('./constants');
@@ -179,19 +179,21 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     console.log('   │       ⏳ Waiting for page to fully load...');
     await page.waitForFunction('document.readyState === "complete"');
     
-    // Take the screenshot
+    // Take the screenshot to a temporary file to prevent race conditions
     console.log('   │       📷 Taking screenshot...');
-    const filename = `${index}.png`;
-    let screenshotPath = path.join(SCREENSHOTS_PATH, filename);
+    const finalFilename = `${index}.png`;
+    const tempFilename = `${index}_temp.png`;
+    let screenshotPath = path.join(SCREENSHOTS_PATH, tempFilename);
+    const finalPath = path.join(SCREENSHOTS_PATH, finalFilename);
     await page.screenshot({ 
       path: screenshotPath,
       fullPage: false,
       type: 'png'
     });
     
-  console.log(`   │       💾 Screenshot saved to: ${filename}`);
+  console.log(`   │       💾 Screenshot saved to temporary file: ${tempFilename}`);
   // Log public URL for Home Assistant (served at /media/ha-screenshotter/)
-  const publicUrl = `/media/ha-screenshotter/${filename}`;
+  const publicUrl = `/media/ha-screenshotter/${finalFilename}`;
   console.log(`   │       🌐 Home Assistant URL: ${publicUrl}`);
     
     // Apply cropping if needed (BEFORE rotation - crop coordinates are relative to original image)
@@ -219,10 +221,28 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       await reduceBitDepth(screenshotPath, bitDepth, '   │       ');
     }
     
-    return screenshotPath;
+    // Atomically move the processed screenshot to its final location
+    console.log(`   │       🔄 Moving processed screenshot to final location...`);
+    await fs.move(screenshotPath, finalPath, { overwrite: true });
+    console.log(`   │       ✅ Screenshot finalized: ${finalFilename}`);
+    
+    return finalPath;
     
   } catch (error) {
     console.error(`❌ Error taking screenshot of ${url}:`, error.message);
+    
+    // Clean up temporary file if it exists
+    try {
+      const tempFilename = `${index}_temp.png`;
+      const tempPath = path.join(SCREENSHOTS_PATH, tempFilename);
+      if (await fs.pathExists(tempPath)) {
+        await fs.remove(tempPath);
+        console.log(`   │       🧹 Cleaned up temporary file: ${tempFilename}`);
+      }
+    } catch (cleanupError) {
+      console.error(`   │       ⚠️  Failed to clean up temporary file:`, cleanupError.message);
+    }
+    
     throw error;
   } finally {
     if (browser) {

@@ -13,15 +13,23 @@ function setupWebServer(config) {
   const app = express();
   const PORT = config.webserverport;
   
-  // Serve static files from the screenshots directory
-  app.use('/screenshots', express.static(SCREENSHOTS_PATH));
+  // Serve static files from the screenshots directory, but block temporary files
+  app.use('/screenshots', (req, res, next) => {
+    // Block access to temporary files (files ending with _temp.png)
+    if (req.path.endsWith('_temp.png')) {
+      return res.status(404).send('Not Found');
+    }
+    next();
+  }, express.static(SCREENSHOTS_PATH));
   
   // Main page with a simple gallery view
   app.get('/', async (req, res) => {
     try {
-      // Read all screenshot files
+      // Read all screenshot files (exclude temporary files)
       const files = await fs.readdir(SCREENSHOTS_PATH);
-      const imageFiles = files.filter(file => file.endsWith('.png')).sort();
+      const imageFiles = files
+        .filter(file => file.endsWith('.png') && !file.endsWith('_temp.png'))
+        .sort();
       
       // Generate HTML page
       const html = `
