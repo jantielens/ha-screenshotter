@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2025-10-13
+
+### Added
+- **Advanced image processing** capabilities for enhanced screenshot quality
+- **Contrast adjustment** to control image clarity and tonal differences
+- **Saturation control** to adjust color intensity from full color to grayscale
+- **Gamma correction** for display-specific optimization
+- **Black/White level adjustments** to crush shadows and highlights for better readability
+- **Gamma removal** feature specifically optimized for e-ink displays
+- Per-URL advanced processing settings support
+- Configuration options: `contrast`, `saturation`, `gamma_correction`, `black_level`, `white_level`, `remove_gamma`
+- Comprehensive test cases for all advanced processing features
+- Updated IMAGE_PROCESSING.md documentation with e-ink optimization examples
+
+### Changed
+- Processing order now includes advanced processing step after cropping and before rotation
+- Updated config.yaml schema to include new advanced processing options
+
 ## [1.13.0] - 2025-10-12
 
 ### Added

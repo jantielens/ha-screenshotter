@@ -137,7 +137,7 @@
             ]
         }
     },
-        {
+    {
         "name": "Cropping test - single URL with crop area, 4-bit depth, grayscale, rotate 90",
         "config": {
             "schedule": "*/1 * * * *",
@@ -597,6 +597,333 @@
         "validation": {
             "success": true,
             "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Advanced processing - contrast adjustment",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "contrast": 1.5,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Advanced processing - saturation and contrast",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "contrast": 1.2,
+            "saturation": 0.8,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Advanced processing - gamma removal for e-ink",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "remove_gamma": true,
+            "contrast": 1.3,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Advanced processing - black and white levels",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "black_level": "20%",
+            "white_level": "90%",
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Advanced processing - complete e-ink optimization",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "remove_gamma": true,
+            "contrast": 1.5,
+            "black_level": "20%",
+            "white_level": "90%",
+            "grayscale": true,
+            "bit_depth": 1,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": true,
+                    "bitDepth": 1
+                }
+            ]
+        }
+    },
+    {
+        "name": "Advanced processing - per-URL contrast and gamma",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.8, \"remove_gamma\": true}, {\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"saturation\": 0.5}]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Advanced processing - custom gamma correction",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "gamma_correction": 2.2,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Advanced processing - grayscale with levels",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "grayscale": true,
+            "black_level": "10%",
+            "white_level": "95%",
+            "bit_depth": 8,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": true,
+                    "bitDepth": 8
+                }
+            ]
+        }
+    },
+    {
+        "name": "Advanced processing - contrast adjustment steps",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.0},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.2},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.4},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.6},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.8},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 2.0},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"gamma_correction\": 1.0},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"gamma_correction\": 1.4},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"gamma_correction\": 1.8},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"gamma_correction\": 2.2},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"black_level\": \"0%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"black_level\": \"25%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"black_level\": \"50%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"black_level\": \"75%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"black_level\": \"100%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"white_level\": \"0%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"white_level\": \"25%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"white_level\": \"50%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"white_level\": \"75%\"},{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"white_level\": \"100%\"}]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
                 {
                     "width": 800,
                     "height": 600,
