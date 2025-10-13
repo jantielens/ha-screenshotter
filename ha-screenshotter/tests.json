@@ -610,7 +610,7 @@
         "name": "Advanced processing - contrast adjustment",
         "config": {
             "schedule": "*/1 * * * *",
-            "urls": "[\"https://example.com\"]",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
             "resolution_width": 800,
             "resolution_height": 600,
             "contrast": 1.5,
@@ -632,7 +632,7 @@
         "name": "Advanced processing - saturation and contrast",
         "config": {
             "schedule": "*/1 * * * *",
-            "urls": "[\"https://example.com\"]",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
             "resolution_width": 800,
             "resolution_height": 600,
             "contrast": 1.2,
@@ -655,7 +655,7 @@
         "name": "Advanced processing - gamma removal for e-ink",
         "config": {
             "schedule": "*/1 * * * *",
-            "urls": "[\"https://example.com\"]",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
             "resolution_width": 800,
             "resolution_height": 600,
             "remove_gamma": true,
@@ -678,7 +678,7 @@
         "name": "Advanced processing - black and white levels",
         "config": {
             "schedule": "*/1 * * * *",
-            "urls": "[\"https://example.com\"]",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
             "resolution_width": 800,
             "resolution_height": 600,
             "black_level": "20%",
@@ -701,7 +701,7 @@
         "name": "Advanced processing - complete e-ink optimization",
         "config": {
             "schedule": "*/1 * * * *",
-            "urls": "[\"https://example.com\"]",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
             "resolution_width": 800,
             "resolution_height": 600,
             "remove_gamma": true,
@@ -728,7 +728,7 @@
         "name": "Advanced processing - per-URL contrast and gamma",
         "config": {
             "schedule": "*/1 * * * *",
-            "urls": "[{\"url\": \"https://example.com\", \"contrast\": 1.8, \"remove_gamma\": true}, {\"url\": \"https://google.com\", \"saturation\": 0.5}]",
+            "urls": "[{\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"contrast\": 1.8, \"remove_gamma\": true}, {\"url\": \"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\", \"saturation\": 0.5}]",
             "resolution_width": 800,
             "resolution_height": 600,
             "run_once": true
@@ -755,7 +755,7 @@
         "name": "Advanced processing - custom gamma correction",
         "config": {
             "schedule": "*/1 * * * *",
-            "urls": "[\"https://example.com\"]",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
             "resolution_width": 800,
             "resolution_height": 600,
             "gamma_correction": 2.2,
@@ -777,7 +777,7 @@
         "name": "Advanced processing - grayscale with levels",
         "config": {
             "schedule": "*/1 * * * *",
-            "urls": "[\"https://example.com\"]",
+            "urls": "[\"https://github.com/jantielens/ha-screenshotter/blob/main/sample-image.jpg\"]",
             "resolution_width": 800,
             "resolution_height": 600,
             "grayscale": true,
