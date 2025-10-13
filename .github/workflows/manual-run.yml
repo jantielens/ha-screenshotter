@@ -1,0 +1,61 @@
+name: Manual Screenshot Run
+on:
+  workflow_dispatch:
+    inputs:
+      options_json:
+        description: 'Paste your options.json content here (JSON)'
+        required: true
+        type: textarea
+        default: |
+          {
+            "schedule": "* * * * *",
+            "urls": "[\"https://example.com\"]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "rotation_degrees": 0,
+            "grayscale": false,
+            "bit_depth": 24,
+            "run_once": true
+          }
+jobs:
+  manual-screenshot:
+    runs-on: ubuntu-latest
+    env:
+      SCREENSHOT_SUBFOLDER: ha-screenshotter
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Docker container
+        run: |
+          cd ha-screenshotter
+          docker build -t ha-screenshotter-manual .
+
+      - name: Prepare test directories
+        run: |
+          mkdir -p manual-run/data manual-run/share/$SCREENSHOT_SUBFOLDER
+
+      - name: Write options.json from input
+        run: |
+          echo "${{ github.event.inputs.options_json }}" > manual-run/data/options.json
+          echo "Options file used:" && cat manual-run/data/options.json
+
+      - name: Run container
+        run: |
+          docker run --rm \
+            -v "${GITHUB_WORKSPACE}/manual-run/data:/data" \
+            -v "${GITHUB_WORKSPACE}/manual-run/share:/media" \
+            ha-screenshotter-manual 2>&1 | tee manual-run/container.log
+
+      - name: List screenshots
+        run: |
+          ls -la manual-run/share/$SCREENSHOT_SUBFOLDER/ || echo "No screenshots directory found"
+
+      - name: Upload screenshots as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: manual-run-screenshots
+          path: |
+            manual-run/share/$SCREENSHOT_SUBFOLDER/
+            manual-run/container.log
+          retention-days: 7

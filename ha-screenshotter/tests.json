@@ -430,5 +430,180 @@
         "validation": {
             "success": false
         }
+    },
+    {
+        "name": "Device emulation - iPhone 12 preset",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"device_emulation\": \"iPhone 12\"}]",
+            "resolution_width": 1024,
+            "resolution_height": 768,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 1024,
+                    "height": 768,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Device emulation - iPhone SE preset",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"device_emulation\": \"iPhone SE\"}]",
+            "resolution_width": 1024,
+            "resolution_height": 768,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 1024,
+                    "height": 768,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Device emulation - custom mobile viewport",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"device_emulation\": \"custom\", \"mobile_viewport\": {\"width\": 414, \"height\": 896, \"device_scale_factor\": 2}}]",
+            "resolution_width": 1024,
+            "resolution_height": 768,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 1024,
+                    "height": 768,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Device emulation - per-URL mixed desktop and mobile",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"device_emulation\": \"desktop\"}, {\"url\": \"https://google.com\", \"device_emulation\": \"iPhone SE\"}]",
+            "resolution_width": 1024,
+            "resolution_height": 768,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 1024,
+                    "height": 768,
+                    "grayscale": false,
+                    "bitDepth": 24
+                },
+                {
+                    "width": 1024,
+                    "height": 768,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Device emulation - iPad preset",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"device_emulation\": \"iPad\"}]",
+            "resolution_width": 400,
+            "resolution_height": 800,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 400,
+                    "height": 800,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Device emulation - global setting with mobile preset",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[\"https://example.com\"]",
+            "device_emulation": "iPhone 12",
+            "resolution_width": 900,
+            "resolution_height": 600,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 900,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
+    },
+    {
+        "name": "Device emulation - mobile with rotation and grayscale",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"device_emulation\": \"iPhone SE\", \"rotation\": 90, \"grayscale\": true}]",
+            "resolution_width": 320,
+            "resolution_height": 568,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 568,
+                    "height": 320,
+                    "grayscale": true,
+                    "bitDepth": 8
+                }
+            ]
+        }
+    },
+    {
+        "name": "Device emulation - unknown preset fallback to desktop",
+        "config": {
+            "schedule": "*/1 * * * *",
+            "urls": "[{\"url\": \"https://example.com\", \"device_emulation\": \"NonExistentDevice\"}]",
+            "resolution_width": 800,
+            "resolution_height": 600,
+            "run_once": true
+        },
+        "validation": {
+            "success": true,
+            "screenshots": [
+                {
+                    "width": 800,
+                    "height": 600,
+                    "grayscale": false,
+                    "bitDepth": 24
+                }
+            ]
+        }
     }
 ]

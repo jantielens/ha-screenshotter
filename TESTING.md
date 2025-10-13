@@ -73,6 +73,7 @@ Create a file `data/options.json` with your test settings:
 | `schedule` | string | Cron schedule for screenshots | `"*/2 * * * *"` (every 2 minutes) |
 | `urls` | string | JSON array of URLs to screenshot | `"[\"https://example.com\"]"` |
 | `resolution_width` | integer | Screenshot width in pixels | `1366` |
+| `device_emulation` | string | Device preset name for mobile emulation | `"iPhone 12"`, `"iPad"`, `"desktop"` |
 | `resolution_height` | integer | Screenshot height in pixels | `768` |
 | `rotation_degrees` | integer | Degrees to rotate screenshots (0, 90, 180, 270) | `90` |
 
@@ -221,6 +222,37 @@ Test different rotation angles:
 ```
 
 **Note**: Invalid rotation values (like 45, 135) will default to 0 degrees.
+
+### Device Emulation Testing
+
+Test mobile device emulation:
+
+```json
+// Desktop mode (default)
+{"urls": "[\"https://example.com\"]", "device_emulation": "desktop"}
+
+// iPhone 12 preset
+{"urls": "[\"https://example.com\"]", "device_emulation": "iPhone 12"}
+
+// iPad preset
+{"urls": "[\"https://example.com\"]", "device_emulation": "iPad"}
+
+// Custom mobile viewport
+{
+  "urls": "[{\"url\": \"https://example.com\", \"device_emulation\": \"custom\", \"mobile_viewport\": {\"width\": 414, \"height\": 896}}]"
+}
+
+// Per-URL mixed desktop and mobile
+{
+  "urls": "[{\"url\": \"https://example.com\", \"device_emulation\": \"desktop\"}, {\"url\": \"https://google.com\", \"device_emulation\": \"iPhone SE\"}]"
+}
+```
+
+**Expected Output**: 
+- iPhone 12: 390x844 pixels
+- iPhone SE: 320x568 pixels
+- iPad: 768x1024 pixels
+- Unknown device presets fall back to desktop mode
 
 ### Schedule Testing
 

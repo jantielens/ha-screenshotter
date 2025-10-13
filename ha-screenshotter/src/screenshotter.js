@@ -9,6 +9,21 @@ const { SCREENSHOTS_PATH } = require('./constants');
 const { rotateImage, convertToGrayscale, cropImage, reduceBitDepth } = require('./imageProcessor');
 
 /**
+ * Get user agent string for mobile device presets
+ * @param {string} preset - Preset name or custom user agent string
+ * @returns {string} User agent string
+ */
+function getUserAgent(preset) {
+  const userAgents = {
+    'iPhone': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1',
+    'iPad': 'Mozilla/5.0 (iPad; CPU OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1',
+    'Android': 'Mozilla/5.0 (Linux; Android 10; SM-G975F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.120 Mobile Safari/537.36'
+  };
+  
+  return userAgents[preset] || preset; // Return preset if it's a custom user agent string
+}
+
+/**
  * Take a screenshot of a given URL
  * @param {string} url - The URL to screenshot
  * @param {number} index - The index of the URL (used for filename)
@@ -20,8 +35,10 @@ const { rotateImage, convertToGrayscale, cropImage, reduceBitDepth } = require('
  * @param {Object|null} cropConfig - Crop configuration object with x, y, width, height properties
  * @param {string} longLivedToken - Home Assistant long-lived access token
  * @param {string} language - Language setting for Home Assistant frontend
+ * @param {string} deviceEmulation - Device emulation preset name or "desktop"/"custom"
+ * @param {Object|null} mobileViewport - Custom mobile viewport settings
  */
-async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, cropConfig = null, longLivedToken = '', language = 'en') {
+async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, cropConfig = null, longLivedToken = '', language = 'en', deviceEmulation = 'desktop', mobileViewport = null) {
   let browser = null;
   try {
     // Check if Chromium is available
@@ -51,9 +68,62 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
 
     const page = await browser.newPage();
     
-    // Set viewport size early for consistent screenshots
-    console.log(`   │       📐 Setting viewport to ${width}x${height}`);
-    await page.setViewport({ width: width, height: height });
+    // Apply device emulation if configured
+    if (deviceEmulation && deviceEmulation !== 'desktop') {
+      console.log(`   │       📱 Emulating device: ${deviceEmulation}`);
+      
+      if (deviceEmulation === 'custom') {
+        // Use custom mobile viewport settings
+        if (mobileViewport) {
+          const viewportConfig = {
+            width: width, // Always use configured resolution, not mobileViewport dimensions
+            height: height, // Always use configured resolution, not mobileViewport dimensions
+            deviceScaleFactor: 1, // Always 1 to prevent scaling up the screenshot
+            isMobile: true,
+            hasTouch: mobileViewport.touch_enabled !== undefined ? mobileViewport.touch_enabled : true,
+            isLandscape: mobileViewport.is_landscape || false
+          };
+          
+          console.log(`   │       📐 Custom viewport: ${width}x${height} with mobile settings (no scaling)`);
+          await page.setViewport(viewportConfig);
+          
+          // Set custom user agent if provided
+          if (mobileViewport.user_agent) {
+            const userAgent = getUserAgent(mobileViewport.user_agent);
+            console.log(`   │       🔧 User agent: ${mobileViewport.user_agent}`);
+            await page.setUserAgent(userAgent);
+          }
+        } else {
+          console.log(`   │       ⚠️  Custom device emulation requested but no mobile_viewport provided, using desktop mode`);
+          await page.setViewport({ width: width, height: height });
+        }
+      } else {
+        // Use Puppeteer built-in device preset
+        const device = puppeteer.devices[deviceEmulation];
+        if (device) {
+          console.log(`   │       📱 Using device preset: ${deviceEmulation} with ${width}x${height} viewport`);
+          // Set viewport to our configured resolution, not the device's native resolution
+          // Force deviceScaleFactor to 1 to ensure screenshot matches exact configured dimensions
+          await page.setViewport({ 
+            width: width, 
+            height: height,
+            deviceScaleFactor: 1, // Always 1 to prevent scaling up the screenshot
+            isMobile: device.viewport.isMobile || true,
+            hasTouch: device.viewport.hasTouch || true,
+            isLandscape: device.viewport.isLandscape || false
+          });
+          // Set the user agent for mobile behavior without changing viewport dimensions
+          await page.setUserAgent(device.userAgent);
+        } else {
+          console.log(`   │       ⚠️  Unknown device preset: ${deviceEmulation}, using desktop mode`);
+          await page.setViewport({ width: width, height: height });
+        }
+      }
+    } else {
+      // Default desktop behavior (current implementation)
+      console.log(`   │       📐 Setting viewport to ${width}x${height}`);
+      await page.setViewport({ width: width, height: height });
+    }
     
     // If a Home Assistant long-lived access token is provided, inject it into localStorage
     // for the Home Assistant origin so the frontend (and websockets) will pick it up.
@@ -176,9 +246,10 @@ async function takeAllScreenshots(urls, longLivedToken = '', language = 'en') {
     const cropText = urlConfig.crop ? ` cropped to (${urlConfig.crop.x},${urlConfig.crop.y}) ${urlConfig.crop.width}x${urlConfig.crop.height}` : '';
     const grayscaleText = urlConfig.grayscale ? ' in grayscale' : '';
     const bitDepthText = urlConfig.bit_depth !== 24 ? ` at ${urlConfig.bit_depth}-bit depth` : '';
+    const deviceText = urlConfig.device_emulation && urlConfig.device_emulation !== 'desktop' ? ` [${urlConfig.device_emulation}]` : '';
     
     console.log(`   │ 📸 [${urlNum}/${urls.length}] Processing: ${urlConfig.url}`);
-    console.log(`   │       📐 Resolution: ${urlConfig.width}x${urlConfig.height}${rotationText}${cropText}${grayscaleText}${bitDepthText}`);
+    console.log(`   │       📐 Resolution: ${urlConfig.width}x${urlConfig.height}${rotationText}${cropText}${grayscaleText}${bitDepthText}${deviceText}`);
     
     try {
       await takeScreenshot(
@@ -191,7 +262,9 @@ async function takeAllScreenshots(urls, longLivedToken = '', language = 'en') {
         urlConfig.bit_depth, 
         urlConfig.crop,
         longLivedToken, 
-        language
+        language,
+        urlConfig.device_emulation,
+        urlConfig.mobile_viewport
       );
       
       const rotationNote = urlConfig.rotation > 0 ? ` (rotated ${urlConfig.rotation}°)` : '';
