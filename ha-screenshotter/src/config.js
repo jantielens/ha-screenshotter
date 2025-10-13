@@ -46,7 +46,13 @@ async function loadConfiguration() {
     long_lived_access_token: "",
     run_once: false,
     webserverport: 0,
-    language: "en"
+    language: "en",
+    contrast: 1.0,
+    saturation: 1.0,
+    gamma_correction: 1.0,
+    black_level: "0%",
+    white_level: "100%",
+    remove_gamma: false
   };
   
   try {
@@ -204,6 +210,88 @@ async function loadConfiguration() {
         }
       }
       
+      // Handle contrast configuration
+      let contrast = defaultConfig.contrast;
+      if (config.contrast !== undefined) {
+        if (typeof config.contrast === 'number' && config.contrast > 0) {
+          contrast = config.contrast;
+          console.log('✅ Contrast setting from configuration:', contrast);
+        } else {
+          console.error('❌ Invalid contrast setting:', config.contrast);
+          throw new Error(`Invalid contrast setting: ${config.contrast}. Must be a positive number.`);
+        }
+      }
+      
+      // Handle saturation configuration
+      let saturation = defaultConfig.saturation;
+      if (config.saturation !== undefined) {
+        if (typeof config.saturation === 'number' && config.saturation >= 0) {
+          saturation = config.saturation;
+          console.log('✅ Saturation setting from configuration:', saturation);
+        } else {
+          console.error('❌ Invalid saturation setting:', config.saturation);
+          throw new Error(`Invalid saturation setting: ${config.saturation}. Must be a non-negative number.`);
+        }
+      }
+      
+      // Handle gamma_correction configuration
+      let gamma_correction = defaultConfig.gamma_correction;
+      if (config.gamma_correction !== undefined) {
+        if (typeof config.gamma_correction === 'number' && config.gamma_correction > 0) {
+          gamma_correction = config.gamma_correction;
+          console.log('✅ Gamma correction setting from configuration:', gamma_correction);
+        } else {
+          console.error('❌ Invalid gamma_correction setting:', config.gamma_correction);
+          throw new Error(`Invalid gamma_correction setting: ${config.gamma_correction}. Must be a positive number.`);
+        }
+      }
+      
+      // Handle black_level configuration
+      let black_level = defaultConfig.black_level;
+      if (config.black_level !== undefined) {
+        if (typeof config.black_level === 'string' && /^\d+(\.\d+)?%$/.test(config.black_level)) {
+          const value = parseFloat(config.black_level.replace('%', ''));
+          if (value >= 0 && value <= 100) {
+            black_level = config.black_level;
+            console.log('✅ Black level setting from configuration:', black_level);
+          } else {
+            throw new Error(`Invalid black_level value: ${config.black_level}. Percentage must be between 0% and 100%.`);
+          }
+        } else {
+          console.error('❌ Invalid black_level setting:', config.black_level);
+          throw new Error(`Invalid black_level setting: ${config.black_level}. Must be a percentage string (e.g., "30%").`);
+        }
+      }
+      
+      // Handle white_level configuration
+      let white_level = defaultConfig.white_level;
+      if (config.white_level !== undefined) {
+        if (typeof config.white_level === 'string' && /^\d+(\.\d+)?%$/.test(config.white_level)) {
+          const value = parseFloat(config.white_level.replace('%', ''));
+          if (value >= 0 && value <= 100) {
+            white_level = config.white_level;
+            console.log('✅ White level setting from configuration:', white_level);
+          } else {
+            throw new Error(`Invalid white_level value: ${config.white_level}. Percentage must be between 0% and 100%.`);
+          }
+        } else {
+          console.error('❌ Invalid white_level setting:', config.white_level);
+          throw new Error(`Invalid white_level setting: ${config.white_level}. Must be a percentage string (e.g., "90%").`);
+        }
+      }
+      
+      // Handle remove_gamma configuration
+      let remove_gamma = defaultConfig.remove_gamma;
+      if (config.remove_gamma !== undefined) {
+        if (typeof config.remove_gamma === 'boolean') {
+          remove_gamma = config.remove_gamma;
+          console.log('✅ Remove gamma setting from configuration:', remove_gamma);
+        } else {
+          console.error('❌ Invalid remove_gamma setting:', config.remove_gamma);
+          throw new Error(`Invalid remove_gamma setting: ${config.remove_gamma}. Must be true or false.`);
+        }
+      }
+      
       // Parse URLs with per-URL settings (using global settings as defaults)
       let urls = defaultConfig.urls;
       if (config.urls) {
@@ -216,6 +304,15 @@ async function loadConfiguration() {
             urls = parsedUrls.map((urlItem, index) => {
               if (typeof urlItem === 'string') {
                 // Simple string URL - use global defaults
+                // Build advanced processing object
+                const advancedProcessing = {};
+                if (contrast !== 1.0) advancedProcessing.contrast = contrast;
+                if (saturation !== 1.0) advancedProcessing.saturation = saturation;
+                if (gamma_correction !== 1.0) advancedProcessing.gamma = gamma_correction;
+                if (black_level !== '0%') advancedProcessing.blackLevel = black_level;
+                if (white_level !== '100%') advancedProcessing.whiteLevel = white_level;
+                if (remove_gamma === true) advancedProcessing.removeGamma = remove_gamma;
+                
                 return {
                   url: urlItem,
                   width: resolution_width,
@@ -225,7 +322,8 @@ async function loadConfiguration() {
                   bit_depth: bit_depth,
                   crop: crop,
                   device_emulation: device_emulation,
-                  mobile_viewport: mobile_viewport
+                  mobile_viewport: mobile_viewport,
+                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null
                 };
               } else if (typeof urlItem === 'object' && urlItem.url) {
                 // Object with url property and optional overrides
@@ -266,6 +364,22 @@ async function loadConfiguration() {
                   throw new Error(`Invalid crop setting for URL ${urlItem.url}: ${urlCrop}. Must be null, false, or an object with x, y, width, and height properties.`);
                 }
                 
+                // Build advanced processing object with per-URL overrides
+                const urlContrast = urlItem.contrast !== undefined ? urlItem.contrast : contrast;
+                const urlSaturation = urlItem.saturation !== undefined ? urlItem.saturation : saturation;
+                const urlGamma = urlItem.gamma_correction !== undefined ? urlItem.gamma_correction : gamma_correction;
+                const urlBlackLevel = urlItem.black_level !== undefined ? urlItem.black_level : black_level;
+                const urlWhiteLevel = urlItem.white_level !== undefined ? urlItem.white_level : white_level;
+                const urlRemoveGamma = urlItem.remove_gamma !== undefined ? urlItem.remove_gamma : remove_gamma;
+                
+                const advancedProcessing = {};
+                if (urlContrast !== 1.0) advancedProcessing.contrast = urlContrast;
+                if (urlSaturation !== 1.0) advancedProcessing.saturation = urlSaturation;
+                if (urlGamma !== 1.0) advancedProcessing.gamma = urlGamma;
+                if (urlBlackLevel !== '0%') advancedProcessing.blackLevel = urlBlackLevel;
+                if (urlWhiteLevel !== '100%') advancedProcessing.whiteLevel = urlWhiteLevel;
+                if (urlRemoveGamma === true) advancedProcessing.removeGamma = urlRemoveGamma;
+                
                 return {
                   url: urlItem.url,
                   width: urlItem.width || resolution_width,
@@ -275,7 +389,8 @@ async function loadConfiguration() {
                   bit_depth: urlItem.bit_depth || bit_depth,
                   crop: urlCrop,
                   device_emulation: urlItem.device_emulation || device_emulation,
-                  mobile_viewport: urlItem.mobile_viewport !== undefined ? urlItem.mobile_viewport : mobile_viewport
+                  mobile_viewport: urlItem.mobile_viewport !== undefined ? urlItem.mobile_viewport : mobile_viewport,
+                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null
                 };
               } else {
                 throw new Error(`Invalid URL at index ${index}: must be a string or object with 'url' property`);
@@ -323,6 +438,22 @@ async function loadConfiguration() {
                   throw new Error(`Invalid crop setting for URL ${url}: ${urlCrop}. Must be null, false, or an object with x, y, width, and height properties.`);
                 }
                 
+                // Build advanced processing object with per-URL overrides
+                const urlContrast = settings.contrast !== undefined ? settings.contrast : contrast;
+                const urlSaturation = settings.saturation !== undefined ? settings.saturation : saturation;
+                const urlGamma = settings.gamma_correction !== undefined ? settings.gamma_correction : gamma_correction;
+                const urlBlackLevel = settings.black_level !== undefined ? settings.black_level : black_level;
+                const urlWhiteLevel = settings.white_level !== undefined ? settings.white_level : white_level;
+                const urlRemoveGamma = settings.remove_gamma !== undefined ? settings.remove_gamma : remove_gamma;
+                
+                const advancedProcessing = {};
+                if (urlContrast !== 1.0) advancedProcessing.contrast = urlContrast;
+                if (urlSaturation !== 1.0) advancedProcessing.saturation = urlSaturation;
+                if (urlGamma !== 1.0) advancedProcessing.gamma = urlGamma;
+                if (urlBlackLevel !== '0%') advancedProcessing.blackLevel = urlBlackLevel;
+                if (urlWhiteLevel !== '100%') advancedProcessing.whiteLevel = urlWhiteLevel;
+                if (urlRemoveGamma === true) advancedProcessing.removeGamma = urlRemoveGamma;
+                
                 return {
                   url: url,
                   width: settings.width || resolution_width,
@@ -332,10 +463,20 @@ async function loadConfiguration() {
                   bit_depth: settings.bit_depth || bit_depth,
                   crop: urlCrop,
                   device_emulation: settings.device_emulation || device_emulation,
-                  mobile_viewport: settings.mobile_viewport !== undefined ? settings.mobile_viewport : mobile_viewport
+                  mobile_viewport: settings.mobile_viewport !== undefined ? settings.mobile_viewport : mobile_viewport,
+                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null
                 };
               } else {
                 // Empty settings object or null - use defaults
+                // Build advanced processing object
+                const advancedProcessing = {};
+                if (contrast !== 1.0) advancedProcessing.contrast = contrast;
+                if (saturation !== 1.0) advancedProcessing.saturation = saturation;
+                if (gamma_correction !== 1.0) advancedProcessing.gamma = gamma_correction;
+                if (black_level !== '0%') advancedProcessing.blackLevel = black_level;
+                if (white_level !== '100%') advancedProcessing.whiteLevel = white_level;
+                if (remove_gamma === true) advancedProcessing.removeGamma = remove_gamma;
+                
                 return {
                   url: url,
                   width: resolution_width,
@@ -345,7 +486,8 @@ async function loadConfiguration() {
                   bit_depth: bit_depth,
                   crop: crop,
                   device_emulation: device_emulation,
-                  mobile_viewport: mobile_viewport
+                  mobile_viewport: mobile_viewport,
+                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null
                 };
               }
             });
@@ -450,7 +592,13 @@ async function loadConfiguration() {
         long_lived_access_token: config.long_lived_access_token || defaultConfig.long_lived_access_token,
         run_once: run_once,
         webserverport: webserverport,
-        language: language
+        language: language,
+        contrast: contrast,
+        saturation: saturation,
+        gamma_correction: gamma_correction,
+        black_level: black_level,
+        white_level: white_level,
+        remove_gamma: remove_gamma
       };
     }
   } catch (error) {

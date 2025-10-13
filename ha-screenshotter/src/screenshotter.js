@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const { SCREENSHOTS_PATH } = require('./constants');
-const { rotateImage, convertToGrayscale, cropImage, reduceBitDepth } = require('./imageProcessor');
+const { rotateImage, convertToGrayscale, cropImage, reduceBitDepth, applyAdvancedProcessing } = require('./imageProcessor');
 
 /**
  * Get user agent string for mobile device presets
@@ -37,8 +37,9 @@ function getUserAgent(preset) {
  * @param {string} language - Language setting for Home Assistant frontend
  * @param {string} deviceEmulation - Device emulation preset name or "desktop"/"custom"
  * @param {Object|null} mobileViewport - Custom mobile viewport settings
+ * @param {Object|null} advancedProcessing - Advanced processing options (contrast, saturation, gamma, etc.)
  */
-async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, cropConfig = null, longLivedToken = '', language = 'en', deviceEmulation = 'desktop', mobileViewport = null) {
+async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, cropConfig = null, longLivedToken = '', language = 'en', deviceEmulation = 'desktop', mobileViewport = null, advancedProcessing = null) {
   let browser = null;
   try {
     // Check if Chromium is available
@@ -198,7 +199,12 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       await cropImage(screenshotPath, cropConfig, '   │       ');
     }
     
-    // Apply rotation if needed (AFTER cropping - rotate the cropped image)
+    // Apply advanced processing if needed (AFTER cropping, BEFORE rotation)
+    if (advancedProcessing !== null && advancedProcessing !== false) {
+      await applyAdvancedProcessing(screenshotPath, advancedProcessing, '   │       ');
+    }
+    
+    // Apply rotation if needed (AFTER cropping and processing - rotate the processed image)
     if (rotationDegrees !== 0) {
       await rotateImage(screenshotPath, rotationDegrees, '   │       ');
     }
@@ -264,7 +270,8 @@ async function takeAllScreenshots(urls, longLivedToken = '', language = 'en') {
         longLivedToken, 
         language,
         urlConfig.device_emulation,
-        urlConfig.mobile_viewport
+        urlConfig.mobile_viewport,
+        urlConfig.advanced_processing
       );
       
       const rotationNote = urlConfig.rotation > 0 ? ` (rotated ${urlConfig.rotation}°)` : '';

@@ -160,9 +160,113 @@ async function reduceBitDepth(imagePath, bitDepth, indent = '') {
   }
 }
 
+/**
+ * Apply advanced image processing (contrast, saturation, gamma, levels)
+ * @param {string} imagePath - Path to the image file
+ * @param {Object} processingOptions - Processing configuration
+ * @param {number} processingOptions.contrast - Contrast multiplier (1.0 = no change)
+ * @param {number} processingOptions.saturation - Saturation multiplier (1.0 = no change)
+ * @param {number} processingOptions.gamma - Gamma correction value (1.0 = no change)
+ * @param {string} processingOptions.blackLevel - Black level percentage (e.g., "30%")
+ * @param {string} processingOptions.whiteLevel - White level percentage (e.g., "90%")
+ * @param {boolean} processingOptions.removeGamma - Remove gamma correction
+ * @param {string} indent - Indentation prefix for logging
+ */
+async function applyAdvancedProcessing(imagePath, processingOptions, indent = '') {
+  // Check if any processing is actually needed
+  const needsProcessing = 
+    (processingOptions.contrast !== undefined && processingOptions.contrast !== 1.0) ||
+    (processingOptions.saturation !== undefined && processingOptions.saturation !== 1.0) ||
+    (processingOptions.gamma !== undefined && processingOptions.gamma !== 1.0) ||
+    (processingOptions.blackLevel !== undefined && processingOptions.blackLevel !== '0%') ||
+    (processingOptions.whiteLevel !== undefined && processingOptions.whiteLevel !== '100%') ||
+    (processingOptions.removeGamma === true);
+  
+  if (!needsProcessing) {
+    return; // No processing needed
+  }
+  
+  try {
+    console.log(`${indent}🎨 Applying advanced image processing...`);
+    
+    let pipeline = sharp(imagePath);
+    
+    // Apply remove_gamma first (inverse gamma correction for e-ink displays)
+    if (processingOptions.removeGamma === true) {
+      console.log(`${indent}   📐 Removing gamma correction (inverse gamma for e-ink)`);
+      // Remove standard 2.2 gamma by applying inverse (1/2.2 = ~0.45)
+      pipeline = pipeline.gamma(1 / 2.2);
+    }
+    
+    // Apply custom gamma correction
+    if (processingOptions.gamma !== undefined && processingOptions.gamma !== 1.0) {
+      console.log(`${indent}   📐 Applying gamma correction: ${processingOptions.gamma}`);
+      pipeline = pipeline.gamma(processingOptions.gamma);
+    }
+    
+    // Apply black and white level adjustments (normalize/level control)
+    if ((processingOptions.blackLevel !== undefined && processingOptions.blackLevel !== '0%') ||
+        (processingOptions.whiteLevel !== undefined && processingOptions.whiteLevel !== '100%')) {
+      
+      const blackLevel = processingOptions.blackLevel || '0%';
+      const whiteLevel = processingOptions.whiteLevel || '100%';
+      
+      console.log(`${indent}   📊 Applying level adjustments: black=${blackLevel}, white=${whiteLevel}`);
+      
+      // Parse percentage values
+      const blackPercent = parseFloat(blackLevel.replace('%', '')) / 100;
+      const whitePercent = parseFloat(whiteLevel.replace('%', '')) / 100;
+      
+      // Sharp's normalise uses min/max approach, so we use linear for level control
+      // Map input range [blackPercent, whitePercent] to output range [0, 1]
+      // This is accomplished with linear transformation
+      const inputMin = Math.round(blackPercent * 255);
+      const inputMax = Math.round(whitePercent * 255);
+      
+      pipeline = pipeline.linear(
+        255 / (inputMax - inputMin),  // multiplier (a)
+        -inputMin * 255 / (inputMax - inputMin)  // offset (b)
+      );
+    }
+    
+    // Apply contrast adjustment
+    if (processingOptions.contrast !== undefined && processingOptions.contrast !== 1.0) {
+      console.log(`${indent}   🔲 Applying contrast: ${processingOptions.contrast}x`);
+      // Sharp doesn't have direct contrast control, but we can use modulate
+      // However, modulate doesn't support contrast directly
+      // We'll use linear transformation: output = (input - 128) * contrast + 128
+      const contrastMultiplier = processingOptions.contrast;
+      pipeline = pipeline.linear(
+        contrastMultiplier,  // multiplier
+        128 * (1 - contrastMultiplier)  // offset to keep midpoint at 128
+      );
+    }
+    
+    // Apply saturation adjustment
+    if (processingOptions.saturation !== undefined && processingOptions.saturation !== 1.0) {
+      console.log(`${indent}   🌈 Applying saturation: ${processingOptions.saturation}x`);
+      pipeline = pipeline.modulate({
+        saturation: processingOptions.saturation
+      });
+    }
+    
+    // Process and save
+    const processedBuffer = await pipeline.png().toBuffer();
+    await fs.writeFile(imagePath, processedBuffer);
+    
+    console.log(`${indent}✅ Advanced image processing completed`);
+    
+  } catch (error) {
+    console.error(`${indent}❌ Error applying advanced processing:`, error.message);
+    // Don't crash on processing errors, just log and continue
+    console.log(`${indent}⚠️  Continuing without advanced processing`);
+  }
+}
+
 module.exports = {
   rotateImage,
   convertToGrayscale,
   cropImage,
-  reduceBitDepth
+  reduceBitDepth,
+  applyAdvancedProcessing
 };
