@@ -3,6 +3,8 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
   workflow_dispatch:
     inputs:
       screenshots_subfolder:
