@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.0] - 2025-10-15
+
+### Added
+- **Web server now starts before screenshot generation** to provide near-zero downtime for the gallery UI
+- **Existing screenshots are now preserved on container restart** instead of being deleted
+
+### Changed
+- Web server initialization moved to start immediately after configuration validation, before initial screenshots are taken
+- Startup cleanup now only removes temporary files (`*_temp.png`) instead of deleting all existing screenshots
+- Users can now access the gallery and download existing screenshots immediately when the container starts
+- New screenshots atomically overwrite previous versions, providing seamless updates visible in the web UI
+
 ## [1.14.1] - 2025-10-13
 
 ### Fixed

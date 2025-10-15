@@ -36,17 +36,17 @@ async function init() {
   console.log('✅ Media directory ensured at:', WWW_PATH);
   console.log('✅ Screenshots directory ensured at:', SCREENSHOTS_PATH);
     
-    // Clean up existing screenshots to avoid stale files
-    console.log('🧹 Cleaning up existing screenshots...');
+    // Clean up temporary files only, preserve existing screenshots
+    console.log('🧹 Cleaning up temporary files...');
     const files = await fs.readdir(SCREENSHOTS_PATH);
-    const pngFiles = files.filter(file => file.endsWith('.png'));
-    if (pngFiles.length > 0) {
-      for (const file of pngFiles) {
+    const tempFiles = files.filter(file => file.endsWith('_temp.png'));
+    if (tempFiles.length > 0) {
+      for (const file of tempFiles) {
         await fs.remove(path.join(SCREENSHOTS_PATH, file));
       }
-      console.log(`✅ Deleted ${pngFiles.length} existing screenshot(s)`);
+      console.log(`✅ Deleted ${tempFiles.length} temporary file(s)`);
     } else {
-      console.log('✅ No existing screenshots to clean up');
+      console.log('✅ No temporary files to clean up');
     }
     
     // Load configuration
@@ -61,7 +61,14 @@ async function init() {
     }
     console.log('✅ Cron schedule is valid:', config.schedule);
     
-    // Take initial screenshots
+    // Set up web server if port is configured (start immediately to serve existing screenshots)
+    if (config.webserverport > 0) {
+      setupWebServer(config);
+    } else {
+      console.log('🌐 Web server disabled (webserverport = 0)');
+    }
+    
+    // Take initial screenshots (these will atomically overwrite any existing screenshots)
     console.log('📸 Taking initial screenshots...');
     await takeAllScreenshots(config.urls, config.long_lived_access_token, config.language);
     
@@ -134,13 +141,6 @@ async function init() {
         isExecuting = false;
       }
     });
-    
-    // Set up web server if port is configured
-    if (config.webserverport > 0) {
-      setupWebServer(config);
-    } else {
-      console.log('🌐 Web server disabled (webserverport = 0)');
-    }
     
     console.log('🎉 HA Screenshotter configured and scheduled!');
     console.log('✨ Add-on is running successfully');
