@@ -15,8 +15,8 @@ function setupWebServer(config) {
   
   // Serve static files from the screenshots directory, but block temporary files
   app.use('/screenshots', (req, res, next) => {
-    // Block access to temporary files (files ending with _temp.png)
-    if (req.path.endsWith('_temp.png')) {
+    // Block access to temporary files (files ending with _temp.png or _temp.png.crc32)
+    if (req.path.endsWith('_temp.png') || req.path.endsWith('_temp.png.crc32')) {
       return res.status(404).send('Not Found');
     }
     next();
@@ -25,10 +25,10 @@ function setupWebServer(config) {
   // Main page with a simple gallery view
   app.get('/', async (req, res) => {
     try {
-      // Read all screenshot files (exclude temporary files)
+      // Read all screenshot files (exclude temporary files and checksum files)
       const files = await fs.readdir(SCREENSHOTS_PATH);
       const imageFiles = files
-        .filter(file => file.endsWith('.png') && !file.endsWith('_temp.png'))
+        .filter(file => !file.endsWith('.crc32') && file.endsWith('.png') && !file.endsWith('_temp.png'))
         .sort();
       
       // Generate HTML page
