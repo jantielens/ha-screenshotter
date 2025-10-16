@@ -7,6 +7,30 @@ const path = require('path');
 const zlib = require('zlib');
 
 /**
+ * Calculate CRC32 checksum manually (compatible with all Node.js versions)
+ * @param {Buffer} buffer - Buffer to calculate CRC32 for
+ * @returns {number} CRC32 checksum as unsigned 32-bit integer
+ */
+function calculateCRC32Manual(buffer) {
+  // CRC32 lookup table
+  const crcTable = [];
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) {
+      c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+    }
+    crcTable[n] = c;
+  }
+  
+  // Calculate CRC32
+  let crc = 0 ^ (-1);
+  for (let i = 0; i < buffer.length; i++) {
+    crc = (crc >>> 8) ^ crcTable[(crc ^ buffer[i]) & 0xFF];
+  }
+  return (crc ^ (-1)) >>> 0;
+}
+
+/**
  * Calculate CRC32 checksum for a file
  * @param {string} filePath - Path to the file
  * @returns {Promise<string>} CRC32 checksum as 8-character hexadecimal string
@@ -14,7 +38,16 @@ const zlib = require('zlib');
 async function calculateCRC32(filePath) {
   try {
     const buffer = await fs.readFile(filePath);
-    const crc = zlib.crc32(buffer);
+    
+    // Try to use native zlib.crc32 if available (Node.js >= 17.5.0)
+    let crc;
+    if (typeof zlib.crc32 === 'function') {
+      crc = zlib.crc32(buffer);
+    } else {
+      // Fallback to manual CRC32 calculation for older Node.js versions
+      crc = calculateCRC32Manual(buffer);
+    }
+    
     // Convert to hexadecimal string with leading zeros (8 characters)
     return crc.toString(16).padStart(8, '0');
   } catch (error) {
