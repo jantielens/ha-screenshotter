@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.15.2] - 2025-10-16
+
+### Added
+- **Additional Chromium stability flags** to improve browser reliability and reduce background interference
+  - Disabled software rasterizer, extensions, and background networking features
+  - Disabled background timer throttling and renderer backgrounding
+  - Disabled component updates, domain reliability, sync, and breakpad crash reporting
+  - Added flags to mute audio, disable pings, and prevent zygote process
+  - Disabled TranslateUI and BlinkGenPropertyTrees features for cleaner rendering
+
+### Changed
+- **Reduced log verbosity** by ~50% to make output more concise and readable
+- Removed low-value verbose logs (browser checks, memory info, intermediate processing steps)
+- Retained all essential logs for progress tracking and debugging (navigation, screenshot capture, finalization, errors)
+
 ## [1.15.1] - 2025-10-15
 
 ### Fixed
