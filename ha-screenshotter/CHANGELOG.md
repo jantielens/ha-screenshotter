@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.15.2] - 2025-10-16
+## [1.16.1] - 2025-10-16
 
 ### Added
 - **Additional Chromium stability flags** to improve browser reliability and reduce background interference
@@ -19,6 +19,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Reduced log verbosity** by ~50% to make output more concise and readable
 - Removed low-value verbose logs (browser checks, memory info, intermediate processing steps)
 - Retained all essential logs for progress tracking and debugging (navigation, screenshot capture, finalization, errors)
+
+## [1.16.0] - 2025-10-16
+
+### Added
+- **CRC32 checksum support** for efficient e-ink device screenshot change detection
+- Automatic generation of `.crc32` checksum files alongside each screenshot
+- Web server now serves checksum files at `/screenshots/{index}.png.crc32`
+- Checksum files contain 8-character hexadecimal CRC32 hash (only 8 bytes)
+- E-ink devices can download tiny checksum file to detect changes before downloading full image
+- Fallback CRC32 implementation for compatibility with all Node.js versions
+- Comprehensive documentation in EINK.md with ESP32/Arduino example code
+- Updated WEBSERVER.md with checksum endpoint documentation
+- CI tests for checksum file creation, format validation, and web accessibility
+
+### Changed
+- Gallery view now filters out `.crc32` checksum files
+- Web server blocks temporary checksum files (`*_temp.png.crc32`) from being served
 
 ## [1.15.1] - 2025-10-15
 

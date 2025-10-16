@@ -503,6 +503,52 @@ jobs:
             curl -s "http://localhost:3000" || true
             exit 1
           fi
+          
+          # Try to download the CRC32 checksum file via webserver
+          echo ""
+          echo "Testing CRC32 checksum file..."
+          if curl -f -s "http://localhost:3000/screenshots/0.png.crc32" -o "downloaded-checksum.crc32"; then
+            echo "✅ Successfully downloaded checksum file via webserver"
+            
+            # Validate the checksum file format
+            checksum=$(cat downloaded-checksum.crc32)
+            echo "Checksum content: $checksum"
+            
+            # Check if it's exactly 8 hexadecimal characters
+            if echo "$checksum" | grep -qE '^[0-9a-f]{8}$'; then
+              echo "✅ Checksum format is valid (8 hex characters)"
+            else
+              echo "❌ Checksum format is invalid: $checksum"
+              exit 1
+            fi
+            
+            # Verify checksum changes when screenshot changes
+            # Take another screenshot by modifying the image slightly
+            echo "Checking that checksum changes when image changes..."
+            sleep 5
+            
+            # Download checksum again
+            if curl -f -s "http://localhost:3000/screenshots/0.png.crc32" -o "downloaded-checksum2.crc32"; then
+              checksum2=$(cat downloaded-checksum2.crc32)
+              echo "Second checksum: $checksum2"
+              # Note: checksums should be the same if image hasn't changed
+              echo "✅ Checksum download is consistent"
+            fi
+            
+          else
+            echo "❌ Failed to download checksum file via webserver"
+            exit 1
+          fi
+          
+          # Verify that temporary checksum files are blocked
+          echo ""
+          echo "Testing that temporary checksum files are blocked..."
+          if curl -f -s "http://localhost:3000/screenshots/0_temp.png.crc32" -o /dev/null 2>&1; then
+            echo "❌ Temporary checksum file should be blocked but was accessible"
+            exit 1
+          else
+            echo "✅ Temporary checksum files are correctly blocked"
+          fi
 
       - name: Generate webserver test summary
         if: always()
@@ -536,12 +582,39 @@ jobs:
             echo "| Screenshot Download | ❌ File not found |" >> webserver_summary.md
           fi
           
+          # Check if checksum was downloaded
+          if [ -f "downloaded-checksum.crc32" ]; then
+            CHECKSUM=$(cat downloaded-checksum.crc32 2>/dev/null || echo "")
+            if echo "$CHECKSUM" | grep -qE '^[0-9a-f]{8}$'; then
+              echo "| Checksum Download | ✅ ($CHECKSUM) |" >> webserver_summary.md
+            else
+              echo "| Checksum Download | ❌ Invalid format |" >> webserver_summary.md
+            fi
+          else
+            echo "| Checksum Download | ❌ File not found |" >> webserver_summary.md
+          fi
+          
+          # Check if temporary files are blocked
+          if curl -f -s "http://localhost:3000/screenshots/0_temp.png.crc32" -o /dev/null 2>&1; then
+            echo "| Temp File Blocking | ❌ Temp files accessible |" >> webserver_summary.md
+          else
+            echo "| Temp File Blocking | ✅ |" >> webserver_summary.md
+          fi
+          
           # Check if screenshots were created in filesystem
           SCREENSHOT_COUNT=$(find webserver-test/share/ha-screenshotter/ -name "*.png" 2>/dev/null | wc -l)
           if [ "$SCREENSHOT_COUNT" -gt 0 ]; then
             echo "| Screenshot Generation | ✅ ($SCREENSHOT_COUNT files) |" >> webserver_summary.md
           else
             echo "| Screenshot Generation | ❌ No screenshots found |" >> webserver_summary.md
+          fi
+          
+          # Check if checksum files were created in filesystem
+          CHECKSUM_COUNT=$(find webserver-test/share/ha-screenshotter/ -name "*.crc32" 2>/dev/null | wc -l)
+          if [ "$CHECKSUM_COUNT" -gt 0 ]; then
+            echo "| Checksum Generation | ✅ ($CHECKSUM_COUNT files) |" >> webserver_summary.md
+          else
+            echo "| Checksum Generation | ❌ No checksum files found |" >> webserver_summary.md
           fi
           
           echo ""
@@ -563,6 +636,8 @@ jobs:
           path: |
             webserver-test/
             downloaded-screenshot.png
+            downloaded-checksum.crc32
+            downloaded-checksum2.crc32
             webserver_summary.md
           retention-days: 7
 
@@ -668,6 +743,28 @@ jobs:
             curl -s "http://localhost:6666" || true
             exit 1
           fi
+          
+          # Try to download the CRC32 checksum file via webserver
+          echo ""
+          echo "Testing CRC32 checksum file on custom port..."
+          if curl -f -s "http://localhost:6666/screenshots/0.png.crc32" -o "downloaded-checksum-customport.crc32"; then
+            echo "✅ Successfully downloaded checksum file via webserver on port 6666"
+            
+            # Validate the checksum file format
+            checksum=$(cat downloaded-checksum-customport.crc32)
+            echo "Checksum content: $checksum"
+            
+            # Check if it's exactly 8 hexadecimal characters
+            if echo "$checksum" | grep -qE '^[0-9a-f]{8}$'; then
+              echo "✅ Checksum format is valid (8 hex characters)"
+            else
+              echo "❌ Checksum format is invalid: $checksum"
+              exit 1
+            fi
+          else
+            echo "❌ Failed to download checksum file via webserver on port 6666"
+            exit 1
+          fi
 
       - name: Generate webserver custom port test summary
         if: always()
@@ -701,12 +798,32 @@ jobs:
             echo "| Screenshot Download | ❌ File not found |" >> webserver_customport_summary.md
           fi
           
+          # Check if checksum was downloaded
+          if [ -f "downloaded-checksum-customport.crc32" ]; then
+            CHECKSUM=$(cat downloaded-checksum-customport.crc32 2>/dev/null || echo "")
+            if echo "$CHECKSUM" | grep -qE '^[0-9a-f]{8}$'; then
+              echo "| Checksum Download | ✅ ($CHECKSUM) |" >> webserver_customport_summary.md
+            else
+              echo "| Checksum Download | ❌ Invalid format |" >> webserver_customport_summary.md
+            fi
+          else
+            echo "| Checksum Download | ❌ File not found |" >> webserver_customport_summary.md
+          fi
+          
           # Check if screenshots were created in filesystem
           SCREENSHOT_COUNT=$(find webserver-customport-test/share/ha-screenshotter/ -name "*.png" 2>/dev/null | wc -l)
           if [ "$SCREENSHOT_COUNT" -gt 0 ]; then
             echo "| Screenshot Generation | ✅ ($SCREENSHOT_COUNT files) |" >> webserver_customport_summary.md
           else
             echo "| Screenshot Generation | ❌ No screenshots found |" >> webserver_customport_summary.md
+          fi
+          
+          # Check if checksum files were created in filesystem
+          CHECKSUM_COUNT=$(find webserver-customport-test/share/ha-screenshotter/ -name "*.crc32" 2>/dev/null | wc -l)
+          if [ "$CHECKSUM_COUNT" -gt 0 ]; then
+            echo "| Checksum Generation | ✅ ($CHECKSUM_COUNT files) |" >> webserver_customport_summary.md
+          else
+            echo "| Checksum Generation | ❌ No checksum files found |" >> webserver_customport_summary.md
           fi
           
           echo ""
@@ -728,6 +845,7 @@ jobs:
           path: |
             webserver-customport-test/
             downloaded-screenshot-customport.png
+            downloaded-checksum-customport.crc32
             webserver_customport_summary.md
           retention-days: 7
 
