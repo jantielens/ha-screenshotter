@@ -28,7 +28,7 @@ function setupWebServer(config) {
       // Read all screenshot files (exclude temporary files and checksum files)
       const files = await fs.readdir(SCREENSHOTS_PATH);
       const imageFiles = files
-        .filter(file => file.endsWith('.png') && !file.endsWith('_temp.png') && !file.endsWith('.crc32'))
+        .filter(file => !file.endsWith('.crc32') && file.endsWith('.png') && !file.endsWith('_temp.png'))
         .sort();
       
       // Generate HTML page
