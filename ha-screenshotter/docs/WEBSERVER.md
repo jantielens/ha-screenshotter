@@ -23,7 +23,12 @@ webserverport: 3000
 
 ### Gallery View
 - **URL**: `http://your-home-assistant-ip:3000/`
-- **Description**: Web interface showing all captured screenshots in a gallery layout
+- **Description**: Web interface showing all captured screenshots in a gallery layout with current CRC32 values
+- **Features**:
+  - View all screenshots with thumbnails
+  - Display current CRC32 checksum for each screenshot
+  - Click "View History" button to see historical CRC32 values
+  - Modal popup showing up to 500 historical checksums with timestamps
 - **Auto-refresh**: Page refreshes every 60 seconds
 
 ### Screenshot Images
@@ -56,6 +61,64 @@ webserverport: 3000
     }
   }
   ```
+
+### Get All Current CRC32 Values
+- **URL**: `http://your-home-assistant-ip:3000/checksums`
+- **Description**: JSON endpoint returning current CRC32 values for all screenshots
+- **Response Example**:
+  ```json
+  {
+    "checksums": {
+      "0": {
+        "crc32": "a1b2c3d4",
+        "timestamp": "2025-10-17T21:47:00.000Z",
+        "historyCount": 125
+      },
+      "1": {
+        "crc32": "e5f6g7h8",
+        "timestamp": "2025-10-17T21:47:05.000Z",
+        "historyCount": 125
+      }
+    },
+    "timestamp": "2025-10-17T21:47:10.000Z",
+    "history_length": 500
+  }
+  ```
+
+### Get CRC32 History for Specific Screenshot
+- **URL Pattern**: `http://your-home-assistant-ip:3000/checksums/{index}`
+- **Example**: `http://your-home-assistant-ip:3000/checksums/0`
+- **Description**: JSON endpoint returning full CRC32 history for a specific screenshot (up to 500 entries)
+- **Response Example**:
+  ```json
+  {
+    "screenshot_index": 0,
+    "history": [
+      {
+        "timestamp": "2025-10-17T20:00:00.000Z",
+        "crc32": "a1b2c3d4"
+      },
+      {
+        "timestamp": "2025-10-17T21:00:00.000Z",
+        "crc32": "a1b2c3d5"
+      }
+    ],
+    "count": 2,
+    "max_length": 500,
+    "timestamp": "2025-10-17T21:47:10.000Z"
+  }
+  ```
+
+## CRC32 History Feature
+
+The web server now tracks and stores the last 500 CRC32 checksum values for each screenshot with timestamps. This feature provides:
+
+- **Historical Tracking**: Every time a screenshot is captured, its CRC32 checksum is calculated and stored
+- **Change Detection**: View when screenshots changed by comparing historical checksums
+- **Diagnostics**: Identify patterns in screenshot changes over time
+- **Persistence**: History is saved to `checksum-history.json` in the screenshots directory
+- **Fixed Limit**: History is automatically trimmed to 500 entries per screenshot (oldest entries removed first)
+- **No Configuration**: This feature is always enabled and requires no configuration changes
 
 ## Security Notes
 

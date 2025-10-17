@@ -108,6 +108,143 @@ jobs:
           echo "✅ Checksum consistency test PASSED"
           echo "   Same URL produces identical checksums for identical content"
 
+      - name: Verify CRC32 history endpoint
+        if: matrix.config.verify_checksum_consistency == true && matrix.config.expect_failure == false
+        run: |
+          echo "===================="
+          echo "CRC32 HISTORY ENDPOINT TEST"
+          echo "===================="
+          echo "Testing /checksums and /checksums/:index endpoints..."
+          
+          # Test /checksums endpoint
+          echo ""
+          echo "Testing /checksums endpoint..."
+          curl -f -s "http://localhost:${{ matrix.config.port }}/checksums" -o "checksums-all.json"
+          
+          if [ -f "checksums-all.json" ]; then
+            echo "✅ Successfully downloaded checksums summary"
+            echo "Response content:"
+            cat checksums-all.json | jq '.' || cat checksums-all.json
+            
+            # Verify JSON structure
+            if cat checksums-all.json | jq -e '.checksums' > /dev/null 2>&1; then
+              echo "✅ Response contains 'checksums' field"
+            else
+              echo "❌ Response missing 'checksums' field"
+              exit 1
+            fi
+            
+            if cat checksums-all.json | jq -e '.timestamp' > /dev/null 2>&1; then
+              echo "✅ Response contains 'timestamp' field"
+            else
+              echo "❌ Response missing 'timestamp' field"
+              exit 1
+            fi
+            
+            if cat checksums-all.json | jq -e '.history_length' > /dev/null 2>&1; then
+              HISTORY_LENGTH=$(cat checksums-all.json | jq -r '.history_length')
+              echo "✅ Response contains 'history_length' field: $HISTORY_LENGTH"
+              
+              if [ "$HISTORY_LENGTH" = "500" ]; then
+                echo "✅ History length is 500 as expected"
+              else
+                echo "❌ History length is $HISTORY_LENGTH, expected 500"
+                exit 1
+              fi
+            else
+              echo "❌ Response missing 'history_length' field"
+              exit 1
+            fi
+          else
+            echo "❌ Failed to download checksums summary"
+            exit 1
+          fi
+          
+          # Test /checksums/:index endpoint
+          echo ""
+          echo "Testing /checksums/0 endpoint..."
+          curl -f -s "http://localhost:${{ matrix.config.port }}/checksums/0" -o "checksums-0-history.json"
+          
+          if [ -f "checksums-0-history.json" ]; then
+            echo "✅ Successfully downloaded CRC32 history for screenshot 0"
+            echo "Response content:"
+            cat checksums-0-history.json | jq '.' || cat checksums-0-history.json
+            
+            # Verify JSON structure
+            if cat checksums-0-history.json | jq -e '.screenshot_index' > /dev/null 2>&1; then
+              SCREENSHOT_INDEX=$(cat checksums-0-history.json | jq -r '.screenshot_index')
+              echo "✅ Response contains 'screenshot_index' field: $SCREENSHOT_INDEX"
+              
+              if [ "$SCREENSHOT_INDEX" = "0" ]; then
+                echo "✅ Screenshot index is 0 as expected"
+              else
+                echo "❌ Screenshot index is $SCREENSHOT_INDEX, expected 0"
+                exit 1
+              fi
+            else
+              echo "❌ Response missing 'screenshot_index' field"
+              exit 1
+            fi
+            
+            if cat checksums-0-history.json | jq -e '.history' > /dev/null 2>&1; then
+              echo "✅ Response contains 'history' field"
+              
+              # Check if history is an array
+              if cat checksums-0-history.json | jq -e '.history | type' | grep -q "array"; then
+                echo "✅ History field is an array"
+                
+                HISTORY_COUNT=$(cat checksums-0-history.json | jq '.history | length')
+                echo "   History entries: $HISTORY_COUNT"
+                
+                if [ "$HISTORY_COUNT" -gt 0 ]; then
+                  echo "✅ History contains $HISTORY_COUNT entry/entries"
+                  
+                  # Verify first entry structure
+                  if cat checksums-0-history.json | jq -e '.history[0].timestamp' > /dev/null 2>&1 && \
+                     cat checksums-0-history.json | jq -e '.history[0].crc32' > /dev/null 2>&1; then
+                    FIRST_TIMESTAMP=$(cat checksums-0-history.json | jq -r '.history[0].timestamp')
+                    FIRST_CRC32=$(cat checksums-0-history.json | jq -r '.history[0].crc32')
+                    echo "✅ History entry contains 'timestamp' and 'crc32' fields"
+                    echo "   First entry: timestamp=$FIRST_TIMESTAMP, crc32=$FIRST_CRC32"
+                  else
+                    echo "❌ History entry missing required fields"
+                    exit 1
+                  fi
+                else
+                  echo "⚠️  History is empty (no screenshots captured yet)"
+                fi
+              else
+                echo "❌ History field is not an array"
+                exit 1
+              fi
+            else
+              echo "❌ Response missing 'history' field"
+              exit 1
+            fi
+            
+            if cat checksums-0-history.json | jq -e '.count' > /dev/null 2>&1; then
+              echo "✅ Response contains 'count' field"
+            else
+              echo "❌ Response missing 'count' field"
+              exit 1
+            fi
+            
+            if cat checksums-0-history.json | jq -e '.max_length' > /dev/null 2>&1; then
+              MAX_LENGTH=$(cat checksums-0-history.json | jq -r '.max_length')
+              echo "✅ Response contains 'max_length' field: $MAX_LENGTH"
+            else
+              echo "❌ Response missing 'max_length' field"
+              exit 1
+            fi
+          else
+            echo "❌ Failed to download CRC32 history for screenshot 0"
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ CRC32 history endpoint test PASSED"
+          echo "   Both /checksums and /checksums/:index endpoints are working correctly"
+
       - name: Cleanup container
         if: always() && matrix.config.expect_failure == false
         run: |
@@ -127,6 +264,8 @@ jobs:
             downloaded-${{ matrix.config.name }}-checksum2.crc32
             checksum-test-*.png
             checksum-test-*.crc32
+            checksums-all.json
+            checksums-0-history.json
             webserver_${{ matrix.config.name }}_summary.md
           retention-days: 7
 
