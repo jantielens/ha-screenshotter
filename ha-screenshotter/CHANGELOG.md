@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **Pixel-based CRC32 checksums** for improved reliability and battery savings
+  - Checksums now calculated over raw pixel buffer instead of PNG file
+  - Eliminates false positives from PNG metadata or compression differences
+  - Checksum only changes when actual displayed pixels change
+  - Prevents unnecessary e-ink device wakeups and image downloads
+  - Improves battery life for battery-powered e-ink displays
+  - CRC32 lookup table precomputed at module load for better performance
+  - Maintains backward compatibility: same `.crc32` file format (8-char lowercase hex)
+
 ## [1.16.1] - 2025-10-16
 
 ### Added

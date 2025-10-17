@@ -146,9 +146,21 @@ void downloadAndDisplayImage(const char* url) {
 
 ### Technical Details
 
-- **Algorithm**: CRC32 (using Node.js built-in `zlib` module)
+- **Algorithm**: CRC32 calculated over **raw pixel buffer** (not PNG file)
 - **Format**: Plain text file with 8-character lowercase hexadecimal string
+- **Checksum basis**: Raw uncompressed pixel data + image dimensions header (width, height, channels)
 - **Checksum timing**: Generated after all image processing (rotation, grayscale, cropping, bit depth reduction)
 - **URL pattern**: `http://server:port/screenshots/{index}.png.crc32`
 - **Size**: 8 bytes total (8 ASCII hex characters)
 - **Reliability**: More than sufficient collision resistance for screenshot change detection
+
+#### Why Pixel-Based Checksums?
+
+The checksum is calculated over the **raw pixel buffer** rather than the final PNG file. This approach:
+
+- **Eliminates false positives**: PNG files can differ due to metadata or compression settings even when pixels are identical
+- **Detects only visual changes**: Checksum changes only when actual displayed pixels change
+- **Optimizes battery life**: Prevents unnecessary downloads when PNG encoding varies but image is unchanged
+- **Improves reliability**: Same pixels always produce the same checksum, regardless of PNG encoder settings
+
+The checksum includes a 12-byte header (width, height, channel count) followed by the raw pixel buffer, ensuring uniqueness even if pixel data happens to match between different images.
