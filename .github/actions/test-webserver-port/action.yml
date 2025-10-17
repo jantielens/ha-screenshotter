@@ -151,9 +151,9 @@ runs:
       if: always() && inputs.expect-failure == 'false'
       shell: bash
       run: |
-        echo "Stopping and removing container..."
-        docker stop ha-screenshotter-${{ inputs.test-name }} || true
-        docker rm ha-screenshotter-${{ inputs.test-name }} || true
+        # Cleanup is skipped here if verify_checksum_consistency is set
+        # The parent workflow will handle cleanup after checksum tests
+        echo "Container cleanup will be handled by parent workflow"
 
     - name: Determine result
       id: determine-result

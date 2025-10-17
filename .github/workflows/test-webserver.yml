@@ -51,7 +51,7 @@ jobs:
           expect-failure: ${{ matrix.config.expect_failure }}
 
       - name: Verify checksum consistency
-        if: matrix.config.verify_checksum_consistency == true
+        if: matrix.config.verify_checksum_consistency == true && matrix.config.expect_failure == false
         run: |
           echo "===================="
           echo "CHECKSUM CONSISTENCY TEST"
@@ -107,6 +107,13 @@ jobs:
           echo ""
           echo "✅ Checksum consistency test PASSED"
           echo "   Same URL produces identical checksums for identical content"
+
+      - name: Cleanup container
+        if: always() && matrix.config.expect_failure == false
+        run: |
+          echo "Stopping and removing container..."
+          docker stop ha-screenshotter-${{ matrix.config.name }} || true
+          docker rm ha-screenshotter-${{ matrix.config.name }} || true
 
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
