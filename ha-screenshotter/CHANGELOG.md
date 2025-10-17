@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.18.0] - 2025-10-18
+
 ### Added
 - **CRC32 History Tracking** for screenshot change monitoring and diagnostics
   - Stores last 500 CRC32 checksum values with timestamps for each screenshot
@@ -19,6 +21,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - No configuration required - feature enabled by default with fixed 500-entry limit
   - Atomic file writes for history persistence (write temp, rename)
   - Facilitates change detection patterns and diagnostic analysis
+
+### Changed
+- **Webserver CI tests** enhanced with CRC32 history endpoint validation
+  - Added test for `/checksums` endpoint to verify current checksums for all screenshots
+  - Added test for `/checksums/:index` endpoint to verify historical data retrieval
+  - Validates JSON structure, required fields, and history length settings
 
 ## [1.17.0] - 2025-10-17
 
