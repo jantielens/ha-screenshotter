@@ -52,15 +52,6 @@ jobs:
             echo "❌ Screenshot not found"
           fi
       
-      - name: Upload screenshot to GitHub (for URL)
-        if: steps.check-screenshot.outputs.exists == 'true'
-        id: upload-image
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr-screenshot-${{ github.event.pull_request.number }}-${{ github.run_number }}
-          path: combined_screenshots.png
-          retention-days: 30
-      
       - name: Post PR comment with artifact link
         if: steps.check-screenshot.outputs.exists == 'true'
         uses: actions/github-script@v7
