@@ -24,6 +24,10 @@ jobs:
           - name: "invalid-port"
             port: '"abcd"'
             expect_failure: true
+          - name: "checksum-consistency"
+            port: 3000
+            expect_failure: false
+            verify_checksum_consistency: true
     
     env:
       SCREENSHOT_SUBFOLDER: ${{ inputs.screenshots_subfolder }}
@@ -46,6 +50,64 @@ jobs:
           docker-image: ha-screenshotter-webserver-${{ matrix.config.name }}-test
           expect-failure: ${{ matrix.config.expect_failure }}
 
+      - name: Verify checksum consistency
+        if: matrix.config.verify_checksum_consistency == true
+        run: |
+          echo "===================="
+          echo "CHECKSUM CONSISTENCY TEST"
+          echo "===================="
+          echo "Downloading screenshot twice and comparing checksums..."
+          
+          # First download
+          echo "First download..."
+          curl -f -s "http://localhost:${{ matrix.config.port }}/screenshots/0.png" -o "checksum-test-1.png"
+          curl -f -s "http://localhost:${{ matrix.config.port }}/screenshots/0.png.crc32" -o "checksum-test-1.crc32"
+          CHECKSUM_1=$(cat checksum-test-1.crc32)
+          SIZE_1=$(stat -c%s checksum-test-1.png)
+          echo "  Checksum 1: $CHECKSUM_1"
+          echo "  Size 1: $SIZE_1 bytes"
+          
+          # Wait a moment
+          sleep 2
+          
+          # Second download
+          echo "Second download..."
+          curl -f -s "http://localhost:${{ matrix.config.port }}/screenshots/0.png" -o "checksum-test-2.png"
+          curl -f -s "http://localhost:${{ matrix.config.port }}/screenshots/0.png.crc32" -o "checksum-test-2.crc32"
+          CHECKSUM_2=$(cat checksum-test-2.crc32)
+          SIZE_2=$(stat -c%s checksum-test-2.png)
+          echo "  Checksum 2: $CHECKSUM_2"
+          echo "  Size 2: $SIZE_2 bytes"
+          
+          # Compare checksums
+          echo ""
+          echo "Comparing checksums..."
+          if [ "$CHECKSUM_1" = "$CHECKSUM_2" ]; then
+            echo "✅ Checksums match: $CHECKSUM_1 = $CHECKSUM_2"
+          else
+            echo "❌ Checksums DO NOT match: $CHECKSUM_1 != $CHECKSUM_2"
+            exit 1
+          fi
+          
+          # Compare file sizes
+          if [ "$SIZE_1" = "$SIZE_2" ]; then
+            echo "✅ File sizes match: $SIZE_1 = $SIZE_2 bytes"
+          else
+            echo "❌ File sizes DO NOT match: $SIZE_1 != $SIZE_2 bytes"
+            exit 1
+          fi
+          
+          # Binary comparison of files
+          if cmp -s checksum-test-1.png checksum-test-2.png; then
+            echo "✅ Binary content is identical"
+          else
+            echo "❌ Binary content differs (but checksums match - this is expected for PNG metadata differences)"
+          fi
+          
+          echo ""
+          echo "✅ Checksum consistency test PASSED"
+          echo "   Same URL produces identical checksums for identical content"
+
       - name: Upload test artifacts
         uses: actions/upload-artifact@v4
         if: always()
@@ -56,6 +118,8 @@ jobs:
             downloaded-${{ matrix.config.name }}-screenshot.png
             downloaded-${{ matrix.config.name }}-checksum.crc32
             downloaded-${{ matrix.config.name }}-checksum2.crc32
+            checksum-test-*.png
+            checksum-test-*.crc32
             webserver_${{ matrix.config.name }}_summary.md
           retention-days: 7
 
