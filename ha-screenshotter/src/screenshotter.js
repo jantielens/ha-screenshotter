@@ -8,6 +8,7 @@ const puppeteer = require('puppeteer');
 const { SCREENSHOTS_PATH } = require('./constants');
 const { rotateImage, convertToGrayscale, cropImage, reduceBitDepth, applyAdvancedProcessing } = require('./imageProcessor');
 const { generateChecksumFile } = require('./checksumUtil');
+const { addToHistory } = require('./crcHistory');
 
 /**
  * Get user agent string for mobile device presets
@@ -234,7 +235,12 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     console.log(`   │       ✅ Screenshot finalized: ${finalFilename}`);
     
     // Generate CRC32 checksum file after screenshot is finalized
-    await generateChecksumFile(finalPath, '   │       ');
+    const checksum = await generateChecksumFile(finalPath, '   │       ');
+    
+    // Add checksum to history
+    if (checksum) {
+      await addToHistory(index, checksum);
+    }
     
     return finalPath;
     

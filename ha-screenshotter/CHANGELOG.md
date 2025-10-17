@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **CRC32 History Tracking** for screenshot change monitoring and diagnostics
+  - Stores last 500 CRC32 checksum values with timestamps for each screenshot
+  - History persisted to `checksum-history.json` in screenshots directory
+  - Automatic trimming of oldest entries when limit exceeded
+  - New `/checksums` API endpoint to get current CRC32 values for all screenshots
+  - New `/checksums/:index` API endpoint to get full history for specific screenshot
+  - Gallery UI enhanced to display current CRC32 value for each screenshot
+  - Interactive "View History" button opens modal with historical checksums table
+  - No configuration required - feature enabled by default with fixed 500-entry limit
+  - Atomic file writes for history persistence (write temp, rename)
+  - Facilitates change detection patterns and diagnostic analysis
+
 ## [1.17.0] - 2025-10-17
 
 ### Changed

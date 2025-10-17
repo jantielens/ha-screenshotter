@@ -18,6 +18,7 @@ const { loadConfiguration } = require('./src/config');
 const { displaySystemInfo } = require('./src/systemInfo');
 const { takeAllScreenshots } = require('./src/screenshotter');
 const { setupWebServer } = require('./src/webServer');
+const { loadHistory } = require('./src/crcHistory');
 
 // Global flag to prevent overlapping executions
 let isExecuting = false;
@@ -51,6 +52,9 @@ async function init() {
     
     // Load configuration
     const config = await loadConfiguration();
+    
+    // Load CRC32 history
+    await loadHistory();
     
     // Display comprehensive system information
     displaySystemInfo(packageInfo, config);
