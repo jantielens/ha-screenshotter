@@ -1,4 +1,4 @@
-name: CI Tests
+name: CI Tests (New)
 on:
   pull_request:
     types: [opened, synchronize, reopened]
@@ -13,964 +13,106 @@ on:
         default: 'ha-screenshotter'
 
 jobs:
-  test-screenshot-configurations:
+  screenshot-tests:
+    name: Screenshot Configuration Tests
+    uses: ./.github/workflows/test-screenshots.yml
+    with:
+      screenshots_subfolder: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
+  
+  webserver-tests:
+    name: Webserver Tests
+    uses: ./.github/workflows/test-webserver.yml
+    with:
+      screenshots_subfolder: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
+  
+  post-screenshot-comment:
+    name: Post Screenshot to PR
     runs-on: ubuntu-latest
-    env:
-      SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
-
+    needs: [screenshot-tests]
+    if: github.event_name == 'pull_request' && always()
+    permissions:
+      pull-requests: write
+      contents: read
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install ImageMagick for image validation
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick jq bc
-
-      - name: Build Docker container
-        run: |
-          cd ha-screenshotter
-          docker build -t ha-screenshotter-test .
-
-      - name: Load and run test cases
-        run: |
-          # Read test cases from tests.json
-          TEST_CASES=$(jq -c '.[]' ha-screenshotter/tests.json)
-          
-          # Initialize counters
-          TOTAL_TESTS=0
-          PASSED_TESTS=0
-          FAILED_TESTS=0
-          
-          echo "| Test Case | Result |" >> test_summary.md
-          echo "|-----------|--------|" >> test_summary.md
-          
-          # Process each test case
-          while IFS= read -r test_case; do
-            TOTAL_TESTS=$((TOTAL_TESTS + 1))
-            
-            # Extract test data
-            TEST_NAME=$(echo "$test_case" | jq -r '.name')
-            TEST_CONFIG=$(echo "$test_case" | jq -c '.config')
-            TEST_VALIDATION=$(echo "$test_case" | jq -c '.validation')
-            
-            EXPECTED_SUCCESS=$(echo "$TEST_VALIDATION" | jq -r 'if .success == true then "true" else "false" end')
-            
-            echo "===================="
-            echo "Running test: $TEST_NAME"
-            echo "Expected to succeed: $EXPECTED_SUCCESS"
-            echo "===================="
-            
-            # Create test directories with pattern "001-test-name"
-            PADDED_TEST_NUMBER=$(printf "%03d" $TOTAL_TESTS)
-            SAFE_TEST_NAME=$(echo "$TEST_NAME" | sed 's/[^a-zA-Z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
-            TEST_DIR="${PADDED_TEST_NUMBER}-${SAFE_TEST_NAME}"
-            mkdir -p "$TEST_DIR/data" "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER"
-            
-            # Create options.json from config
-            echo "$TEST_CONFIG" > "$TEST_DIR/data/options.json"
-            
-            echo "Test configuration:"
-            cat "$TEST_DIR/data/options.json"
-            
-            # Run container and capture result
-            CONTAINER_SUCCESS=true
-            if ! docker run --rm \
-              -v "${GITHUB_WORKSPACE}/$TEST_DIR/data:/data" \
-              -v "${GITHUB_WORKSPACE}/$TEST_DIR/share:/media" \
-              ha-screenshotter-test 2>&1 | tee "$TEST_DIR/container.log"; then
-              CONTAINER_SUCCESS=false
-            fi
-            
-            # Wait a moment for any file operations to complete
-            sleep 2
-            
-            # Sync filesystem to ensure all writes are complete
-            sync
-            
-            # Validate results
-            TEST_PASSED=true
-            VALIDATION_DETAILS=""
-            
-            echo "DEBUG: EXPECTED_SUCCESS='$EXPECTED_SUCCESS', CONTAINER_SUCCESS='$CONTAINER_SUCCESS'"
-            
-            if [ "$EXPECTED_SUCCESS" = "true" ]; then
-              echo "DEBUG: Taking SUCCESS validation path"
-              # Test should succeed
-              if [ "$CONTAINER_SUCCESS" = "false" ]; then
-                TEST_PASSED=false
-                VALIDATION_DETAILS="Container failed unexpectedly"
-              else
-                # Count screenshots
-                ACTUAL_SCREENSHOTS=$(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" | wc -l)
-                EXPECTED_SCREENSHOTS=$(echo "$TEST_VALIDATION" | jq -r '.screenshots | length')
-                
-                if [ "$ACTUAL_SCREENSHOTS" -ne "$EXPECTED_SCREENSHOTS" ]; then
-                  TEST_PASSED=false
-                  VALIDATION_DETAILS="Expected $EXPECTED_SCREENSHOTS screenshots, got $ACTUAL_SCREENSHOTS"
-                else
-                  # Validate each screenshot
-                  SCREENSHOT_INDEX=0
-                  while [ $SCREENSHOT_INDEX -lt $ACTUAL_SCREENSHOTS ]; do
-                    SCREENSHOT_FILE="$TEST_DIR/share/$SCREENSHOT_SUBFOLDER/$SCREENSHOT_INDEX.png"
-                    
-                    if [ -f "$SCREENSHOT_FILE" ]; then
-                      # Get expected properties for this screenshot
-                      EXPECTED_WIDTH=$(echo "$TEST_VALIDATION" | jq -r ".screenshots[$SCREENSHOT_INDEX].width")
-                      EXPECTED_HEIGHT=$(echo "$TEST_VALIDATION" | jq -r ".screenshots[$SCREENSHOT_INDEX].height")
-                      EXPECTED_GRAYSCALE=$(echo "$TEST_VALIDATION" | jq -r ".screenshots[$SCREENSHOT_INDEX].grayscale // false" | sed 's/^null$/false/')
-                      EXPECTED_BIT_DEPTH=$(echo "$TEST_VALIDATION" | jq -r ".screenshots[$SCREENSHOT_INDEX].bitDepth")
-                      
-                      # Get actual properties using multiple ImageMagick methods
-                      ACTUAL_WIDTH=$(identify -ping -format "%w" "$SCREENSHOT_FILE")
-                      ACTUAL_HEIGHT=$(identify -ping -format "%h" "$SCREENSHOT_FILE")
-                      COLORSPACE=$(identify -ping -format "%[colorspace]" "$SCREENSHOT_FILE")
-                      DEPTH=$(identify -ping -format "%[depth]" "$SCREENSHOT_FILE")
-                      
-                      # Additional checks for PNG-specific properties
-                      PNG_COLORTYPE=$(identify -ping -format "%[png:color-type]" "$SCREENSHOT_FILE" 2>/dev/null || echo "unknown")
-                      FILE_INFO=$(file "$SCREENSHOT_FILE" 2>/dev/null || echo "")
-                      
-                      # Skip grayscale detection - too unreliable with palette-based images
-                      ACTUAL_GRAYSCALE="skip"
-                      
-                      # More accurate bit depth detection for PNG files
-                      if [[ "$FILE_INFO" =~ ([0-9]+)-bit ]]; then
-                        ACTUAL_BIT_DEPTH="${BASH_REMATCH[1]}"
-                      else
-                        ACTUAL_BIT_DEPTH="$DEPTH"
-                      fi
-                      
-                      echo "Screenshot $SCREENSHOT_INDEX validation:"
-                      echo "  Dimensions: ${ACTUAL_WIDTH}x${ACTUAL_HEIGHT} (expected: ${EXPECTED_WIDTH}x${EXPECTED_HEIGHT})"
-                      echo "  Colorspace: $COLORSPACE, PNG type: $PNG_COLORTYPE (grayscale validation: SKIPPED)"
-                      echo "  Bit depth: ImageMagick=$DEPTH, File=$ACTUAL_BIT_DEPTH (expected: $EXPECTED_BIT_DEPTH)"
-                      echo "  File info: $FILE_INFO"
-                      
-                      # Validate dimensions
-                      if [ "$ACTUAL_WIDTH" != "$EXPECTED_WIDTH" ] || [ "$ACTUAL_HEIGHT" != "$EXPECTED_HEIGHT" ]; then
-                        TEST_PASSED=false
-                        VALIDATION_DETAILS="${VALIDATION_DETAILS}Screenshot $SCREENSHOT_INDEX: Wrong dimensions (${ACTUAL_WIDTH}x${ACTUAL_HEIGHT} vs ${EXPECTED_WIDTH}x${EXPECTED_HEIGHT}). "
-                      fi
-                      
-                      # Skip grayscale validation (too unreliable with bit-depth reduced images)
-                      # if [ "$ACTUAL_GRAYSCALE" != "$EXPECTED_GRAYSCALE" ]; then
-                      #   TEST_PASSED=false
-                      #   VALIDATION_DETAILS="${VALIDATION_DETAILS}Screenshot $SCREENSHOT_INDEX: Wrong colorspace (grayscale: $ACTUAL_GRAYSCALE vs $EXPECTED_GRAYSCALE). "
-                      # fi
-                      
-                      # Validate bit depth (for grayscale images)
-                      if [ "$EXPECTED_GRAYSCALE" = "true" ] && [ "$ACTUAL_BIT_DEPTH" != "$EXPECTED_BIT_DEPTH" ]; then
-                        TEST_PASSED=false
-                        VALIDATION_DETAILS="${VALIDATION_DETAILS}Screenshot $SCREENSHOT_INDEX: Wrong bit depth ($ACTUAL_BIT_DEPTH vs $EXPECTED_BIT_DEPTH). "
-                      fi
-                      
-                    else
-                      TEST_PASSED=false
-                      VALIDATION_DETAILS="${VALIDATION_DETAILS}Screenshot $SCREENSHOT_INDEX missing. "
-                    fi
-                    
-                    SCREENSHOT_INDEX=$((SCREENSHOT_INDEX + 1))
-                  done
-                fi
-              fi
-            else
-              # Test should fail
-              echo "DEBUG: Taking FAILURE validation path"
-              if [ "$CONTAINER_SUCCESS" = "true" ]; then
-                # Check if screenshots were created (they shouldn't be for failed tests)
-                ACTUAL_SCREENSHOTS=$(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" | wc -l)
-                if [ "$ACTUAL_SCREENSHOTS" -gt 0 ]; then
-                  TEST_PASSED=false
-                  VALIDATION_DETAILS="Container should have failed but created $ACTUAL_SCREENSHOTS screenshots"
-                fi
-              fi
-            fi
-            
-            # Record result
-            if [ "$TEST_PASSED" = "true" ]; then
-              echo "✅ Test PASSED: $TEST_NAME"
-              PASSED_TESTS=$((PASSED_TESTS + 1))
-              echo "| $TEST_NAME | ✅ |" >> test_summary.md
-            else
-              echo "❌ Test FAILED: $TEST_NAME"
-              echo "   Details: $VALIDATION_DETAILS"
-              FAILED_TESTS=$((FAILED_TESTS + 1))
-              echo "| $TEST_NAME | ❌ $VALIDATION_DETAILS |" >> test_summary.md
-            fi
-            
-            echo ""
-            
-          done <<< "$TEST_CASES"
-          
-          # Final summary
-          echo ""
-          echo "===================="
-          echo "FINAL TEST SUMMARY"
-          echo "===================="
-          echo "Total tests: $TOTAL_TESTS"
-          echo "Passed: $PASSED_TESTS"
-          echo "Failed: $FAILED_TESTS"
-          
-          echo "" >> test_summary.md
-          echo "Summary: " >> test_summary.md
-          echo "- **Total tests:** $TOTAL_TESTS" >> test_summary.md
-          echo "- **Passed:** $PASSED_TESTS" >> test_summary.md
-          echo "- **Failed:** $FAILED_TESTS" >> test_summary.md
-          
-          # Fail the job if any tests failed
-          if [ $FAILED_TESTS -gt 0 ]; then
-            echo "❌ $FAILED_TESTS test(s) failed"
-            exit 1
-          else
-            echo "✅ All tests passed!"
-          fi
-
-      - name: Create combined screenshot image
-        if: always()
-        run: |
-          echo "===================="
-          echo "CREATING COMBINED SCREENSHOT IMAGE"
-          echo "===================="
-          
-          # Find all test directories
-          TEST_DIRS=($(ls -1d [0-9][0-9][0-9]-* 2>/dev/null | sort))
-          
-          if [ ${#TEST_DIRS[@]} -eq 0 ]; then
-            echo "No test directories found, skipping combined image creation"
-            exit 0
-          fi
-          
-          echo "Found ${#TEST_DIRS[@]} test directories"
-          
-          # Create a temporary directory for processing
-          mkdir -p combined_processing
-          
-          # Process each test directory to create row images
-          ROW_IMAGES=()
-          for TEST_DIR in "${TEST_DIRS[@]}"; do
-            echo "Processing $TEST_DIR..."
-            
-            # Get test name from directory name (remove number prefix)
-            TEST_NAME=$(echo "$TEST_DIR" | sed 's/^[0-9][0-9][0-9]-//')
-            
-            # Check if this test passed by looking in the test summary
-            TEST_PASSED=true
-            if [ -f test_summary.md ]; then
-              if grep -q "| $TEST_NAME | ❌" test_summary.md; then
-                TEST_PASSED=false
-              fi
-            fi
-            
-            # Skip failed tests
-            if [ "$TEST_PASSED" = "false" ]; then
-              echo "  Skipping failed test: $TEST_NAME"
-              continue
-            fi
-            
-            # Find all screenshots in this test directory
-            SCREENSHOTS=($(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" 2>/dev/null | sort -V))
-            
-            if [ ${#SCREENSHOTS[@]} -eq 0 ]; then
-              echo "  No screenshots found for $TEST_DIR, skipping..."
-              continue
-            fi
-            
-            echo "  Found ${#SCREENSHOTS[@]} screenshots"
-            
-            # Resize all screenshots to a consistent height for better layout and add index numbers
-            RESIZED_SCREENSHOTS=()
-            ROW_HEIGHT=200
-            
-            for i in "${!SCREENSHOTS[@]}"; do
-              SCREENSHOT="${SCREENSHOTS[$i]}"
-              RESIZED_FILE="combined_processing/resized_${TEST_DIR}_${i}.png"
-              
-              # Get original dimensions
-              ORIGINAL_WIDTH=$(identify -ping -format "%w" "$SCREENSHOT")
-              ORIGINAL_HEIGHT=$(identify -ping -format "%h" "$SCREENSHOT")
-              
-              # Calculate new width maintaining aspect ratio
-              NEW_WIDTH=$(echo "scale=0; $ORIGINAL_WIDTH * $ROW_HEIGHT / $ORIGINAL_HEIGHT" | bc)
-              
-              # Resize the image first
-              convert "$SCREENSHOT" -resize "${NEW_WIDTH}x${ROW_HEIGHT}!" "temp_resized.png"
-              
-              # Add red index number in top-right corner
-              convert "temp_resized.png" \
-                      -font DejaVu-Sans-Bold -pointsize 16 -fill red -stroke white -strokewidth 1 \
-                      -gravity northeast -annotate +5+5 "$i" \
-                      "$RESIZED_FILE"
-              
-              # Clean up temp file
-              rm -f "temp_resized.png"
-              
-              RESIZED_SCREENSHOTS+=("$RESIZED_FILE")
-            done
-            
-            # Create a label for this test (make it twice as wide)
-            LABEL_FILE="combined_processing/label_${TEST_DIR}.png"
-            convert -size 400x${ROW_HEIGHT} xc:white \
-                    -font DejaVu-Sans -pointsize 10 -fill black \
-                    -gravity center -annotate +0+0 "$TEST_NAME" \
-                    "$LABEL_FILE"
-            
-            # Combine all screenshots in this row horizontally
-            ROW_FILE="combined_processing/row_${TEST_DIR}.png"
-            convert "$LABEL_FILE" "${RESIZED_SCREENSHOTS[@]}" +append "$ROW_FILE"
-            ROW_IMAGES+=("$ROW_FILE")
-            
-            echo "  Created row image: $ROW_FILE"
-          done
-          
-          # Combine all rows vertically to create the final image
-          if [ ${#ROW_IMAGES[@]} -gt 0 ]; then
-            echo "Combining ${#ROW_IMAGES[@]} rows into final image..."
-            
-            # Create title header
-            TITLE_HEIGHT=40
-            TOTAL_WIDTH=$(identify -ping -format "%w" "${ROW_IMAGES[0]}")
-            convert -size ${TOTAL_WIDTH}x${TITLE_HEIGHT} xc:lightblue \
-                    -font DejaVu-Sans -pointsize 16 -fill black \
-                    -gravity center -annotate +0+0 "HA-Screenshotter Test Results - $(date '+%Y-%m-%d %H:%M:%S')" \
-                    "combined_processing/title.png"
-            
-            # Combine title and all rows
-            convert "combined_processing/title.png" "${ROW_IMAGES[@]}" -append "combined_screenshots.png"
-            
-            echo "✅ Combined screenshot image created: combined_screenshots.png"
-            
-            # Get final image dimensions
-            FINAL_WIDTH=$(identify -ping -format "%w" "combined_screenshots.png")
-            FINAL_HEIGHT=$(identify -ping -format "%h" "combined_screenshots.png")
-            FINAL_SIZE=$(stat -c%s "combined_screenshots.png")
-            
-            echo "Final image dimensions: ${FINAL_WIDTH}x${FINAL_HEIGHT}"
-            echo "Final image size: $FINAL_SIZE bytes"
-            
-            # Create a summary of what's in the combined image
-            echo "## Combined Screenshot Summary" > combined_image_summary.md
-            echo "" >> combined_image_summary.md
-            echo "- **Image dimensions:** ${FINAL_WIDTH}x${FINAL_HEIGHT}" >> combined_image_summary.md
-            echo "- **File size:** $(echo "scale=2; $FINAL_SIZE / 1024 / 1024" | bc) MB" >> combined_image_summary.md
-            echo "- **Number of test rows:** ${#ROW_IMAGES[@]}" >> combined_image_summary.md
-            echo "- **Tests included:**" >> combined_image_summary.md
-            
-            for TEST_DIR in "${TEST_DIRS[@]}"; do
-              TEST_NAME=$(echo "$TEST_DIR" | sed 's/^[0-9][0-9][0-9]-//')
-              
-              # Check if this test passed
-              TEST_PASSED=true
-              if [ -f test_summary.md ]; then
-                if grep -q "| $TEST_NAME | ❌" test_summary.md; then
-                  TEST_PASSED=false
-                fi
-              fi
-              
-              if [ "$TEST_PASSED" = "true" ]; then
-                SCREENSHOT_COUNT=$(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" 2>/dev/null | wc -l)
-                echo "  - $TEST_NAME ($SCREENSHOT_COUNT screenshots)" >> combined_image_summary.md
-              fi
-            done
-            
-          else
-            echo "❌ No row images to combine"
-          fi
-          
-          # Cleanup temporary files
-          rm -rf combined_processing
-
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
+      - name: Download combined screenshot
+        uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
-          name: test-results
-          path: |
-            [0-9][0-9][0-9]-*/
-            test_summary.md
-            combined_screenshots.png
-            combined_image_summary.md
-          retention-days: 7
-
-      - name: Add test summary to job summary
-        if: always()
+          name: combined-screenshot-image
+          path: ./
+      
+      - name: Check if screenshot exists
+        id: check-screenshot
         run: |
-          if [ -f test_summary.md ]; then
-            cat test_summary.md >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ -f combined_image_summary.md ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            cat combined_image_summary.md >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ -f combined_screenshots.png ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "📸 **Combined Screenshots:** Available in test-results artifact" >> $GITHUB_STEP_SUMMARY
-          fi
-
-  test-webserver:
-    runs-on: ubuntu-latest
-    env:
-      SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Build Docker container
-        run: |
-          cd ha-screenshotter
-          docker build -t ha-screenshotter-webserver-test .
-
-      - name: Set up test directories
-        run: |
-          mkdir -p webserver-test/data webserver-test/share/$SCREENSHOT_SUBFOLDER
-
-      - name: Create webserver test configuration
-        run: |
-          cat > webserver-test/data/options.json << 'EOF'
-          {
-            "schedule": "*/1 * * * *",
-            "urls": "[\"https://example.com\"]",
-            "resolution_width": 800,
-            "resolution_height": 600,
-            "rotation_degrees": 0,
-            "grayscale": false,
-            "bit_depth": 24,
-            "run_once": false,
-            "webserverport": 3000
-          }
-          EOF
-          
-          echo "Webserver test configuration:"
-          cat webserver-test/data/options.json
-
-      - name: Start container in background
-        run: |
-          echo "Starting container with webserver enabled..."
-          docker run -d \
-            --name ha-screenshotter-webserver \
-            -v "${GITHUB_WORKSPACE}/webserver-test/data:/data" \
-            -v "${GITHUB_WORKSPACE}/webserver-test/share:/media" \
-            -p 3000:3000 \
-            ha-screenshotter-webserver-test
-          
-          echo "Container started, waiting for initialization..."
-
-      - name: Wait for screenshot and webserver startup
-        run: |
-          echo "Waiting 30 seconds for container to take screenshot and start webserver..."
-          sleep 30
-          
-          echo "Checking container status..."
-          docker logs ha-screenshotter-webserver || true
-          
-          echo "Checking if screenshot was created..."
-          ls -la webserver-test/share/$SCREENSHOT_SUBFOLDER/ || echo "No screenshots directory found"
-
-      - name: Test webserver and download image
-        run: |
-          echo "Testing webserver endpoint..."
-          
-          # Check if webserver is responding
-          if curl -f -s "http://localhost:3000" > /dev/null; then
-            echo "✅ Webserver is responding"
+          if [ -f "combined_screenshots.png" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Screenshot found"
           else
-            echo "❌ Webserver is not responding"
-            docker logs ha-screenshotter-webserver
-            exit 1
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "❌ Screenshot not found"
           fi
-          
-          # Try to download the screenshot via webserver
-          if curl -f -s "http://localhost:3000/screenshots/0.png" -o "downloaded-screenshot.png"; then
-            echo "✅ Successfully downloaded screenshot via webserver"
-            
-            # Validate the downloaded file
-            file downloaded-screenshot.png
-            size=$(stat -c%s downloaded-screenshot.png)
-            echo "Downloaded file size: $size bytes"
-            
-            if [ "$size" -gt 1000 ]; then
-              echo "✅ Downloaded screenshot appears valid (size > 1KB)"
-            else
-              echo "❌ Downloaded screenshot seems too small"
-              exit 1
-            fi
-          else
-            echo "❌ Failed to download screenshot via webserver"
-            echo "Available files on webserver:"
-            curl -s "http://localhost:3000" || true
-            exit 1
-          fi
-          
-          # Try to download the CRC32 checksum file via webserver
-          echo ""
-          echo "Testing CRC32 checksum file..."
-          if curl -f -s "http://localhost:3000/screenshots/0.png.crc32" -o "downloaded-checksum.crc32"; then
-            echo "✅ Successfully downloaded checksum file via webserver"
-            
-            # Validate the checksum file format
-            checksum=$(cat downloaded-checksum.crc32)
-            echo "Checksum content: $checksum"
-            
-            # Check if it's exactly 8 hexadecimal characters
-            if echo "$checksum" | grep -qE '^[0-9a-f]{8}$'; then
-              echo "✅ Checksum format is valid (8 hex characters)"
-            else
-              echo "❌ Checksum format is invalid: $checksum"
-              exit 1
-            fi
-            
-            # Verify checksum changes when screenshot changes
-            # Take another screenshot by modifying the image slightly
-            echo "Checking that checksum changes when image changes..."
-            sleep 5
-            
-            # Download checksum again
-            if curl -f -s "http://localhost:3000/screenshots/0.png.crc32" -o "downloaded-checksum2.crc32"; then
-              checksum2=$(cat downloaded-checksum2.crc32)
-              echo "Second checksum: $checksum2"
-              # Note: checksums should be the same if image hasn't changed
-              echo "✅ Checksum download is consistent"
-            fi
-            
-          else
-            echo "❌ Failed to download checksum file via webserver"
-            exit 1
-          fi
-          
-          # Verify that temporary checksum files are blocked
-          echo ""
-          echo "Testing that temporary checksum files are blocked..."
-          if curl -f -s "http://localhost:3000/screenshots/0_temp.png.crc32" -o /dev/null 2>&1; then
-            echo "❌ Temporary checksum file should be blocked but was accessible"
-            exit 1
-          else
-            echo "✅ Temporary checksum files are correctly blocked"
-          fi
-
-      - name: Generate webserver test summary
-        if: always()
-        run: |
-          echo "| Test Component | Result |" > webserver_summary.md
-          echo "|----------------|--------|" >> webserver_summary.md
-          
-          # Check if container started
-          if docker ps -a --format "table {{.Names}}" | grep -q "ha-screenshotter-webserver"; then
-            echo "| Container Startup | ✅ |" >> webserver_summary.md
-          else
-            echo "| Container Startup | ❌ Container failed to start |" >> webserver_summary.md
-          fi
-          
-          # Check if webserver responded
-          if curl -f -s "http://localhost:3000" > /dev/null 2>&1; then
-            echo "| Webserver Response | ✅ |" >> webserver_summary.md
-          else
-            echo "| Webserver Response | ❌ Webserver not responding |" >> webserver_summary.md
-          fi
-          
-          # Check if screenshot was downloaded
-          if [ -f "downloaded-screenshot.png" ]; then
-            SIZE=$(stat -c%s downloaded-screenshot.png 2>/dev/null || echo "0")
-            if [ "$SIZE" -gt 1000 ]; then
-              echo "| Screenshot Download | ✅ ($SIZE bytes) |" >> webserver_summary.md
-            else
-              echo "| Screenshot Download | ❌ File too small ($SIZE bytes) |" >> webserver_summary.md
-            fi
-          else
-            echo "| Screenshot Download | ❌ File not found |" >> webserver_summary.md
-          fi
-          
-          # Check if checksum was downloaded
-          if [ -f "downloaded-checksum.crc32" ]; then
-            CHECKSUM=$(cat downloaded-checksum.crc32 2>/dev/null || echo "")
-            if echo "$CHECKSUM" | grep -qE '^[0-9a-f]{8}$'; then
-              echo "| Checksum Download | ✅ ($CHECKSUM) |" >> webserver_summary.md
-            else
-              echo "| Checksum Download | ❌ Invalid format |" >> webserver_summary.md
-            fi
-          else
-            echo "| Checksum Download | ❌ File not found |" >> webserver_summary.md
-          fi
-          
-          # Check if temporary files are blocked
-          if curl -f -s "http://localhost:3000/screenshots/0_temp.png.crc32" -o /dev/null 2>&1; then
-            echo "| Temp File Blocking | ❌ Temp files accessible |" >> webserver_summary.md
-          else
-            echo "| Temp File Blocking | ✅ |" >> webserver_summary.md
-          fi
-          
-          # Check if screenshots were created in filesystem
-          SCREENSHOT_COUNT=$(find webserver-test/share/ha-screenshotter/ -name "*.png" 2>/dev/null | wc -l)
-          if [ "$SCREENSHOT_COUNT" -gt 0 ]; then
-            echo "| Screenshot Generation | ✅ ($SCREENSHOT_COUNT files) |" >> webserver_summary.md
-          else
-            echo "| Screenshot Generation | ❌ No screenshots found |" >> webserver_summary.md
-          fi
-          
-          # Check if checksum files were created in filesystem
-          CHECKSUM_COUNT=$(find webserver-test/share/ha-screenshotter/ -name "*.crc32" 2>/dev/null | wc -l)
-          if [ "$CHECKSUM_COUNT" -gt 0 ]; then
-            echo "| Checksum Generation | ✅ ($CHECKSUM_COUNT files) |" >> webserver_summary.md
-          else
-            echo "| Checksum Generation | ❌ No checksum files found |" >> webserver_summary.md
-          fi
-          
-          echo ""
-          echo "## Webserver Test Summary"
-          cat webserver_summary.md
-
-      - name: Cleanup container
-        if: always()
-        run: |
-          echo "Stopping and removing container..."
-          docker stop ha-screenshotter-webserver || true
-          docker rm ha-screenshotter-webserver || true
-
-      - name: Upload webserver test artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
+      
+      - name: Post PR comment with artifact link
+        if: steps.check-screenshot.outputs.exists == 'true'
+        uses: actions/github-script@v7
         with:
-          name: webserver-test-results
-          path: |
-            webserver-test/
-            downloaded-screenshot.png
-            downloaded-checksum.crc32
-            downloaded-checksum2.crc32
-            webserver_summary.md
-          retention-days: 7
-
-      - name: Add webserver summary to job summary
-        if: always()
-        run: |
-          if [ -f webserver_summary.md ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            cat webserver_summary.md >> $GITHUB_STEP_SUMMARY
-          fi
-
-  test-webserver-customport:
-    runs-on: ubuntu-latest
-    env:
-      SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Build Docker container
-        run: |
-          cd ha-screenshotter
-          docker build -t ha-screenshotter-webserver-customport-test .
-
-      - name: Set up test directories
-        run: |
-          mkdir -p webserver-customport-test/data webserver-customport-test/share/$SCREENSHOT_SUBFOLDER
-
-      - name: Create webserver test configuration with custom port
-        run: |
-          cat > webserver-customport-test/data/options.json << 'EOF'
-          {
-            "schedule": "*/1 * * * *",
-            "urls": "[\"https://example.com\"]",
-            "resolution_width": 800,
-            "resolution_height": 600,
-            "rotation_degrees": 0,
-            "grayscale": false,
-            "bit_depth": 24,
-            "run_once": false,
-            "webserverport": 6666
-          }
-          EOF
-          
-          echo "Webserver custom port test configuration:"
-          cat webserver-customport-test/data/options.json
-
-      - name: Start container in background
-        run: |
-          echo "Starting container with webserver on custom port 6666..."
-          docker run -d \
-            --name ha-screenshotter-webserver-customport \
-            -v "${GITHUB_WORKSPACE}/webserver-customport-test/data:/data" \
-            -v "${GITHUB_WORKSPACE}/webserver-customport-test/share:/media" \
-            -p 6666:6666 \
-            ha-screenshotter-webserver-customport-test
-          
-          echo "Container started, waiting for initialization..."
-
-      - name: Wait for screenshot and webserver startup
-        run: |
-          echo "Waiting 30 seconds for container to take screenshot and start webserver..."
-          sleep 30
-          
-          echo "Checking container status..."
-          docker logs ha-screenshotter-webserver-customport || true
-          
-          echo "Checking if screenshot was created..."
-          ls -la webserver-customport-test/share/$SCREENSHOT_SUBFOLDER/ || echo "No screenshots directory found"
-
-      - name: Test webserver on custom port and download image
-        run: |
-          echo "Testing webserver endpoint on port 6666..."
-          
-          # Check if webserver is responding
-          if curl -f -s "http://localhost:6666" > /dev/null; then
-            echo "✅ Webserver is responding on port 6666"
-          else
-            echo "❌ Webserver is not responding on port 6666"
-            docker logs ha-screenshotter-webserver-customport
-            exit 1
-          fi
-          
-          # Try to download the screenshot via webserver
-          if curl -f -s "http://localhost:6666/screenshots/0.png" -o "downloaded-screenshot-customport.png"; then
-            echo "✅ Successfully downloaded screenshot via webserver on port 6666"
+          script: |
+            const fs = require('fs');
+            const runId = context.runId;
+            const repo = context.repo;
+            const prNumber = context.payload.pull_request.number;
             
-            # Validate the downloaded file
-            file downloaded-screenshot-customport.png
-            size=$(stat -c%s downloaded-screenshot-customport.png)
-            echo "Downloaded file size: $size bytes"
+            // Get artifact URL
+            const artifactUrl = `https://github.com/${repo.owner}/${repo.repo}/actions/runs/${runId}`;
             
-            if [ "$size" -gt 1000 ]; then
-              echo "✅ Downloaded screenshot appears valid (size > 1KB)"
-            else
-              echo "❌ Downloaded screenshot seems too small"
-              exit 1
-            fi
-          else
-            echo "❌ Failed to download screenshot via webserver on port 6666"
-            echo "Available files on webserver:"
-            curl -s "http://localhost:6666" || true
-            exit 1
-          fi
-          
-          # Try to download the CRC32 checksum file via webserver
-          echo ""
-          echo "Testing CRC32 checksum file on custom port..."
-          if curl -f -s "http://localhost:6666/screenshots/0.png.crc32" -o "downloaded-checksum-customport.crc32"; then
-            echo "✅ Successfully downloaded checksum file via webserver on port 6666"
+            // Check for existing comments
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: repo.owner,
+              repo: repo.repo,
+              issue_number: prNumber,
+            });
             
-            # Validate the checksum file format
-            checksum=$(cat downloaded-checksum-customport.crc32)
-            echo "Checksum content: $checksum"
+            const botComment = comments.find(comment => 
+              comment.user.type === 'Bot' && 
+              comment.body.includes('📸 Screenshot Test Results')
+            );
             
-            # Check if it's exactly 8 hexadecimal characters
-            if echo "$checksum" | grep -qE '^[0-9a-f]{8}$'; then
-              echo "✅ Checksum format is valid (8 hex characters)"
-            else
-              echo "❌ Checksum format is invalid: $checksum"
-              exit 1
-            fi
-          else
-            echo "❌ Failed to download checksum file via webserver on port 6666"
-            exit 1
-          fi
-
-      - name: Generate webserver custom port test summary
-        if: always()
-        run: |
-          echo "| Test Component | Result |" > webserver_customport_summary.md
-          echo "|----------------|--------|" >> webserver_customport_summary.md
-          
-          # Check if container started
-          if docker ps -a --format "table {{.Names}}" | grep -q "ha-screenshotter-webserver-customport"; then
-            echo "| Container Startup | ✅ |" >> webserver_customport_summary.md
-          else
-            echo "| Container Startup | ❌ Container failed to start |" >> webserver_customport_summary.md
-          fi
-          
-          # Check if webserver responded on custom port
-          if curl -f -s "http://localhost:6666" > /dev/null 2>&1; then
-            echo "| Webserver Response (Port 6666) | ✅ |" >> webserver_customport_summary.md
-          else
-            echo "| Webserver Response (Port 6666) | ❌ Webserver not responding |" >> webserver_customport_summary.md
-          fi
-          
-          # Check if screenshot was downloaded
-          if [ -f "downloaded-screenshot-customport.png" ]; then
-            SIZE=$(stat -c%s downloaded-screenshot-customport.png 2>/dev/null || echo "0")
-            if [ "$SIZE" -gt 1000 ]; then
-              echo "| Screenshot Download | ✅ ($SIZE bytes) |" >> webserver_customport_summary.md
-            else
-              echo "| Screenshot Download | ❌ File too small ($SIZE bytes) |" >> webserver_customport_summary.md
-            fi
-          else
-            echo "| Screenshot Download | ❌ File not found |" >> webserver_customport_summary.md
-          fi
-          
-          # Check if checksum was downloaded
-          if [ -f "downloaded-checksum-customport.crc32" ]; then
-            CHECKSUM=$(cat downloaded-checksum-customport.crc32 2>/dev/null || echo "")
-            if echo "$CHECKSUM" | grep -qE '^[0-9a-f]{8}$'; then
-              echo "| Checksum Download | ✅ ($CHECKSUM) |" >> webserver_customport_summary.md
-            else
-              echo "| Checksum Download | ❌ Invalid format |" >> webserver_customport_summary.md
-            fi
-          else
-            echo "| Checksum Download | ❌ File not found |" >> webserver_customport_summary.md
-          fi
-          
-          # Check if screenshots were created in filesystem
-          SCREENSHOT_COUNT=$(find webserver-customport-test/share/ha-screenshotter/ -name "*.png" 2>/dev/null | wc -l)
-          if [ "$SCREENSHOT_COUNT" -gt 0 ]; then
-            echo "| Screenshot Generation | ✅ ($SCREENSHOT_COUNT files) |" >> webserver_customport_summary.md
-          else
-            echo "| Screenshot Generation | ❌ No screenshots found |" >> webserver_customport_summary.md
-          fi
-          
-          # Check if checksum files were created in filesystem
-          CHECKSUM_COUNT=$(find webserver-customport-test/share/ha-screenshotter/ -name "*.crc32" 2>/dev/null | wc -l)
-          if [ "$CHECKSUM_COUNT" -gt 0 ]; then
-            echo "| Checksum Generation | ✅ ($CHECKSUM_COUNT files) |" >> webserver_customport_summary.md
-          else
-            echo "| Checksum Generation | ❌ No checksum files found |" >> webserver_customport_summary.md
-          fi
-          
-          echo ""
-          echo "## Webserver Custom Port Test Summary"
-          cat webserver_customport_summary.md
-
-      - name: Cleanup container
-        if: always()
-        run: |
-          echo "Stopping and removing container..."
-          docker stop ha-screenshotter-webserver-customport || true
-          docker rm ha-screenshotter-webserver-customport || true
-
-      - name: Upload webserver custom port test artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: webserver-customport-test-results
-          path: |
-            webserver-customport-test/
-            downloaded-screenshot-customport.png
-            downloaded-checksum-customport.crc32
-            webserver_customport_summary.md
-          retention-days: 7
-
-      - name: Add webserver custom port summary to job summary
-        if: always()
-        run: |
-          if [ -f webserver_customport_summary.md ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            cat webserver_customport_summary.md >> $GITHUB_STEP_SUMMARY
-          fi
-
-  test-webserver-invalidport:
-    runs-on: ubuntu-latest
-    env:
-      SCREENSHOT_SUBFOLDER: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Build Docker container
-        run: |
-          cd ha-screenshotter
-          docker build -t ha-screenshotter-webserver-invalidport-test .
-
-      - name: Set up test directories
-        run: |
-          mkdir -p webserver-invalidport-test/data webserver-invalidport-test/share/$SCREENSHOT_SUBFOLDER
-
-      - name: Create webserver test configuration with invalid port
-        run: |
-          cat > webserver-invalidport-test/data/options.json << 'EOF'
-          {
-            "schedule": "*/1 * * * *",
-            "urls": "[\"https://example.com\"]",
-            "resolution_width": 800,
-            "resolution_height": 600,
-            "rotation_degrees": 0,
-            "grayscale": false,
-            "bit_depth": 24,
-            "run_once": false,
-            "webserverport": "abcd"
-          }
-          EOF
-          
-          echo "Webserver invalid port test configuration:"
-          cat webserver-invalidport-test/data/options.json
-
-      - name: Run container and expect failure
-        run: |
-          echo "Running container with invalid webserver port (should fail)..."
-          
-          # Run container and capture exit code
-          set +e
-          docker run --rm \
-            -v "${GITHUB_WORKSPACE}/webserver-invalidport-test/data:/data" \
-            -v "${GITHUB_WORKSPACE}/webserver-invalidport-test/share:/media" \
-            ha-screenshotter-webserver-invalidport-test 2>&1 | tee webserver-invalidport-test/container.log
-          EXIT_CODE=${PIPESTATUS[0]}
-          set -e
-          
-          echo "Container exit code: $EXIT_CODE"
-          
-          # Container should fail (non-zero exit code)
-          if [ $EXIT_CODE -ne 0 ]; then
-            echo "✅ Container failed as expected with invalid port configuration"
+            const commentBody = `## 📸 Screenshot Test Results
             
-            # Verify error message contains expected validation error
-            if grep -q "Invalid webserverport setting" webserver-invalidport-test/container.log; then
-              echo "✅ Error message contains expected validation message"
-            else
-              echo "⚠️ Warning: Expected validation error message not found in logs"
-              echo "Container log:"
-              cat webserver-invalidport-test/container.log
-            fi
-          else
-            echo "❌ Container should have failed but succeeded"
-            echo "Container log:"
-            cat webserver-invalidport-test/container.log
-            exit 1
-          fi
+            The combined screenshot image from all tests is ready for review!
+            
+            ### 🔗 Quick Links
+            - **[View Test Results Artifact](${artifactUrl})**
+            - **[Download Combined Screenshot](${artifactUrl}#artifacts)** - Look for \`combined-screenshot-image\` (image only, fast download)
+            
+            ### 👁️ Visual Inspection Required
+            **⚠️ Please visually inspect the combined screenshot to verify test results.**
+            The image shows all test screenshots side-by-side for easy comparison.
+            
+            ### 📊 Test Summary
+            Check the workflow summary for detailed test results and individual screenshots.
+            
+            ---
+            🤖 *This comment is automatically updated on each push*
+            `;
+            
+            if (botComment) {
+              // Update existing comment
+              await github.rest.issues.updateComment({
+                owner: repo.owner,
+                repo: repo.repo,
+                comment_id: botComment.id,
+                body: commentBody
+              });
+              console.log('Updated existing comment');
+            } else {
+              // Create new comment
+              await github.rest.issues.createComment({
+                owner: repo.owner,
+                repo: repo.repo,
+                issue_number: prNumber,
+                body: commentBody
+              });
+              console.log('Created new comment');
+            }
 
-      - name: Generate webserver invalid port test summary
-        if: always()
-        run: |
-          echo "| Test Component | Result |" > webserver_invalidport_summary.md
-          echo "|----------------|--------|" >> webserver_invalidport_summary.md
-          
-          # Check if container failed as expected
-          if [ -f webserver-invalidport-test/container.log ]; then
-            if grep -q "Invalid webserverport setting" webserver-invalidport-test/container.log; then
-              echo "| Container Validation | ✅ Failed with expected error |" >> webserver_invalidport_summary.md
-            else
-              echo "| Container Validation | ⚠️ Failed but error message unexpected |" >> webserver_invalidport_summary.md
-            fi
-          else
-            echo "| Container Validation | ❌ Log file not found |" >> webserver_invalidport_summary.md
-          fi
-          
-          # Verify no screenshots were created (container should fail before taking screenshots)
-          SCREENSHOT_COUNT=$(find webserver-invalidport-test/share/ -name "*.png" 2>/dev/null | wc -l)
-          if [ "$SCREENSHOT_COUNT" -eq 0 ]; then
-            echo "| No Screenshots Created | ✅ |" >> webserver_invalidport_summary.md
-          else
-            echo "| No Screenshots Created | ❌ Found $SCREENSHOT_COUNT screenshots |" >> webserver_invalidport_summary.md
-          fi
-          
-          echo ""
-          echo "## Webserver Invalid Port Test Summary"
-          cat webserver_invalidport_summary.md
-
-      - name: Upload webserver invalid port test artifacts
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: webserver-invalidport-test-results
-          path: |
-            webserver-invalidport-test/
-            webserver_invalidport_summary.md
-          retention-days: 7
-
-      - name: Add webserver invalid port summary to job summary
-        if: always()
-        run: |
-          if [ -f webserver_invalidport_summary.md ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            cat webserver_invalidport_summary.md >> $GITHUB_STEP_SUMMARY
-          fi

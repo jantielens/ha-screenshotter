@@ -1,0 +1,140 @@
+name: Webserver Tests
+on:
+  workflow_call:
+    inputs:
+      screenshots_subfolder:
+        description: 'Subfolder name inside /media where screenshots are written'
+        type: string
+        required: false
+        default: 'ha-screenshotter'
+
+jobs:
+  test-webserver-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: "default-port"
+            port: 3000
+            expect_failure: false
+          - name: "custom-port"
+            port: 6666
+            expect_failure: false
+          - name: "invalid-port"
+            port: '"abcd"'
+            expect_failure: true
+          - name: "checksum-consistency"
+            port: 3000
+            expect_failure: false
+            verify_checksum_consistency: true
+    
+    env:
+      SCREENSHOT_SUBFOLDER: ${{ inputs.screenshots_subfolder }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test-env
+        with:
+          docker-image-name: ha-screenshotter-webserver-${{ matrix.config.name }}-test
+
+      - name: Test webserver configuration
+        uses: ./.github/actions/test-webserver-port
+        with:
+          port: ${{ matrix.config.port }}
+          test-name: ${{ matrix.config.name }}
+          screenshot-subfolder: ${{ inputs.screenshots_subfolder }}
+          docker-image: ha-screenshotter-webserver-${{ matrix.config.name }}-test
+          expect-failure: ${{ matrix.config.expect_failure }}
+
+      - name: Verify checksum consistency
+        if: matrix.config.verify_checksum_consistency == true && matrix.config.expect_failure == false
+        run: |
+          echo "===================="
+          echo "CHECKSUM CONSISTENCY TEST"
+          echo "===================="
+          echo "Downloading screenshot twice and comparing checksums..."
+          
+          # First download
+          echo "First download..."
+          curl -f -s "http://localhost:${{ matrix.config.port }}/screenshots/0.png" -o "checksum-test-1.png"
+          curl -f -s "http://localhost:${{ matrix.config.port }}/screenshots/0.png.crc32" -o "checksum-test-1.crc32"
+          CHECKSUM_1=$(cat checksum-test-1.crc32)
+          SIZE_1=$(stat -c%s checksum-test-1.png)
+          echo "  Checksum 1: $CHECKSUM_1"
+          echo "  Size 1: $SIZE_1 bytes"
+          
+          # Wait a moment
+          sleep 2
+          
+          # Second download
+          echo "Second download..."
+          curl -f -s "http://localhost:${{ matrix.config.port }}/screenshots/0.png" -o "checksum-test-2.png"
+          curl -f -s "http://localhost:${{ matrix.config.port }}/screenshots/0.png.crc32" -o "checksum-test-2.crc32"
+          CHECKSUM_2=$(cat checksum-test-2.crc32)
+          SIZE_2=$(stat -c%s checksum-test-2.png)
+          echo "  Checksum 2: $CHECKSUM_2"
+          echo "  Size 2: $SIZE_2 bytes"
+          
+          # Compare checksums
+          echo ""
+          echo "Comparing checksums..."
+          if [ "$CHECKSUM_1" = "$CHECKSUM_2" ]; then
+            echo "✅ Checksums match: $CHECKSUM_1 = $CHECKSUM_2"
+          else
+            echo "❌ Checksums DO NOT match: $CHECKSUM_1 != $CHECKSUM_2"
+            exit 1
+          fi
+          
+          # Compare file sizes
+          if [ "$SIZE_1" = "$SIZE_2" ]; then
+            echo "✅ File sizes match: $SIZE_1 = $SIZE_2 bytes"
+          else
+            echo "❌ File sizes DO NOT match: $SIZE_1 != $SIZE_2 bytes"
+            exit 1
+          fi
+          
+          # Binary comparison of files
+          if cmp -s checksum-test-1.png checksum-test-2.png; then
+            echo "✅ Binary content is identical"
+          else
+            echo "❌ Binary content differs (but checksums match - this is expected for PNG metadata differences)"
+          fi
+          
+          echo ""
+          echo "✅ Checksum consistency test PASSED"
+          echo "   Same URL produces identical checksums for identical content"
+
+      - name: Cleanup container
+        if: always() && matrix.config.expect_failure == false
+        run: |
+          echo "Stopping and removing container..."
+          docker stop ha-screenshotter-${{ matrix.config.name }} || true
+          docker rm ha-screenshotter-${{ matrix.config.name }} || true
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webserver-${{ matrix.config.name }}-test-results
+          path: |
+            webserver-${{ matrix.config.name }}/
+            downloaded-${{ matrix.config.name }}-screenshot.png
+            downloaded-${{ matrix.config.name }}-checksum.crc32
+            downloaded-${{ matrix.config.name }}-checksum2.crc32
+            checksum-test-*.png
+            checksum-test-*.crc32
+            webserver_${{ matrix.config.name }}_summary.md
+          retention-days: 7
+
+      - name: Add test summary to job summary
+        if: always()
+        run: |
+          if [ -f webserver_${{ matrix.config.name }}_summary.md ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## Webserver Test: ${{ matrix.config.name }}" >> $GITHUB_STEP_SUMMARY
+            cat webserver_${{ matrix.config.name }}_summary.md >> $GITHUB_STEP_SUMMARY
+          fi

@@ -47,13 +47,8 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     if (!fs.existsSync('/usr/bin/chromium-browser')) {
       throw new Error('Chromium browser not found at /usr/bin/chromium-browser');
     }
-    console.log('   │       🔍 Chromium browser found');
-    
-    // Log basic runtime info
-    console.log(`   │       💾 Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
     
     // Launch Puppeteer with minimal configuration first
-    console.log('   │       🚀 Launching browser...');
     browser = await puppeteer.launch({
       executablePath: '/usr/bin/chromium-browser',
       headless: 'new',
@@ -62,11 +57,26 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--no-first-run'
+        '--no-first-run',
+        // Additional stability flags
+        '--disable-software-rasterizer',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-breakpad',
+        '--disable-component-update',
+        '--disable-domain-reliability',
+        '--disable-sync',
+        '--disable-features=TranslateUI,BlinkGenPropertyTrees',
+        '--metrics-recording-only',
+        '--mute-audio',
+        '--no-default-browser-check',
+        '--no-pings',
+        '--no-zygote'
       ]
     });
-    
-    console.log('   │       ✅ Browser launched successfully');
 
     const page = await browser.newPage();
     
@@ -123,7 +133,6 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       }
     } else {
       // Default desktop behavior (current implementation)
-      console.log(`   │       📐 Setting viewport to ${width}x${height}`);
       await page.setViewport({ width: width, height: height });
     }
     
@@ -177,7 +186,6 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     });
     
     // Wait for the page to be fully loaded
-    console.log('   │       ⏳ Waiting for page to fully load...');
     await page.waitForFunction('document.readyState === "complete"');
     
     // Take the screenshot to a temporary file to prevent race conditions
@@ -192,10 +200,9 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
       type: 'png'
     });
     
-  console.log(`   │       💾 Screenshot saved to temporary file: ${tempFilename}`);
-  // Log public URL for Home Assistant (served at /media/ha-screenshotter/)
-  const publicUrl = `/media/ha-screenshotter/${finalFilename}`;
-  console.log(`   │       🌐 Home Assistant URL: ${publicUrl}`);
+    // Log public URL for Home Assistant (served at /media/ha-screenshotter/)
+    const publicUrl = `/media/ha-screenshotter/${finalFilename}`;
+    console.log(`   │       🌐 Home Assistant URL: ${publicUrl}`);
     
     // Apply cropping if needed (BEFORE rotation - crop coordinates are relative to original image)
     if (cropConfig !== null && cropConfig !== false) {
@@ -223,7 +230,6 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     }
     
     // Atomically move the processed screenshot to its final location
-    console.log(`   │       🔄 Moving processed screenshot to final location...`);
     await fs.move(screenshotPath, finalPath, { overwrite: true });
     console.log(`   │       ✅ Screenshot finalized: ${finalFilename}`);
     

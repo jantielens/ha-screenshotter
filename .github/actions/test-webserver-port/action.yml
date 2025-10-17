@@ -1,0 +1,171 @@
+name: 'Test Webserver Port'
+description: 'Test webserver on a specific port configuration'
+inputs:
+  port:
+    description: 'Port number to test (or "invalid" for invalid port test)'
+    required: true
+  test-name:
+    description: 'Name of the test for output files'
+    required: true
+  screenshot-subfolder:
+    description: 'Screenshot subfolder name'
+    required: false
+    default: 'ha-screenshotter'
+  docker-image:
+    description: 'Docker image to use'
+    required: false
+    default: 'ha-screenshotter-test'
+  expect-failure:
+    description: 'Set to "true" if the container should fail'
+    required: false
+    default: 'false'
+outputs:
+  test-passed:
+    description: 'Whether the test passed'
+    value: ${{ steps.determine-result.outputs.passed }}
+runs:
+  using: "composite"
+  steps:
+    - name: Set up test directories
+      shell: bash
+      run: |
+        mkdir -p webserver-${{ inputs.test-name }}/data webserver-${{ inputs.test-name }}/share/${{ inputs.screenshot-subfolder }}
+
+    - name: Create webserver test configuration
+      shell: bash
+      run: |
+        cat > webserver-${{ inputs.test-name }}/data/options.json << 'EOF'
+        {
+          "schedule": "*/1 * * * *",
+          "urls": "[\"https://example.com\"]",
+          "resolution_width": 800,
+          "resolution_height": 600,
+          "rotation_degrees": 0,
+          "grayscale": false,
+          "bit_depth": 24,
+          "run_once": false,
+          "webserverport": ${{ inputs.port }}
+        }
+        EOF
+        
+        echo "Webserver test configuration:"
+        cat webserver-${{ inputs.test-name }}/data/options.json
+
+    - name: Start container in background
+      if: inputs.expect-failure == 'false'
+      shell: bash
+      run: |
+        echo "Starting container with webserver on port ${{ inputs.port }}..."
+        docker run -d \
+          --name ha-screenshotter-${{ inputs.test-name }} \
+          -v "${GITHUB_WORKSPACE}/webserver-${{ inputs.test-name }}/data:/data" \
+          -v "${GITHUB_WORKSPACE}/webserver-${{ inputs.test-name }}/share:/media" \
+          -p ${{ inputs.port }}:${{ inputs.port }} \
+          ${{ inputs.docker-image }}
+        
+        echo "Container started, waiting for initialization..."
+
+    - name: Run container and expect failure
+      if: inputs.expect-failure == 'true'
+      shell: bash
+      run: |
+        echo "Running container with invalid configuration (should fail)..."
+        
+        set +e
+        docker run --rm \
+          -v "${GITHUB_WORKSPACE}/webserver-${{ inputs.test-name }}/data:/data" \
+          -v "${GITHUB_WORKSPACE}/webserver-${{ inputs.test-name }}/share:/media" \
+          ${{ inputs.docker-image }} 2>&1 | tee webserver-${{ inputs.test-name }}/container.log
+        EXIT_CODE=${PIPESTATUS[0]}
+        set -e
+        
+        echo "Container exit code: $EXIT_CODE"
+        
+        if [ $EXIT_CODE -ne 0 ]; then
+          echo "✅ Container failed as expected"
+          if grep -q "Invalid webserverport setting" webserver-${{ inputs.test-name }}/container.log; then
+            echo "✅ Error message contains expected validation message"
+          else
+            echo "⚠️ Warning: Expected validation error message not found in logs"
+          fi
+        else
+          echo "❌ Container should have failed but succeeded"
+          exit 1
+        fi
+
+    - name: Wait for webserver startup
+      if: inputs.expect-failure == 'false'
+      shell: bash
+      run: |
+        echo "Waiting 30 seconds for container to take screenshot and start webserver..."
+        sleep 30
+        
+        echo "Checking container status..."
+        docker logs ha-screenshotter-${{ inputs.test-name }} || true
+
+    - name: Test webserver endpoint
+      if: inputs.expect-failure == 'false'
+      shell: bash
+      run: |
+        chmod +x .github/scripts/test-webserver-endpoint.sh
+        .github/scripts/test-webserver-endpoint.sh ${{ inputs.port }} "downloaded-${{ inputs.test-name }}"
+
+    - name: Generate test summary
+      if: always()
+      shell: bash
+      run: |
+        if [ "${{ inputs.expect-failure }}" = "true" ]; then
+          # Invalid port test summary
+          echo "| Test Component | Result |" > webserver_${{ inputs.test-name }}_summary.md
+          echo "|----------------|--------|" >> webserver_${{ inputs.test-name }}_summary.md
+          
+          if [ -f webserver-${{ inputs.test-name }}/container.log ]; then
+            if grep -q "Invalid webserverport setting" webserver-${{ inputs.test-name }}/container.log; then
+              echo "| Container Validation | ✅ Failed with expected error |" >> webserver_${{ inputs.test-name }}_summary.md
+            else
+              echo "| Container Validation | ⚠️ Failed but error message unexpected |" >> webserver_${{ inputs.test-name }}_summary.md
+            fi
+          else
+            echo "| Container Validation | ❌ Log file not found |" >> webserver_${{ inputs.test-name }}_summary.md
+          fi
+          
+          SCREENSHOT_COUNT=$(find webserver-${{ inputs.test-name }}/share/ -name "*.png" 2>/dev/null | wc -l)
+          if [ "$SCREENSHOT_COUNT" -eq 0 ]; then
+            echo "| No Screenshots Created | ✅ |" >> webserver_${{ inputs.test-name }}_summary.md
+          else
+            echo "| No Screenshots Created | ❌ Found $SCREENSHOT_COUNT screenshots |" >> webserver_${{ inputs.test-name }}_summary.md
+          fi
+        else
+          # Normal webserver test summary
+          chmod +x .github/scripts/generate-webserver-summary.sh
+          .github/scripts/generate-webserver-summary.sh \
+            ${{ inputs.port }} \
+            webserver_${{ inputs.test-name }}_summary.md \
+            webserver-${{ inputs.test-name }} \
+            ${{ inputs.screenshot-subfolder }} \
+            "downloaded-${{ inputs.test-name }}" \
+            "ha-screenshotter-${{ inputs.test-name }}"
+        fi
+
+    - name: Cleanup container
+      if: always() && inputs.expect-failure == 'false'
+      shell: bash
+      run: |
+        # Cleanup is skipped here if verify_checksum_consistency is set
+        # The parent workflow will handle cleanup after checksum tests
+        echo "Container cleanup will be handled by parent workflow"
+
+    - name: Determine result
+      id: determine-result
+      if: always()
+      shell: bash
+      run: |
+        if [ -f webserver_${{ inputs.test-name }}_summary.md ]; then
+          if grep -q "❌" webserver_${{ inputs.test-name }}_summary.md; then
+            echo "passed=false" >> $GITHUB_OUTPUT
+          else
+            echo "passed=true" >> $GITHUB_OUTPUT
+          fi
+        else
+          echo "passed=false" >> $GITHUB_OUTPUT
+        fi
