@@ -1,0 +1,186 @@
+name: Screenshot Configuration Tests
+on:
+  workflow_call:
+    inputs:
+      screenshots_subfolder:
+        description: 'Subfolder name inside /media where screenshots are written'
+        type: string
+        required: false
+        default: 'ha-screenshotter'
+
+jobs:
+  test-configurations:
+    runs-on: ubuntu-latest
+    env:
+      SCREENSHOT_SUBFOLDER: ${{ inputs.screenshots_subfolder }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test-env
+        with:
+          docker-image-name: ha-screenshotter-test
+
+      - name: Load and run test cases
+        run: |
+          # Read test cases from tests.json
+          TEST_CASES=$(jq -c '.[]' ha-screenshotter/tests.json)
+          
+          # Initialize counters
+          TOTAL_TESTS=0
+          PASSED_TESTS=0
+          FAILED_TESTS=0
+          
+          echo "| Test Case | Result |" >> test_summary.md
+          echo "|-----------|--------|" >> test_summary.md
+          
+          # Process each test case
+          while IFS= read -r test_case; do
+            TOTAL_TESTS=$((TOTAL_TESTS + 1))
+            
+            # Extract test data
+            TEST_NAME=$(echo "$test_case" | jq -r '.name')
+            TEST_CONFIG=$(echo "$test_case" | jq -c '.config')
+            TEST_VALIDATION=$(echo "$test_case" | jq -c '.validation')
+            
+            EXPECTED_SUCCESS=$(echo "$TEST_VALIDATION" | jq -r 'if .success == true then "true" else "false" end')
+            
+            echo "===================="
+            echo "Running test: $TEST_NAME"
+            echo "Expected to succeed: $EXPECTED_SUCCESS"
+            echo "===================="
+            
+            # Create test directories with pattern "001-test-name"
+            PADDED_TEST_NUMBER=$(printf "%03d" $TOTAL_TESTS)
+            SAFE_TEST_NAME=$(echo "$TEST_NAME" | sed 's/[^a-zA-Z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g')
+            TEST_DIR="${PADDED_TEST_NUMBER}-${SAFE_TEST_NAME}"
+            mkdir -p "$TEST_DIR/data" "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER"
+            
+            # Create options.json from config
+            echo "$TEST_CONFIG" > "$TEST_DIR/data/options.json"
+            
+            echo "Test configuration:"
+            cat "$TEST_DIR/data/options.json"
+            
+            # Run container and capture result
+            CONTAINER_SUCCESS=true
+            if ! docker run --rm \
+              -v "${GITHUB_WORKSPACE}/$TEST_DIR/data:/data" \
+              -v "${GITHUB_WORKSPACE}/$TEST_DIR/share:/media" \
+              ha-screenshotter-test 2>&1 | tee "$TEST_DIR/container.log"; then
+              CONTAINER_SUCCESS=false
+            fi
+            
+            # Wait a moment for any file operations to complete
+            sleep 2
+            sync
+            
+            # Validate results
+            TEST_PASSED=true
+            VALIDATION_DETAILS=""
+            
+            echo "DEBUG: EXPECTED_SUCCESS='$EXPECTED_SUCCESS', CONTAINER_SUCCESS='$CONTAINER_SUCCESS'"
+            
+            if [ "$EXPECTED_SUCCESS" = "true" ]; then
+              echo "DEBUG: Taking SUCCESS validation path"
+              if [ "$CONTAINER_SUCCESS" = "false" ]; then
+                TEST_PASSED=false
+                VALIDATION_DETAILS="Container failed unexpectedly"
+              else
+                # Make validation script executable and run it
+                chmod +x .github/scripts/validate-screenshots.sh
+                if .github/scripts/validate-screenshots.sh "$TEST_DIR" "$SCREENSHOT_SUBFOLDER" "$TEST_VALIDATION"; then
+                  TEST_PASSED=true
+                else
+                  TEST_PASSED=false
+                  # Extract validation details from script output
+                  VALIDATION_DETAILS=$(grep "VALIDATION_DETAILS=" .github/scripts/validate-screenshots.sh.log 2>/dev/null | cut -d'=' -f2- || echo "Validation failed")
+                fi
+              fi
+            else
+              # Test should fail
+              echo "DEBUG: Taking FAILURE validation path"
+              if [ "$CONTAINER_SUCCESS" = "true" ]; then
+                ACTUAL_SCREENSHOTS=$(find "$TEST_DIR/share/$SCREENSHOT_SUBFOLDER" -name "*.png" | wc -l)
+                if [ "$ACTUAL_SCREENSHOTS" -gt 0 ]; then
+                  TEST_PASSED=false
+                  VALIDATION_DETAILS="Container should have failed but created $ACTUAL_SCREENSHOTS screenshots"
+                fi
+              fi
+            fi
+            
+            # Record result
+            if [ "$TEST_PASSED" = "true" ]; then
+              echo "✅ Test PASSED: $TEST_NAME"
+              PASSED_TESTS=$((PASSED_TESTS + 1))
+              echo "| $TEST_NAME | ✅ |" >> test_summary.md
+            else
+              echo "❌ Test FAILED: $TEST_NAME"
+              echo "   Details: $VALIDATION_DETAILS"
+              FAILED_TESTS=$((FAILED_TESTS + 1))
+              echo "| $TEST_NAME | ❌ $VALIDATION_DETAILS |" >> test_summary.md
+            fi
+            
+            echo ""
+            
+          done <<< "$TEST_CASES"
+          
+          # Final summary
+          echo ""
+          echo "===================="
+          echo "FINAL TEST SUMMARY"
+          echo "===================="
+          echo "Total tests: $TOTAL_TESTS"
+          echo "Passed: $PASSED_TESTS"
+          echo "Failed: $FAILED_TESTS"
+          
+          echo "" >> test_summary.md
+          echo "Summary: " >> test_summary.md
+          echo "- **Total tests:** $TOTAL_TESTS" >> test_summary.md
+          echo "- **Passed:** $PASSED_TESTS" >> test_summary.md
+          echo "- **Failed:** $FAILED_TESTS" >> test_summary.md
+          
+          # Fail the job if any tests failed
+          if [ $FAILED_TESTS -gt 0 ]; then
+            echo "❌ $FAILED_TESTS test(s) failed"
+            exit 1
+          else
+            echo "✅ All tests passed!"
+          fi
+
+      - name: Create combined screenshot image
+        if: always()
+        run: |
+          chmod +x .github/scripts/create-combined-image.sh
+          .github/scripts/create-combined-image.sh $SCREENSHOT_SUBFOLDER
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: |
+            [0-9][0-9][0-9]-*/
+            test_summary.md
+            combined_screenshots.png
+            combined_image_summary.md
+          retention-days: 7
+
+      - name: Add test summary to job summary
+        if: always()
+        run: |
+          if [ -f test_summary.md ]; then
+            cat test_summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -f combined_image_summary.md ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            cat combined_image_summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          if [ -f combined_screenshots.png ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📸 **Combined Screenshots:** Available in test-results artifact" >> $GITHUB_STEP_SUMMARY
+          fi

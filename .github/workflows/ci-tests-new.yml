@@ -1,0 +1,26 @@
+name: CI Tests (New)
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+  workflow_dispatch:
+    inputs:
+      screenshots_subfolder:
+        description: 'Subfolder name inside /media where screenshots are written'
+        required: false
+        default: 'ha-screenshotter'
+
+jobs:
+  screenshot-tests:
+    name: Screenshot Configuration Tests
+    uses: ./.github/workflows/test-screenshots.yml
+    with:
+      screenshots_subfolder: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}
+  
+  webserver-tests:
+    name: Webserver Tests
+    uses: ./.github/workflows/test-webserver.yml
+    with:
+      screenshots_subfolder: ${{ github.event.inputs.screenshots_subfolder || 'ha-screenshotter' }}

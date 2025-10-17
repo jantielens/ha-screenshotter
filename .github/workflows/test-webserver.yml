@@ -1,0 +1,69 @@
+name: Webserver Tests
+on:
+  workflow_call:
+    inputs:
+      screenshots_subfolder:
+        description: 'Subfolder name inside /media where screenshots are written'
+        type: string
+        required: false
+        default: 'ha-screenshotter'
+
+jobs:
+  test-webserver-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: "default-port"
+            port: 3000
+            expect_failure: false
+          - name: "custom-port"
+            port: 6666
+            expect_failure: false
+          - name: "invalid-port"
+            port: '"abcd"'
+            expect_failure: true
+    
+    env:
+      SCREENSHOT_SUBFOLDER: ${{ inputs.screenshots_subfolder }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup test environment
+        uses: ./.github/actions/setup-test-env
+        with:
+          docker-image-name: ha-screenshotter-webserver-${{ matrix.config.name }}-test
+
+      - name: Test webserver configuration
+        uses: ./.github/actions/test-webserver-port
+        with:
+          port: ${{ matrix.config.port }}
+          test-name: ${{ matrix.config.name }}
+          screenshot-subfolder: ${{ inputs.screenshots_subfolder }}
+          docker-image: ha-screenshotter-webserver-${{ matrix.config.name }}-test
+          expect-failure: ${{ matrix.config.expect_failure }}
+
+      - name: Upload test artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: webserver-${{ matrix.config.name }}-test-results
+          path: |
+            webserver-${{ matrix.config.name }}/
+            downloaded-${{ matrix.config.name }}-screenshot.png
+            downloaded-${{ matrix.config.name }}-checksum.crc32
+            downloaded-${{ matrix.config.name }}-checksum2.crc32
+            webserver_${{ matrix.config.name }}_summary.md
+          retention-days: 7
+
+      - name: Add test summary to job summary
+        if: always()
+        run: |
+          if [ -f webserver_${{ matrix.config.name }}_summary.md ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "## Webserver Test: ${{ matrix.config.name }}" >> $GITHUB_STEP_SUMMARY
+            cat webserver_${{ matrix.config.name }}_summary.md >> $GITHUB_STEP_SUMMARY
+          fi
