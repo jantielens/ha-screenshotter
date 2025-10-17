@@ -5,6 +5,20 @@
 const fs = require('fs-extra');
 const path = require('path');
 const zlib = require('zlib');
+const sharp = require('sharp');
+
+// Precompute CRC32 lookup table at module load for better performance
+const CRC32_TABLE = (() => {
+  const table = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) {
+    let c = n;
+    for (let k = 0; k < 8; k++) {
+      c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
+    }
+    table[n] = c;
+  }
+  return table;
+})();
 
 /**
  * Calculate CRC32 checksum manually (compatible with all Node.js versions)
@@ -12,28 +26,55 @@ const zlib = require('zlib');
  * @returns {number} CRC32 checksum as unsigned 32-bit integer
  */
 function calculateCRC32Manual(buffer) {
-  // CRC32 lookup table
-  const crcTable = [];
-  for (let n = 0; n < 256; n++) {
-    let c = n;
-    for (let k = 0; k < 8; k++) {
-      c = ((c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1));
-    }
-    crcTable[n] = c;
-  }
-  
-  // Calculate CRC32
+  // Calculate CRC32 using precomputed lookup table
   let crc = 0 ^ (-1);
   for (let i = 0; i < buffer.length; i++) {
-    crc = (crc >>> 8) ^ crcTable[(crc ^ buffer[i]) & 0xFF];
+    crc = (crc >>> 8) ^ CRC32_TABLE[(crc ^ buffer[i]) & 0xFF];
   }
   return (crc ^ (-1)) >>> 0;
 }
 
 /**
- * Calculate CRC32 checksum for a file
+ * Calculate CRC32 checksum over raw pixel buffer from a PNG image
+ * This ensures the checksum only changes when actual pixels change,
+ * not when PNG metadata or compression artifacts change.
+ * @param {string} pngPath - Path to the PNG image file
+ * @returns {Promise<string>} CRC32 checksum as 8-character hexadecimal string
+ */
+async function calculatePixelChecksum(pngPath) {
+  try {
+    // Load the PNG image with Sharp
+    const image = sharp(pngPath);
+    const metadata = await image.metadata();
+    
+    // Extract raw pixel buffer (uncompressed RGBA or grayscale data)
+    const rawBuffer = await image.raw().toBuffer();
+    
+    // Create a header containing width, height, and channel count
+    // This ensures the checksum is unique even if raw pixel data happens to match
+    const header = Buffer.allocUnsafe(12);
+    header.writeUInt32LE(metadata.width, 0);
+    header.writeUInt32LE(metadata.height, 4);
+    header.writeUInt32LE(metadata.channels, 8);
+    
+    // Concatenate header and raw pixel buffer
+    const composite = Buffer.concat([header, rawBuffer]);
+    
+    // Calculate CRC32 over the composite buffer
+    const crc = calculateCRC32Manual(composite);
+    
+    // Convert to hexadecimal string with leading zeros (8 characters)
+    return crc.toString(16).padStart(8, '0');
+  } catch (error) {
+    throw new Error(`Failed to calculate pixel checksum for ${pngPath}: ${error.message}`);
+  }
+}
+
+/**
+ * Calculate CRC32 checksum for a file (legacy method for compatibility)
  * @param {string} filePath - Path to the file
  * @returns {Promise<string>} CRC32 checksum as 8-character hexadecimal string
+ * @deprecated Use calculatePixelChecksum for image files to avoid PNG metadata false positives
  */
 async function calculateCRC32(filePath) {
   try {
@@ -57,15 +98,16 @@ async function calculateCRC32(filePath) {
 
 /**
  * Generate and save CRC32 checksum file for a screenshot
+ * Uses raw pixel-based checksum to eliminate PNG metadata false positives
  * @param {string} screenshotPath - Path to the screenshot file
  * @param {string} indent - Indentation prefix for logging
  */
 async function generateChecksumFile(screenshotPath, indent = '') {
   try {
-    console.log(`${indent}🔐 Generating CRC32 checksum...`);
+    console.log(`${indent}🔐 Generating pixel-based CRC32 checksum...`);
     
-    // Calculate CRC32 checksum
-    const checksum = await calculateCRC32(screenshotPath);
+    // Calculate CRC32 checksum over raw pixel data (not PNG file)
+    const checksum = await calculatePixelChecksum(screenshotPath);
     
     // Create checksum file path
     const checksumPath = `${screenshotPath}.crc32`;
@@ -73,7 +115,7 @@ async function generateChecksumFile(screenshotPath, indent = '') {
     // Write checksum to file (plain text, lowercase hex)
     await fs.writeFile(checksumPath, checksum, 'utf8');
     
-    console.log(`${indent}✅ CRC32 checksum saved: ${checksum}`);
+    console.log(`${indent}✅ Pixel-based CRC32 checksum saved: ${checksum}`);
     
     return checksum;
   } catch (error) {
@@ -86,5 +128,6 @@ async function generateChecksumFile(screenshotPath, indent = '') {
 
 module.exports = {
   calculateCRC32,
+  calculatePixelChecksum,
   generateChecksumFile
 };
