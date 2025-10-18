@@ -2,6 +2,59 @@
 
 ## Overview
 
+This guide covers the evolution of checksum methods in HA Screenshotter:
+
+- **v1.16.x and earlier**: File-based checksums (PNG file hash)
+- **v1.17.0 - v1.19.x**: Pixel-based CRC32 checksums (default, backward compatible)
+- **v1.20.0+**: Text-based SimHash checksums (optional per-URL alternative)
+
+## Changes in v1.20.0
+
+Starting with version 1.20.0, you can optionally enable **text-based SimHash checksums** on a per-URL basis. This feature provides an alternative to pixel-based checksums with benefits for text-heavy pages and bandwidth-constrained environments.
+
+### When to Enable Text-Based SimHash
+
+Enable `use_text_based_crc32: true` for specific URLs if:
+- Dashboard displays primarily text/numbers (temperature, time, status, metrics)
+- Visual styling changes frequently but content doesn't
+- Extreme bandwidth optimization is needed
+- E-ink device has very limited battery
+
+### Configuration Example
+
+```yaml
+urls:
+  - url: https://home-assistant:8123/lovelace/text-dashboard
+    use_text_based_crc32: true  # Enable text-based SimHash for this URL
+  
+  - url: https://home-assistant:8123/lovelace/graph-dashboard
+    # Omit use_text_based_crc32 or set to false for pixel-based (default)
+```
+
+### Format Remains Unchanged
+
+Both pixel-based and text-based checksums:
+- Use the same 8-character hexadecimal format
+- Are served at the same URLs (`.png.crc32`)
+- Work with the same web server endpoints
+- Don't require any changes to e-ink device code
+
+**Example response from `/checksums` endpoint:**
+```json
+{
+  "checksums": {
+    "0": {
+      "crc32": "a1b2c3d4",  // Could be pixel-based or text-based
+      "timestamp": "2025-10-17T21:47:00.000Z"
+    }
+  }
+}
+```
+
+---
+
+## Previous Migration: v1.16.x → v1.17.0+
+
 Starting with version 1.17.0, HA Screenshotter uses **pixel-based CRC32 checksums** instead of file-based checksums. This change eliminates false positives and improves battery life for e-ink devices.
 
 ## What Changed

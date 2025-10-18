@@ -10,7 +10,9 @@ The built-in web server does **not** have any authentication. Screenshots are ac
 - Enable web server for external access by setting `webserverport` to a value greater than 0.
 - If `webserverport` is set to 0, the web server is not started and screenshots are only available locally.
 - Gallery view and direct image URLs (e.g., `http://your-home-assistant-ip:3000/screenshots/0.png`)
-- CRC32 checksum files for efficient change detection (e.g., `http://your-home-assistant-ip:3000/screenshots/0.png.crc32`)
+- Checksum files for efficient change detection (e.g., `http://your-home-assistant-ip:3000/screenshots/0.png.crc32`)
+  - Default: Pixel-based CRC32 checksums (changes only when pixels change)
+  - Optional: Text-based SimHash checksums (changes only when extracted text changes)
 - Health check endpoint available at `http://your-home-assistant-ip:3000/health` (returns status info)
 - No authentication for trusted networks
 
@@ -23,11 +25,11 @@ webserverport: 3000
 
 ### Gallery View
 - **URL**: `http://your-home-assistant-ip:3000/`
-- **Description**: Web interface showing all captured screenshots in a gallery layout with current CRC32 values
+- **Description**: Web interface showing all captured screenshots in a gallery layout with current checksum values
 - **Features**:
   - View all screenshots with thumbnails
-  - Display current CRC32 checksum for each screenshot
-  - Click "View History" button to see historical CRC32 values
+  - Display current checksum for each screenshot (pixel-based or text-based depending on configuration)
+  - Click "View History" button to see historical checksum values
   - Modal popup showing up to 500 historical checksums with timestamps
 - **Auto-refresh**: Page refreshes every 60 seconds
 
@@ -37,12 +39,15 @@ webserverport: 3000
 - **Description**: Direct access to screenshot PNG files
 - **Index**: Corresponds to URL configuration order (0, 1, 2, etc.)
 
-### CRC32 Checksum Files
+### Checksum Files
 - **URL Pattern**: `http://your-home-assistant-ip:3000/screenshots/{index}.png.crc32`
 - **Example**: `http://your-home-assistant-ip:3000/screenshots/0.png.crc32`
-- **Description**: CRC32 checksum files for efficient change detection
-- **Format**: Plain text file containing 8-character hexadecimal CRC32 hash
+- **Description**: Checksum files for efficient change detection (works with both pixel-based and text-based checksums)
+- **Format**: Plain text file containing 8-character hexadecimal checksum hash
 - **Size**: 8 bytes
+- **Checksum Types**:
+  - **Pixel-based CRC32** (default): Detects changes to screenshot pixels. Changes only when visual content changes.
+  - **Text-based SimHash** (optional per-URL): Detects changes to extracted page text. More efficient for text-heavy pages and e-ink displays. Enable with `use_text_based_crc32: true` in URL configuration.
 - **Use Case**: E-ink devices can download this tiny file to check if screenshot has changed before downloading the full image
 
 ### Health Check
@@ -62,9 +67,9 @@ webserverport: 3000
   }
   ```
 
-### Get All Current CRC32 Values
+### Get All Current Checksum Values
 - **URL**: `http://your-home-assistant-ip:3000/checksums`
-- **Description**: JSON endpoint returning current CRC32 values for all screenshots
+- **Description**: JSON endpoint returning current checksum values for all screenshots (pixel-based or text-based depending on configuration)
 - **Response Example**:
   ```json
   {
@@ -85,10 +90,10 @@ webserverport: 3000
   }
   ```
 
-### Get CRC32 History for Specific Screenshot
+### Get Checksum History for Specific Screenshot
 - **URL Pattern**: `http://your-home-assistant-ip:3000/checksums/{index}`
 - **Example**: `http://your-home-assistant-ip:3000/checksums/0`
-- **Description**: JSON endpoint returning full CRC32 history for a specific screenshot (up to 500 entries)
+- **Description**: JSON endpoint returning full checksum history for a specific screenshot (up to 500 entries). Works with both pixel-based and text-based checksums.
 - **Response Example**:
   ```json
   {
@@ -109,11 +114,11 @@ webserverport: 3000
   }
   ```
 
-## CRC32 History Feature
+## Checksum History Feature
 
-The web server now tracks and stores the last 500 CRC32 checksum values for each screenshot with timestamps. This feature provides:
+The web server now tracks and stores the last 500 checksum values for each screenshot with timestamps. This feature provides:
 
-- **Historical Tracking**: Every time a screenshot is captured, its CRC32 checksum is calculated and stored
+- **Historical Tracking**: Every time a screenshot is captured, its checksum is calculated and stored (pixel-based or text-based)
 - **Change Detection**: View when screenshots changed by comparing historical checksums
 - **Diagnostics**: Identify patterns in screenshot changes over time
 - **Persistence**: History is saved to `checksum-history.json` in the screenshots directory
