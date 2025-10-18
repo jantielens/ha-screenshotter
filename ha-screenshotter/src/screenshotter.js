@@ -9,6 +9,7 @@ const { SCREENSHOTS_PATH } = require('./constants');
 const { rotateImage, convertToGrayscale, cropImage, reduceBitDepth, applyAdvancedProcessing } = require('./imageProcessor');
 const { generateChecksumFile } = require('./checksumUtil');
 const { addToHistory } = require('./crcHistory');
+const { extractVisibleText } = require('./textExtractor');
 
 /**
  * Get user agent string for mobile device presets
@@ -195,138 +196,21 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     if (useTextBasedCrc32) {
       console.log('   │       📝 Extracting visible text for SimHash checksum...');
       try {
-        // Give the page a bit of time for any deferred rendering to complete
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Use the enhanced text extraction utility
+        extractedText = await extractVisibleText(page, {
+          waitForHA: true,
+          maxWaitTime: 10000,
+          debugLogging: true
+        });
         
-        // Use timeout to prevent hanging
-        extractedText = await Promise.race([
-          page.evaluate(() => {
-            const root = document.body || document.documentElement;
-            if (!root) {
-              return '';
-            }
-
-            const skippedTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'META', 'HEAD', 'TITLE', 'LINK']);
-            const visitedFragments = new WeakSet();
-            const chunks = [];
-
-            const isElementVisible = (element) => {
-              if (!(element instanceof Element)) {
-                return false;
-              }
-
-              let current = element;
-              while (current) {
-                if (current.nodeType === Node.ELEMENT_NODE) {
-                  const el = current;
-                  if (el.hidden) {
-                    return false;
-                  }
-                  const ariaHidden = el.getAttribute('aria-hidden');
-                  if (ariaHidden && ariaHidden !== 'false') {
-                    return false;
-                  }
-                  const style = window.getComputedStyle(el);
-                  if (!style) {
-                    return false;
-                  }
-                  if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') {
-                    return false;
-                  }
-                  if (parseFloat(style.opacity) === 0) {
-                    return false;
-                  }
-                }
-
-                const parent = current.parentNode;
-                if (parent) {
-                  current = parent;
-                  continue;
-                }
-
-                if (current instanceof ShadowRoot) {
-                  current = current.host || null;
-                } else {
-                  current = null;
-                }
-              }
-
-              return true;
-            };
-
-            // Traverse DOM and open shadow roots to collect visible text nodes.
-            const walk = (node) => {
-              if (!node) {
-                return;
-              }
-
-              if (node.nodeType === Node.TEXT_NODE) {
-                const parent = node.parentElement;
-                if (!parent || !isElementVisible(parent)) {
-                  return;
-                }
-
-                const text = node.textContent ? node.textContent.replace(/\s+/g, ' ').trim() : '';
-                if (text) {
-                  chunks.push(text);
-                }
-                return;
-              }
-
-              if (node.nodeType === Node.ELEMENT_NODE) {
-                const element = node;
-
-                if (skippedTags.has(element.tagName)) {
-                  return;
-                }
-
-                if (!isElementVisible(element)) {
-                  return;
-                }
-
-                if (element.tagName === 'SLOT' && typeof element.assignedNodes === 'function') {
-                  const assigned = element.assignedNodes({ flatten: true });
-                  if (assigned && assigned.length) {
-                    for (const assignedNode of assigned) {
-                      walk(assignedNode);
-                    }
-                    return;
-                  }
-                }
-
-                for (const child of element.childNodes) {
-                  walk(child);
-                }
-
-                if (element.shadowRoot && !visitedFragments.has(element.shadowRoot)) {
-                  visitedFragments.add(element.shadowRoot);
-                  walk(element.shadowRoot);
-                }
-                return;
-              }
-
-              if ((node.nodeType === Node.DOCUMENT_FRAGMENT_NODE || node.nodeType === Node.DOCUMENT_NODE) && !visitedFragments.has(node)) {
-                visitedFragments.add(node);
-                for (const child of node.childNodes) {
-                  walk(child);
-                }
-              }
-            };
-
-            walk(root);
-            return chunks.join('\n');
-          }),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Text extraction timeout')), 5000))
-        ]);
-        
-        // Debug logging for Home Assistant container issues
+        // Log results
         const charCount = extractedText ? extractedText.length : 0;
         const textPreview = extractedText ? extractedText.substring(0, 100).replace(/\n/g, ' ') : '(empty)';
         
         if (!extractedText || extractedText.trim().length === 0) {
           console.log(`   │       ⚠️  No visible text found on page`);
           console.log(`   │       💡 Debug: Extracted text length: ${charCount}, preview: "${textPreview}"`);
-          console.log(`   │       💡 Tip: Page might be canvas-based, image-only, or JS-rendered content`);
+          console.log(`   │       💡 Tip: Page might be canvas-based, image-only, or require additional wait time`);
           console.log(`   │       💡 Solution: Check if page has visible text content and renders correctly`);
           extractedText = '';
         } else {

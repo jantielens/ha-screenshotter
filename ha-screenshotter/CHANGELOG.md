@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.4] - 2025-10-18
+
+### Fixed
+- **Home Assistant dashboard text extraction** for text-based SimHash checksums
+  - Added dedicated `textExtractor.js` module with Home Assistant-aware logic
+  - Automatically detects Home Assistant dashboards and waits for components to load
+  - Extended wait time (3-5 seconds) for lazy-loaded dashboard cards via WebSocket
+  - Enhanced visibility detection with numeric opacity checks and bounding box validation
+  - Element deduplication (WeakSet) prevents infinite loops in complex shadow DOM trees
+  - Depth limiting (max 50 levels) prevents stack overflow in deeply nested components
+  - Returns extraction metadata (text nodes, shadow roots, chunk count) for debugging
+  - Fixes issue where no text was extracted from HA Lovelace dashboards despite proper shadow DOM traversal
+
+### Changed
+- Text extraction now uses dedicated module instead of inline code in `screenshotter.js`
+- Improved logging shows extraction statistics and Home Assistant detection status
+
 ## [1.20.3] - 2025-10-18
 
 ### Fixed
