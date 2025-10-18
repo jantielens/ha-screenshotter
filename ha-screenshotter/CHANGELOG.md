@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.1] - 2025-10-18
+
+### Fixed
+- **Text-based SimHash checksum extraction** improved for Home Assistant container environment
+  - Added 1-second delay to allow deferred rendering to complete before text extraction
+  - Enhanced error handling with timeout protection to prevent hanging
+  - Improved logging with text preview and diagnostic hints for debugging empty text scenarios
+  - Better error messages indicating possible causes (page not accessible, requires auth, JS blocked)
+
 ## [1.20.0] - 2025-10-18
 
 ### Added
