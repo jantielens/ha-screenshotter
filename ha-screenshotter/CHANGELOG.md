@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.19.0] - 2025-10-18
+
+### Changed
+- **CRC32 history modal** now highlights checksum change runs with rotating color stripes and "Changed" badges for immediate visual cues
+- Duplicate CRC32 entries are dimmed and display consolidated timestamp ranges to clarify how long a checksum remained unchanged
+
 ## [1.18.0] - 2025-10-18
 
 ### Added
