@@ -98,58 +98,75 @@ async function calculateCRC32(filePath) {
 
 /**
  * Calculate SimHash (64-bit, folded to 32-bit) from text
- * Tokenizes text by whitespace, hashes each token, creates a 64-bit fingerprint, then folds to 32-bit using XOR
+ * Implements proper 64-bit SimHash with XOR folding to 32-bit
  * @param {string} text - Text to hash
  * @returns {string} 32-bit hash as 8-character lowercase hexadecimal string
  */
 function calculateSimHash(text) {
   // Normalize: lowercase and collapse whitespace
-  const normalized = text.toLowerCase().split(/\s+/).filter(token => token.length > 0);
+  const tokens = text.toLowerCase().split(/\s+/).filter(token => token.length > 0);
   
-  // Initialize 64-bit fingerprint (we'll use two 32-bit numbers)
-  let fp_high = 0;
-  let fp_low = 0;
+  if (tokens.length === 0) {
+    return '00000000';
+  }
   
-  // For each token, compute a hash and add to fingerprint
-  for (const token of normalized) {
-    // Simple hash function for the token
-    let hash = 0;
+  // Initialize 64-bit fingerprint counters (as two 32-bit counters arrays)
+  // 32 bit positions for low word, 32 for high word
+  const bitCounters_low = new Uint32Array(32);
+  const bitCounters_high = new Uint32Array(32);
+  
+  // For each token, compute its 64-bit hash and contribute to fingerprint
+  for (const token of tokens) {
+    // Hash function 1: DJB2-like for low 32 bits
+    let hash_low = 5381;
     for (let i = 0; i < token.length; i++) {
-      hash = ((hash << 5) - hash) + token.charCodeAt(i);
-      hash = hash & hash; // Convert to 32-bit integer
+      hash_low = ((hash_low << 5) + hash_low) ^ token.charCodeAt(i);
+    }
+    hash_low = hash_low >>> 0;
+    
+    // Hash function 2: Different seed for high 32 bits
+    let hash_high = 33;
+    for (let i = 0; i < token.length; i++) {
+      hash_high = ((hash_high << 5) + hash_high) ^ token.charCodeAt(i);
+    }
+    hash_high = hash_high >>> 0;
+    
+    // Contribute low word bits to fingerprint
+    for (let i = 0; i < 32; i++) {
+      if (hash_low & (1 << i)) {
+        bitCounters_low[i]++;
+      }
     }
     
-    // Convert to unsigned 32-bit
-    hash = hash >>> 0;
-    
-    // Add hash contribution to 64-bit fingerprint
-    // For each bit in the hash, if bit is 1, increment that position in fingerprint
+    // Contribute high word bits to fingerprint
     for (let i = 0; i < 32; i++) {
-      if (hash & (1 << i)) {
-        // Increment bit counter
-        if (i < 32) {
-          fp_low = (fp_low >>> 0) + (1 << i);
-          fp_low = fp_low >>> 0;
-        }
+      if (hash_high & (1 << i)) {
+        bitCounters_high[i]++;
       }
     }
   }
   
   // Build final 64-bit fingerprint: if counter >= threshold, set bit to 1
-  const threshold = normalized.length / 2;
+  const threshold = tokens.length / 2;
   let result_low = 0;
   let result_high = 0;
   
+  // Process low word
   for (let i = 0; i < 32; i++) {
-    const bit_count = (fp_low >> i) & 0xFF; // Get counter for this bit position
-    if (bit_count >= threshold) {
+    if (bitCounters_low[i] >= threshold) {
       result_low |= (1 << i);
     }
   }
   
-  // For a simpler 64-bit implementation, we'll use the hash distribution
-  // Fold 64-bit to 32-bit using XOR of high and low words
-  const folded = (result_high ^ result_low) >>> 0;
+  // Process high word
+  for (let i = 0; i < 32; i++) {
+    if (bitCounters_high[i] >= threshold) {
+      result_high |= (1 << i);
+    }
+  }
+  
+  // Fold 64-bit result to 32-bit using XOR
+  const folded = (result_low ^ result_high) >>> 0;
   
   // Return as 8-character lowercase hex
   return folded.toString(16).padStart(8, '0');

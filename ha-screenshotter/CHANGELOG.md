@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.2] - 2025-10-18
+
+### Fixed
+- **SimHash checksum calculation** now produces stable, non-zero fingerprints
+  - Implemented full 64-bit SimHash with separate high/low word counters
+  - Added dual hash seeds and XOR folding to meet the 64-bit-to-32-bit requirement
+  - Prevented token bit counter underflow that previously yielded `00000000`
+
 ## [1.20.1] - 2025-10-18
 
 ### Fixed
