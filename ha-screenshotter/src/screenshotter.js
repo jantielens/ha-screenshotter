@@ -233,7 +233,7 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
                   if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') {
                     return false;
                   }
-                  if (style.opacity === '0') {
+                  if (parseFloat(style.opacity) === 0) {
                     return false;
                   }
                 }
