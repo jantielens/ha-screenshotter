@@ -91,7 +91,7 @@ urls: '{
 ```
 
 ### How text-based checksums work
-1. **Text Extraction**: After page load, visible text is extracted using `document.body.innerText`
+1. **Text Extraction**: After page load, visible text is collected by walking the DOM (including slots and open shadow roots)
 2. **Normalization**: Text is lowercased and whitespace is collapsed
 3. **Tokenization**: Text is split into tokens (words) by whitespace boundaries
 4. **SimHash**: A 64-bit SimHash is computed from the token set
@@ -104,6 +104,7 @@ urls: '{
 - **No filtering**: Raw extracted text is used; no stemming, stopword removal, or lemmatization
 - **Fast**: Lightweight fingerprinting on extracted text
 - **Stable**: Won't change for minor visual tweaks or CSS-only updates
+- **Shadow DOM aware**: Able to read text from frameworks that render inside shadow roots (e.g., Home Assistant Lovelace components)
 
 ## Long-Lived Access Token
 

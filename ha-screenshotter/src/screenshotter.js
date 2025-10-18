@@ -201,12 +201,120 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
         // Use timeout to prevent hanging
         extractedText = await Promise.race([
           page.evaluate(() => {
-            try {
-              const text = document.body.innerText || '';
-              return text;
-            } catch (e) {
+            const root = document.body || document.documentElement;
+            if (!root) {
               return '';
             }
+
+            const skippedTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'META', 'HEAD', 'TITLE', 'LINK']);
+            const visitedFragments = new WeakSet();
+            const chunks = [];
+
+            const isElementVisible = (element) => {
+              if (!(element instanceof Element)) {
+                return false;
+              }
+
+              let current = element;
+              while (current) {
+                if (current.nodeType === Node.ELEMENT_NODE) {
+                  const el = current;
+                  if (el.hidden) {
+                    return false;
+                  }
+                  const ariaHidden = el.getAttribute('aria-hidden');
+                  if (ariaHidden && ariaHidden !== 'false') {
+                    return false;
+                  }
+                  const style = window.getComputedStyle(el);
+                  if (!style) {
+                    return false;
+                  }
+                  if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') {
+                    return false;
+                  }
+                  if (parseFloat(style.opacity) === 0) {
+                    return false;
+                  }
+                }
+
+                const parent = current.parentNode;
+                if (parent) {
+                  current = parent;
+                  continue;
+                }
+
+                if (current instanceof ShadowRoot) {
+                  current = current.host || null;
+                } else {
+                  current = null;
+                }
+              }
+
+              return true;
+            };
+
+            // Traverse DOM and open shadow roots to collect visible text nodes.
+            const walk = (node) => {
+              if (!node) {
+                return;
+              }
+
+              if (node.nodeType === Node.TEXT_NODE) {
+                const parent = node.parentElement;
+                if (!parent || !isElementVisible(parent)) {
+                  return;
+                }
+
+                const text = node.textContent ? node.textContent.replace(/\s+/g, ' ').trim() : '';
+                if (text) {
+                  chunks.push(text);
+                }
+                return;
+              }
+
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                const element = node;
+
+                if (skippedTags.has(element.tagName)) {
+                  return;
+                }
+
+                if (!isElementVisible(element)) {
+                  return;
+                }
+
+                if (element.tagName === 'SLOT' && typeof element.assignedNodes === 'function') {
+                  const assigned = element.assignedNodes({ flatten: true });
+                  if (assigned && assigned.length) {
+                    for (const assignedNode of assigned) {
+                      walk(assignedNode);
+                    }
+                    return;
+                  }
+                }
+
+                for (const child of element.childNodes) {
+                  walk(child);
+                }
+
+                if (element.shadowRoot && !visitedFragments.has(element.shadowRoot)) {
+                  visitedFragments.add(element.shadowRoot);
+                  walk(element.shadowRoot);
+                }
+                return;
+              }
+
+              if ((node.nodeType === Node.DOCUMENT_FRAGMENT_NODE || node.nodeType === Node.DOCUMENT_NODE) && !visitedFragments.has(node)) {
+                visitedFragments.add(node);
+                for (const child of node.childNodes) {
+                  walk(child);
+                }
+              }
+            };
+
+            walk(root);
+            return chunks.join('\n');
           }),
           new Promise((_, reject) => setTimeout(() => reject(new Error('Text extraction timeout')), 5000))
         ]);
