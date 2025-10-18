@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.3] - 2025-10-18
+
+### Fixed
+- **Text-based SimHash extraction** now crawls light DOM, slots, and open shadow roots
+  - Captures Home Assistant Lovelace dashboards and other shadow DOM-heavy pages
+  - Skips hidden/script content to keep checksums stable and noise-free
+  - Maintains compatibility with standard sites while improving complex UI coverage
+
 ## [1.20.2] - 2025-10-18
 
 ### Fixed
