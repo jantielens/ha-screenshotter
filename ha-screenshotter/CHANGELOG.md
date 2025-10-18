@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.20.0] - 2025-10-18
+
+### Added
+- **Text-based SimHash checksum option** for improved content change detection
+  - Optional per-URL configuration: `use_text_based_crc32: true` to enable text-based checksums
+  - Extracts visible text from DOM using `innerText` (respects CSS visibility/display)
+  - Computes 64-bit SimHash from tokenized text, then folds to 32 bits using XOR
+  - Returns magic number `0xdeadbeef` (displayed as checksum) if text extraction fails
+  - Useful for detecting content changes in dynamic or complex layouts
+  - Complements existing pixel-based CRC32 for diverse use cases
+  - Fully backward compatible - defaults to pixel-based CRC32 for all URLs
+  - Per-URL configuration support in both array and object URL formats
+
+### Changed
+- Checksum generation now supports both pixel-based (default) and text-based (opt-in) methods
+- Config validation enhanced to support `use_text_based_crc32` per-URL boolean option
+
 ## [1.19.0] - 2025-10-18
 
 ### Changed

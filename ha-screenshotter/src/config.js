@@ -23,7 +23,8 @@ async function loadConfiguration() {
         bit_depth: 24,
         crop: null,
         device_emulation: "desktop",
-        advanced_processing: null
+        advanced_processing: null,
+        use_text_based_crc32: false
       },
       {
         url: "https://time.now/",
@@ -34,7 +35,8 @@ async function loadConfiguration() {
         bit_depth: 24,
         crop: null,
         device_emulation: "desktop",
-        advanced_processing: null
+        advanced_processing: null,
+        use_text_based_crc32: false
       }
     ],
     resolution_width: 1920,
@@ -325,7 +327,8 @@ async function loadConfiguration() {
                   crop: crop,
                   device_emulation: device_emulation,
                   mobile_viewport: mobile_viewport,
-                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null
+                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null,
+                  use_text_based_crc32: false
                 };
               } else if (typeof urlItem === 'object' && urlItem.url) {
                 // Object with url property and optional overrides
@@ -373,6 +376,12 @@ async function loadConfiguration() {
                 const urlBlackLevel = urlItem.black_level !== undefined ? urlItem.black_level : black_level;
                 const urlWhiteLevel = urlItem.white_level !== undefined ? urlItem.white_level : white_level;
                 const urlRemoveGamma = urlItem.remove_gamma !== undefined ? urlItem.remove_gamma : remove_gamma;
+                const urlUseTextBasedCrc32 = urlItem.use_text_based_crc32 !== undefined ? urlItem.use_text_based_crc32 : false;
+                
+                // Validate use_text_based_crc32
+                if (typeof urlUseTextBasedCrc32 !== 'boolean') {
+                  throw new Error(`Invalid use_text_based_crc32 for URL ${urlItem.url}: ${urlUseTextBasedCrc32}. Must be true or false.`);
+                }
                 
                 const advancedProcessing = {};
                 if (urlContrast !== 1.0) advancedProcessing.contrast = urlContrast;
@@ -392,7 +401,8 @@ async function loadConfiguration() {
                   crop: urlCrop,
                   device_emulation: urlItem.device_emulation || device_emulation,
                   mobile_viewport: urlItem.mobile_viewport !== undefined ? urlItem.mobile_viewport : mobile_viewport,
-                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null
+                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null,
+                  use_text_based_crc32: urlUseTextBasedCrc32
                 };
               } else {
                 throw new Error(`Invalid URL at index ${index}: must be a string or object with 'url' property`);
@@ -447,6 +457,12 @@ async function loadConfiguration() {
                 const urlBlackLevel = settings.black_level !== undefined ? settings.black_level : black_level;
                 const urlWhiteLevel = settings.white_level !== undefined ? settings.white_level : white_level;
                 const urlRemoveGamma = settings.remove_gamma !== undefined ? settings.remove_gamma : remove_gamma;
+                const urlUseTextBasedCrc32 = settings.use_text_based_crc32 !== undefined ? settings.use_text_based_crc32 : false;
+                
+                // Validate use_text_based_crc32
+                if (typeof urlUseTextBasedCrc32 !== 'boolean') {
+                  throw new Error(`Invalid use_text_based_crc32 for URL ${url}: ${urlUseTextBasedCrc32}. Must be true or false.`);
+                }
                 
                 const advancedProcessing = {};
                 if (urlContrast !== 1.0) advancedProcessing.contrast = urlContrast;
@@ -466,7 +482,8 @@ async function loadConfiguration() {
                   crop: urlCrop,
                   device_emulation: settings.device_emulation || device_emulation,
                   mobile_viewport: settings.mobile_viewport !== undefined ? settings.mobile_viewport : mobile_viewport,
-                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null
+                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null,
+                  use_text_based_crc32: urlUseTextBasedCrc32
                 };
               } else {
                 // Empty settings object or null - use defaults
@@ -489,7 +506,8 @@ async function loadConfiguration() {
                   crop: crop,
                   device_emulation: device_emulation,
                   mobile_viewport: mobile_viewport,
-                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null
+                  advanced_processing: Object.keys(advancedProcessing).length > 0 ? advancedProcessing : null,
+                  use_text_based_crc32: false
                 };
               }
             });

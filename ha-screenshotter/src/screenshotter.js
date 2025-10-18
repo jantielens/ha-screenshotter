@@ -40,8 +40,9 @@ function getUserAgent(preset) {
  * @param {string} deviceEmulation - Device emulation preset name or "desktop"/"custom"
  * @param {Object|null} mobileViewport - Custom mobile viewport settings
  * @param {Object|null} advancedProcessing - Advanced processing options (contrast, saturation, gamma, etc.)
+ * @param {boolean} useTextBasedCrc32 - If true, use text-based SimHash checksum; if false, use pixel-based CRC32
  */
-async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, cropConfig = null, longLivedToken = '', language = 'en', deviceEmulation = 'desktop', mobileViewport = null, advancedProcessing = null) {
+async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, cropConfig = null, longLivedToken = '', language = 'en', deviceEmulation = 'desktop', mobileViewport = null, advancedProcessing = null, useTextBasedCrc32 = false) {
   let browser = null;
   try {
     // Check if Chromium is available
@@ -189,6 +190,21 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     // Wait for the page to be fully loaded
     await page.waitForFunction('document.readyState === "complete"');
     
+    // Extract visible text if text-based checksum is enabled
+    let extractedText = '';
+    if (useTextBasedCrc32) {
+      console.log('   │       📝 Extracting visible text for SimHash checksum...');
+      try {
+        extractedText = await page.evaluate(() => {
+          return document.body.innerText || '';
+        });
+        console.log(`   │       ✅ Extracted ${extractedText.length} characters of visible text`);
+      } catch (error) {
+        console.log(`   │       ⚠️  Failed to extract text:`, error.message);
+        extractedText = '';
+      }
+    }
+    
     // Take the screenshot to a temporary file to prevent race conditions
     console.log('   │       📷 Taking screenshot...');
     const finalFilename = `${index}.png`;
@@ -234,8 +250,8 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     await fs.move(screenshotPath, finalPath, { overwrite: true });
     console.log(`   │       ✅ Screenshot finalized: ${finalFilename}`);
     
-    // Generate CRC32 checksum file after screenshot is finalized
-    const checksum = await generateChecksumFile(finalPath, '   │       ');
+    // Generate checksum file after screenshot is finalized (use appropriate method based on config)
+    const checksum = await generateChecksumFile(finalPath, useTextBasedCrc32, extractedText, '   │       ');
     
     // Add checksum to history
     if (checksum) {
@@ -289,9 +305,10 @@ async function takeAllScreenshots(urls, longLivedToken = '', language = 'en') {
     const grayscaleText = urlConfig.grayscale ? ' in grayscale' : '';
     const bitDepthText = urlConfig.bit_depth !== 24 ? ` at ${urlConfig.bit_depth}-bit depth` : '';
     const deviceText = urlConfig.device_emulation && urlConfig.device_emulation !== 'desktop' ? ` [${urlConfig.device_emulation}]` : '';
+    const checksumText = urlConfig.use_text_based_crc32 ? ' [text-based checksum]' : '';
     
     console.log(`   │ 📸 [${urlNum}/${urls.length}] Processing: ${urlConfig.url}`);
-    console.log(`   │       📐 Resolution: ${urlConfig.width}x${urlConfig.height}${rotationText}${cropText}${grayscaleText}${bitDepthText}${deviceText}`);
+    console.log(`   │       📐 Resolution: ${urlConfig.width}x${urlConfig.height}${rotationText}${cropText}${grayscaleText}${bitDepthText}${deviceText}${checksumText}`);
     
     try {
       await takeScreenshot(
@@ -307,7 +324,8 @@ async function takeAllScreenshots(urls, longLivedToken = '', language = 'en') {
         language,
         urlConfig.device_emulation,
         urlConfig.mobile_viewport,
-        urlConfig.advanced_processing
+        urlConfig.advanced_processing,
+        urlConfig.use_text_based_crc32
       );
       
       const rotationNote = urlConfig.rotation > 0 ? ` (rotated ${urlConfig.rotation}°)` : '';
