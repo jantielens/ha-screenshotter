@@ -50,6 +50,61 @@ long_lived_access_token: "YOUR_LONG_LIVED_TOKEN_HERE"
 language: "es"  # Spanish UI language for screenshots
 ```
 
+## Text-Based SimHash Checksums
+
+By default, HA Screenshotter uses **pixel-based CRC32 checksums** to detect when screenshot content changes. This works well for most use cases, but for dynamic or complex layouts, you can optionally enable **text-based SimHash checksums** that analyze the extracted visible text content instead.
+
+### When to use text-based checksums?
+- **Dynamically generated content**: Pages with constantly changing non-text elements (animations, timers, counters)
+- **Complex layouts**: Pages where minor visual changes shouldn't trigger updates (shadows, spacing, decorations)
+- **Text-focused content**: News, documentation, or status pages where you care about text changes, not styling
+- **Bandwidth optimization**: If displaying on slow/metered connections and text-based detection is sufficient
+
+### Text-based checksum example
+```yaml
+schedule: "*/10 * * * *"
+urls: '[
+  {
+    "url": "https://example.com",
+    "use_text_based_crc32": true  # Enable text-based SimHash checksum
+  },
+  {
+    "url": "https://status.page",
+    "use_text_based_crc32": false  # Use default pixel-based CRC32 (explicit)
+  },
+  {
+    "url": "https://news.site"
+    # use_text_based_crc32 not specified, defaults to false (pixel-based)
+  }
+]'
+resolution_width: 1024
+resolution_height: 768
+```
+
+Or with object format:
+```yaml
+urls: '{
+  "https://example.com": {"use_text_based_crc32": true},
+  "https://status.page": {"use_text_based_crc32": false},
+  "https://news.site": {}
+}'
+```
+
+### How text-based checksums work
+1. **Text Extraction**: After page load, visible text is extracted using `document.body.innerText`
+2. **Normalization**: Text is lowercased and whitespace is collapsed
+3. **Tokenization**: Text is split into tokens (words) by whitespace boundaries
+4. **SimHash**: A 64-bit SimHash is computed from the token set
+5. **Folding**: The 64-bit hash is folded to 32 bits using XOR, producing the final checksum
+6. **Error Handling**: If text extraction fails, checksum is set to `0xdeadbeef` (magic error indicator)
+
+### Text-based checksum characteristics
+- **Case-insensitive**: Changes in letter casing don't trigger a new checksum
+- **Whitespace-insensitive**: Extra spaces, tabs, or line breaks don't matter
+- **No filtering**: Raw extracted text is used; no stemming, stopword removal, or lemmatization
+- **Fast**: Lightweight fingerprinting on extracted text
+- **Stable**: Won't change for minor visual tweaks or CSS-only updates
+
 ## Long-Lived Access Token
 
 A Home Assistant long-lived access token is required to take screenshots of dashboards that require authentication (such as private Lovelace views or protected pages). The token allows the add-on to access your Home Assistant instance securely, without needing to log in interactively.

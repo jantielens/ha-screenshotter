@@ -36,11 +36,13 @@ bit_depth: 1
 	- All dashboard logic and design is handled in Home Assistant.
 	- Easily update the dashboard without touching the e-ink device firmware.
 
-## Efficient Screenshot Change Detection with CRC32 Checksums
+## Efficient Screenshot Change Detection with Checksums
 
-The add-on automatically generates CRC32 checksum files for each screenshot, enabling e-ink devices to efficiently detect when screenshots have changed without downloading the full image. This is especially important for battery-powered e-ink displays using deep sleep.
+The add-on automatically generates checksum files for each screenshot, enabling e-ink devices to efficiently detect when screenshots have changed without downloading the full image. This is especially important for battery-powered e-ink displays using deep sleep.
 
-### How It Works
+Two checksum methods are available:
+
+### Method 1: Pixel-Based CRC32 (Default)
 
 For each screenshot (e.g., `0.png`), the add-on generates a companion checksum file (e.g., `0.png.crc32`) containing an 8-character hexadecimal CRC32 hash of the processed screenshot. These checksum files are:
 
@@ -48,8 +50,33 @@ For each screenshot (e.g., `0.png`), the add-on generates a companion checksum f
 - **Fast to download**: Minimal bandwidth and latency
 - **Reliable**: CRC32 provides sufficient collision resistance for change detection
 - **Accessible via web server**: Same URL pattern as screenshots (e.g., `http://server:3000/screenshots/0.png.crc32`)
+- **Pixel-based**: Changes only when actual displayed pixels change
 
-### E-ink Device Workflow
+### Method 2: Text-Based SimHash (Optional, v1.20.0+)
+
+For text-heavy dashboards or extreme bandwidth constraints, enable text-based SimHash checksums per-URL:
+
+- **Even smaller**: Still 8-character hex hash (same size as pixel-based)
+- **Text-focused**: Changes only when extracted page text changes, ignoring layout/styling
+- **Ideal for**: Dashboards with primarily text content (numbers, labels, metrics)
+- **Configuration**: Add `use_text_based_crc32: true` to specific URLs in config.yaml
+
+**Example configuration:**
+```yaml
+urls:
+  - url: https://home-assistant:8123/lovelace/dashboard1
+    use_text_based_crc32: true  # Use text-based checksum
+  - url: https://home-assistant:8123/lovelace/dashboard2
+    # omit use_text_based_crc32 or set to false for pixel-based (default)
+```
+
+**When to use text-based SimHash:**
+- Dashboard displays mainly text/numbers (temperature, time, status)
+- Visual styling/colors change frequently but content stays the same
+- Minimum bandwidth usage is critical
+- E-ink device needs to stay connected for extended periods
+
+### E-ink Device Workflow (Both Methods)
 
 **Before (without checksums):**
 1. Wake from deep sleep
