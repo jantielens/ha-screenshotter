@@ -192,6 +192,27 @@ function setupWebServer(config) {
             font-weight: 600;
             color: #333;
         }
+        .history-table tr.history-row {
+            position: relative;
+            transition: background-color 0.2s ease;
+        }
+        .history-table tr.history-row::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 6px;
+            border-radius: 4px 0 0 4px;
+            background: var(--history-stripe, #2563eb);
+        }
+        .history-table tr.history-row--changed {
+            font-weight: 600;
+            background-color: rgba(0, 0, 0, 0.04);
+        }
+        .history-table tr.history-row--repeat {
+            opacity: 0.6;
+        }
         .history-table td.crc32-value {
             font-family: 'Courier New', monospace;
             color: #28a745;
@@ -200,6 +221,38 @@ function setupWebServer(config) {
             color: #666;
             font-size: 0.9em;
         }
+        .history-table .timestamp-main {
+            color: #333;
+            font-weight: 500;
+        }
+        .history-table .timestamp-range {
+            font-size: 0.85em;
+            color: #555;
+            margin-top: 4px;
+        }
+        .history-table .history-badge {
+            display: inline-block;
+            margin-right: 8px;
+            padding: 2px 6px;
+            font-size: 0.7em;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            color: #1d4ed8;
+            background-color: rgba(37, 99, 235, 0.12);
+            border-radius: 999px;
+        }
+        .history-table tr.history-row--repeat .crc32-value {
+            color: #1f9d5d;
+        }
+        .history-table tr.history-row--repeat .history-badge {
+            display: none;
+        }
+        .history-run-0 { --history-stripe: #2563eb; }
+        .history-run-1 { --history-stripe: #059669; }
+        .history-run-2 { --history-stripe: #7c3aed; }
+        .history-run-3 { --history-stripe: #d97706; }
+        .history-run-4 { --history-stripe: #dc2626; }
         .no-history {
             text-align: center;
             color: #666;
@@ -291,12 +344,47 @@ function setupWebServer(config) {
                     
                     // Show most recent first
                     const reversedHistory = [...data.history].reverse();
-                    reversedHistory.forEach((entry, idx) => {
-                        html += '<tr>';
-                        html += '<td>' + (data.count - idx) + '</td>';
-                        html += '<td class="timestamp">' + new Date(entry.timestamp).toLocaleString() + '</td>';
-                        html += '<td class="crc32-value">' + entry.crc32 + '</td>';
-                        html += '</tr>';
+                    const runs = [];
+                    reversedHistory.forEach((entry) => {
+                        const lastRun = runs[runs.length - 1];
+                        if (!lastRun || lastRun.crc32 !== entry.crc32) {
+                            runs.push({ crc32: entry.crc32, entries: [entry] });
+                        } else {
+                            lastRun.entries.push(entry);
+                        }
+                    });
+
+                    const stripePaletteSize = 5;
+                    let displayIndex = data.count;
+
+                    runs.forEach((run, runIdx) => {
+                        const colorClass = 'history-run-' + (runIdx % stripePaletteSize);
+                        const latestTimestamp = new Date(run.entries[0].timestamp);
+                        const oldestTimestamp = new Date(run.entries[run.entries.length - 1].timestamp);
+                        const hasRange = run.entries.length > 1;
+
+                        run.entries.forEach((entry, entryIdx) => {
+                            const rowType = entryIdx === 0 ? 'history-row--changed' : 'history-row--repeat';
+                            html += '<tr class="history-row ' + rowType + ' ' + colorClass + '">';
+                            html += '<td>' + displayIndex + '</td>';
+
+                            html += '<td class="timestamp">';
+                            html += '<div class="timestamp-main">' + new Date(entry.timestamp).toLocaleString() + '</div>';
+                            if (entryIdx === 0 && hasRange) {
+                                html += '<div class="timestamp-range">Spanned ' + latestTimestamp.toLocaleString() + ' → ' + oldestTimestamp.toLocaleString() + ' · ' + run.entries.length + ' entr' + (run.entries.length === 1 ? 'y' : 'ies') + '</div>';
+                            }
+                            html += '</td>';
+
+                            html += '<td class="crc32-value">';
+                            if (entryIdx === 0) {
+                                html += '<span class="history-badge">Changed</span>';
+                            }
+                            html += entry.crc32;
+                            html += '</td>';
+
+                            html += '</tr>';
+                            displayIndex--;
+                        });
                     });
                     
                     html += '</tbody></table>';
