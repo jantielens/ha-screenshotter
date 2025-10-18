@@ -195,16 +195,43 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     if (useTextBasedCrc32) {
       console.log('   │       📝 Extracting visible text for SimHash checksum...');
       try {
-        extractedText = await page.evaluate(() => {
-          return document.body.innerText || '';
-        });
-        console.log(`   │       ✅ Extracted ${extractedText.length} characters of visible text`);
+        // Give the page a bit of time for any deferred rendering to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Use timeout to prevent hanging
+        extractedText = await Promise.race([
+          page.evaluate(() => {
+            try {
+              const text = document.body.innerText || '';
+              return text;
+            } catch (e) {
+              return '';
+            }
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Text extraction timeout')), 5000))
+        ]);
+        
+        // Debug logging for Home Assistant container issues
+        const charCount = extractedText ? extractedText.length : 0;
+        const textPreview = extractedText ? extractedText.substring(0, 100).replace(/\n/g, ' ') : '(empty)';
+        
+        if (!extractedText || extractedText.trim().length === 0) {
+          console.log(`   │       ⚠️  No visible text found on page`);
+          console.log(`   │       💡 Debug: Extracted text length: ${charCount}, preview: "${textPreview}"`);
+          console.log(`   │       💡 Tip: Page might be canvas-based, image-only, or JS-rendered content`);
+          console.log(`   │       💡 Solution: Check if page has visible text content and renders correctly`);
+          extractedText = '';
+        } else {
+          console.log(`   │       ✅ Extracted ${charCount} characters of visible text`);
+          console.log(`   │       📄 Text preview: "${textPreview}..."`);
+        }
       } catch (error) {
-        console.log(`   │       ⚠️  Failed to extract text:`, error.message);
+        console.log(`   │       ⚠️  Failed to extract text: ${error.message}`);
+        console.log(`   │       💡 Possible causes: Page not accessible, requires auth, or JS execution blocked`);
+        console.log(`   │       💡 Solution: Verify page loads correctly and is not blocked by CSP`);
         extractedText = '';
       }
     }
-    
     // Take the screenshot to a temporary file to prevent race conditions
     console.log('   │       📷 Taking screenshot...');
     const finalFilename = `${index}.png`;
