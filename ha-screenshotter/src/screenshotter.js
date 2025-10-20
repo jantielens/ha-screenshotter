@@ -6,10 +6,11 @@ const fs = require('fs-extra');
 const path = require('path');
 const puppeteer = require('puppeteer');
 const { SCREENSHOTS_PATH } = require('./constants');
+const { SCREENSHOT_HISTORY_PATH } = require('./constants');
+const { saveScreenshotHistory, cleanupOldHistory } = require('./historyLogger');
 const { rotateImage, convertToGrayscale, cropImage, reduceBitDepth, applyAdvancedProcessing } = require('./imageProcessor');
 const { generateChecksumFile } = require('./checksumUtil');
 const { addToHistory } = require('./crcHistory');
-const { extractVisibleText } = require('./textExtractor');
 
 /**
  * Get user agent string for mobile device presets
@@ -44,6 +45,10 @@ function getUserAgent(preset) {
  * @param {boolean} useTextBasedCrc32 - If true, use text-based SimHash checksum; if false, use pixel-based CRC32
  */
 async function takeScreenshot(url, index, width, height, rotationDegrees = 0, grayscale = false, bitDepth = 24, cropConfig = null, longLivedToken = '', language = 'en', deviceEmulation = 'desktop', mobileViewport = null, advancedProcessing = null, useTextBasedCrc32 = false) {
+    // Load config to check if history logging is enabled
+    const { loadConfiguration } = require('./config');
+    const config = await loadConfiguration();
+    const enableHistory = config.enableScreenshotHistory === true;
   let browser = null;
   try {
     // Check if Chromium is available
@@ -196,21 +201,138 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     if (useTextBasedCrc32) {
       console.log('   │       📝 Extracting visible text for SimHash checksum...');
       try {
-        // Use the enhanced text extraction utility
-        extractedText = await extractVisibleText(page, {
-          waitForHA: true,
-          maxWaitTime: 10000,
-          debugLogging: true
-        });
+        // Give the page a bit of time for any deferred rendering to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Log results
+        // Use timeout to prevent hanging
+        extractedText = await Promise.race([
+          page.evaluate(() => {
+            const root = document.body || document.documentElement;
+            if (!root) {
+              return '';
+            }
+
+            const skippedTags = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'META', 'HEAD', 'TITLE', 'LINK']);
+            const visitedFragments = new WeakSet();
+            const chunks = [];
+
+            const isElementVisible = (element) => {
+              if (!(element instanceof Element)) {
+                return false;
+              }
+
+              let current = element;
+              while (current) {
+                if (current.nodeType === Node.ELEMENT_NODE) {
+                  const el = current;
+                  if (el.hidden) {
+                    return false;
+                  }
+                  const ariaHidden = el.getAttribute('aria-hidden');
+                  if (ariaHidden && ariaHidden !== 'false') {
+                    return false;
+                  }
+                  const style = window.getComputedStyle(el);
+                  if (!style) {
+                    return false;
+                  }
+                  if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') {
+                    return false;
+                  }
+                  if (style.opacity === '0') {
+                    return false;
+                  }
+                }
+
+                const parent = current.parentNode;
+                if (parent) {
+                  current = parent;
+                  continue;
+                }
+
+                if (current instanceof ShadowRoot) {
+                  current = current.host || null;
+                } else {
+                  current = null;
+                }
+              }
+
+              return true;
+            };
+
+            // Traverse DOM and open shadow roots to collect visible text nodes.
+            const walk = (node) => {
+              if (!node) {
+                return;
+              }
+
+              if (node.nodeType === Node.TEXT_NODE) {
+                const parent = node.parentElement;
+                if (!parent || !isElementVisible(parent)) {
+                  return;
+                }
+
+                const text = node.textContent ? node.textContent.replace(/\s+/g, ' ').trim() : '';
+                if (text) {
+                  chunks.push(text);
+                }
+                return;
+              }
+
+              if (node.nodeType === Node.ELEMENT_NODE) {
+                const element = node;
+
+                if (skippedTags.has(element.tagName)) {
+                  return;
+                }
+
+                if (!isElementVisible(element)) {
+                  return;
+                }
+
+                if (element.tagName === 'SLOT' && typeof element.assignedNodes === 'function') {
+                  const assigned = element.assignedNodes({ flatten: true });
+                  if (assigned && assigned.length) {
+                    for (const assignedNode of assigned) {
+                      walk(assignedNode);
+                    }
+                    return;
+                  }
+                }
+
+                for (const child of element.childNodes) {
+                  walk(child);
+                }
+
+                if (element.shadowRoot && !visitedFragments.has(element.shadowRoot)) {
+                  visitedFragments.add(element.shadowRoot);
+                  walk(element.shadowRoot);
+                }
+                return;
+              }
+
+              if ((node.nodeType === Node.DOCUMENT_FRAGMENT_NODE || node.nodeType === Node.DOCUMENT_NODE) && !visitedFragments.has(node)) {
+                visitedFragments.add(node);
+                for (const child of node.childNodes) {
+                  walk(child);
+                }
+              }
+            };
+
+            walk(root);
+            return chunks.join('\n');
+          }),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Text extraction timeout')), 5000))
+        ]);
+        
+        // Debug logging for Home Assistant container issues
         const charCount = extractedText ? extractedText.length : 0;
         const textPreview = extractedText ? extractedText.substring(0, 100).replace(/\n/g, ' ') : '(empty)';
         
         if (!extractedText || extractedText.trim().length === 0) {
           console.log(`   │       ⚠️  No visible text found on page`);
           console.log(`   │       💡 Debug: Extracted text length: ${charCount}, preview: "${textPreview}"`);
-          console.log(`   │       💡 Tip: Page might be canvas-based, image-only, or require additional wait time`);
+          console.log(`   │       💡 Tip: Page might be canvas-based, image-only, or JS-rendered content`);
           console.log(`   │       💡 Solution: Check if page has visible text content and renders correctly`);
           extractedText = '';
         } else {
@@ -230,53 +352,75 @@ async function takeScreenshot(url, index, width, height, rotationDegrees = 0, gr
     const tempFilename = `${index}_temp.png`;
     let screenshotPath = path.join(SCREENSHOTS_PATH, tempFilename);
     const finalPath = path.join(SCREENSHOTS_PATH, finalFilename);
-    await page.screenshot({ 
-      path: screenshotPath,
-      fullPage: false,
-      type: 'png'
-    });
-    
+
+    // Take original screenshot (buffer)
+    const originalBuffer = await page.screenshot({ fullPage: false, type: 'png' });
+    await fs.writeFile(screenshotPath, originalBuffer);
+
     // Log public URL for Home Assistant (served at /media/ha-screenshotter/)
     const publicUrl = `/media/ha-screenshotter/${finalFilename}`;
     console.log(`   │       🌐 Home Assistant URL: ${publicUrl}`);
-    
+
     // Apply cropping if needed (BEFORE rotation - crop coordinates are relative to original image)
     if (cropConfig !== null && cropConfig !== false) {
       await cropImage(screenshotPath, cropConfig, '   │       ');
     }
-    
+
     // Apply advanced processing if needed (AFTER cropping, BEFORE rotation)
     if (advancedProcessing !== null && advancedProcessing !== false) {
       await applyAdvancedProcessing(screenshotPath, advancedProcessing, '   │       ');
     }
-    
+
     // Apply rotation if needed (AFTER cropping and processing - rotate the processed image)
     if (rotationDegrees !== 0) {
       await rotateImage(screenshotPath, rotationDegrees, '   │       ');
     }
-    
+
     // Apply grayscale conversion if needed
     if (grayscale) {
       await convertToGrayscale(screenshotPath, '   │       ');
     }
-    
+
     // Apply bit depth reduction if needed
     if (bitDepth !== 24) {
       await reduceBitDepth(screenshotPath, bitDepth, '   │       ');
     }
-    
+
+    // Read processed screenshot (buffer)
+    const processedBuffer = await fs.readFile(screenshotPath);
+
     // Atomically move the processed screenshot to its final location
     await fs.move(screenshotPath, finalPath, { overwrite: true });
     console.log(`   │       ✅ Screenshot finalized: ${finalFilename}`);
-    
+
     // Generate checksum file after screenshot is finalized (use appropriate method based on config)
     const checksum = await generateChecksumFile(finalPath, useTextBasedCrc32, extractedText, '   │       ');
-    
+
     // Add checksum to history
     if (checksum) {
       await addToHistory(index, checksum);
     }
-    
+
+    // Save extra history/log data if enabled
+    if (enableHistory) {
+      const metadata = {
+        timestamp: new Date().toISOString(),
+        url,
+        index,
+        crc32_mechanism: useTextBasedCrc32 ? 'simhash' : 'pixel-crc32',
+        crc32_value: checksum,
+        extracted_text: useTextBasedCrc32 ? extractedText : undefined,
+        width,
+        height,
+        rotationDegrees,
+        grayscale,
+        bitDepth,
+        cropConfig
+      };
+      await saveScreenshotHistory(originalBuffer, processedBuffer, metadata);
+      await cleanupOldHistory();
+    }
+
     return finalPath;
     
   } catch (error) {

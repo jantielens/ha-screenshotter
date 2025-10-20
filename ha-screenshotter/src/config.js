@@ -56,7 +56,8 @@ async function loadConfiguration() {
     gamma_correction: 1.0,
     black_level: "0%",
     white_level: "100%",
-    remove_gamma: false
+    remove_gamma: false,
+    enableScreenshotHistory: false
   };
   
   try {
@@ -618,7 +619,8 @@ async function loadConfiguration() {
         gamma_correction: gamma_correction,
         black_level: black_level,
         white_level: white_level,
-        remove_gamma: remove_gamma
+        remove_gamma: remove_gamma,
+        enableScreenshotHistory: config.enableScreenshotHistory !== undefined ? config.enableScreenshotHistory : defaultConfig.enableScreenshotHistory
       };
     }
   } catch (error) {

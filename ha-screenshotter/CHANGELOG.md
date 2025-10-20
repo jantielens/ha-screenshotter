@@ -5,7 +5,62 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+
+## [1.21.0] - 2025-10-19
+
+### Added
+- **Screenshot history logging and download**
+  - New config option `enableScreenshotHistory` (default: false) to log original/processed screenshots, CRC32 values, and extracted text for simhash
+  - History files stored in `/media/screenshot-history` with 48-hour retention
+  - Metadata saved as JSON alongside images for easy debugging
+  - Web endpoint `/download-history-zip` to download all history as a zip file
+  - Web endpoint `/clear-history` to clear all history files
+  - New `/history` page in the web UI to view, download, and manage history files
+  - Individual file download via `/history-files/:filename` endpoint
+
+
+
+## [1.20.3] - 2025-10-18
+
+### Fixed
+- **Text-based SimHash extraction** now crawls light DOM, slots, and open shadow roots
+  - Captures Home Assistant Lovelace dashboards and other shadow DOM-heavy pages
+  - Skips hidden/script content to keep checksums stable and noise-free
+  - Maintains compatibility with standard sites while improving complex UI coverage
+
+## [1.20.2] - 2025-10-18
+
+### Fixed
+- **SimHash checksum calculation** now produces stable, non-zero fingerprints
+  - Implemented full 64-bit SimHash with separate high/low word counters
+  - Added dual hash seeds and XOR folding to meet the 64-bit-to-32-bit requirement
+  - Prevented token bit counter underflow that previously yielded `00000000`
+
+## [1.20.1] - 2025-10-18
+
+### Fixed
+- **Text-based SimHash checksum extraction** improved for Home Assistant container environment
+  - Added 1-second delay to allow deferred rendering to complete before text extraction
+  - Enhanced error handling with timeout protection to prevent hanging
+  - Improved logging with text preview and diagnostic hints for debugging empty text scenarios
+  - Better error messages indicating possible causes (page not accessible, requires auth, JS blocked)
+
+## [1.20.0] - 2025-10-18
+
+### Added
+- **Text-based SimHash checksum option** for improved content change detection
+  - Optional per-URL configuration: `use_text_based_crc32: true` to enable text-based checksums
+  - Extracts visible text from DOM using `innerText` (respects CSS visibility/display)
+  - Computes 64-bit SimHash from tokenized text, then folds to 32 bits using XOR
+  - Returns magic number `0xdeadbeef` (displayed as checksum) if text extraction fails
+  - Useful for detecting content changes in dynamic or complex layouts
+  - Complements existing pixel-based CRC32 for diverse use cases
+  - Fully backward compatible - defaults to pixel-based CRC32 for all URLs
+  - Per-URL configuration support in both array and object URL formats
+
+### Changed
+- Checksum generation now supports both pixel-based (default) and text-based (opt-in) methods
+- Config validation enhanced to support `use_text_based_crc32` per-URL boolean option
 
 ## [1.20.4] - 2025-10-18
 
