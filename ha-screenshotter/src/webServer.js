@@ -52,7 +52,7 @@ function setupWebServer(config) {
                     type: match[3],
                     ext: match[4]
                 } : null;
-            }).filter(Boolean).sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+            }).filter(Boolean).sort((a, b) => b.filename.localeCompare(a.filename));
             // Group rows by CRC32 runs for visualization
             let rows = [];
             let lastCrc = null;
