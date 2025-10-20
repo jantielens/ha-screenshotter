@@ -57,8 +57,10 @@ For each screenshot (e.g., `0.png`), the add-on generates a companion checksum f
 For text-heavy dashboards or extreme bandwidth constraints, enable text-based SimHash checksums per-URL:
 
 - **Even smaller**: Still 8-character hex hash (same size as pixel-based)
-- **Text-focused**: Changes only when extracted page text changes, ignoring layout/styling
-- **Ideal for**: Dashboards with primarily text content (numbers, labels, metrics)
+- **Text-focused**: Changes when extracted page text content, text colors, or emojis change
+- **Color-aware**: Detects color changes (e.g., black text → gray text) using quantized color values (4096 distinct colors)
+- **Emoji-aware**: Includes emoji content with their associated colors in checksum calculation
+- **Ideal for**: Dashboards with primarily text content (numbers, labels, metrics, status indicators)
 - **Configuration**: Add `use_text_based_crc32: true` to specific URLs in config.yaml
 
 **Example configuration:**
@@ -72,9 +74,12 @@ urls:
 
 **When to use text-based SimHash:**
 - Dashboard displays mainly text/numbers (temperature, time, status)
-- Visual styling/colors change frequently but content stays the same
+- You want to detect text color changes (e.g., status indicators changing from green to red)
+- Layout/styling changes frequently but content stays the same
 - Minimum bandwidth usage is critical
 - E-ink device needs to stay connected for extended periods
+
+**Note:** Text-based checksums include text color information. If your dashboard frequently animates or transitions text colors for visual effects (not state changes), pixel-based checksums may provide more stable results.
 
 ### E-ink Device Workflow (Both Methods)
 

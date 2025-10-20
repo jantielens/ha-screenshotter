@@ -42,15 +42,16 @@ function setupWebServer(config) {
     app.get('/history', async (req, res) => {
         try {
             const files = await fs.readdir(SCREENSHOT_HISTORY_PATH);
-            // Parse info from filenames
+            // Parse info from filenames (format: url{index}-YYYYMMDD-HHMMSS-{crc32}-(original|processed|metadata).(png|json))
             const parsed = files.map(f => {
-                const match = f.match(/^(\d{8}-\d{6})-([^-]+)-(original|processed|metadata)\.(png|json)$/);
+                const match = f.match(/^url(\d+)-(\d{8}-\d{6})-([^-]+)-(original|processed|metadata)\.(png|json)$/);
                 return match ? {
                     filename: f,
-                    timestamp: match[1],
-                    crc32: match[2],
-                    type: match[3],
-                    ext: match[4]
+                    urlIndex: match[1],
+                    timestamp: match[2],
+                    crc32: match[3],
+                    type: match[4],
+                    ext: match[5]
                 } : null;
             }).filter(Boolean).sort((a, b) => b.filename.localeCompare(a.filename));
             // Group rows by CRC32 runs for visualization

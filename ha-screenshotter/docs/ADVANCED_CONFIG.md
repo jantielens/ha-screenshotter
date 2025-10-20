@@ -101,9 +101,11 @@ urls: '{
 ### Text-based checksum characteristics
 - **Case-insensitive**: Changes in letter casing don't trigger a new checksum
 - **Whitespace-insensitive**: Extra spaces, tabs, or line breaks don't matter
+- **Color-aware**: Includes quantized text color information (4096 distinct colors) to detect color changes while ignoring minor fluctuations
+- **Emoji-aware**: Includes emoji characters with their associated colors in checksum calculation
 - **No filtering**: Raw extracted text is used; no stemming, stopword removal, or lemmatization
-- **Fast**: Lightweight fingerprinting on extracted text
-- **Stable**: Won't change for minor visual tweaks or CSS-only updates
+- **Fast**: Lightweight fingerprinting on extracted text with computed styles
+- **Stable**: Won't change for minor visual tweaks, CSS animations, or tiny color variations
 - **Shadow DOM aware**: Able to read text from frameworks that render inside shadow roots (e.g., Home Assistant Lovelace components)
 
 ## Long-Lived Access Token

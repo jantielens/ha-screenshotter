@@ -12,7 +12,7 @@ The built-in web server does **not** have any authentication. Screenshots are ac
 - Gallery view and direct image URLs (e.g., `http://your-home-assistant-ip:3000/screenshots/0.png`)
 - Checksum files for efficient change detection (e.g., `http://your-home-assistant-ip:3000/screenshots/0.png.crc32`)
   - Default: Pixel-based CRC32 checksums (changes only when pixels change)
-  - Optional: Text-based SimHash checksums (changes only when extracted text changes)
+  - Optional: Text-based SimHash checksums (changes when extracted text content, text colors, or emojis change)
 - Health check endpoint available at `http://your-home-assistant-ip:3000/health` (returns status info)
 - No authentication for trusted networks
 
@@ -47,7 +47,7 @@ webserverport: 3000
 - **Size**: 8 bytes
 - **Checksum Types**:
   - **Pixel-based CRC32** (default): Detects changes to screenshot pixels. Changes only when visual content changes.
-  - **Text-based SimHash** (optional per-URL): Detects changes to extracted page text. More efficient for text-heavy pages and e-ink displays. Enable with `use_text_based_crc32: true` in URL configuration.
+  - **Text-based SimHash** (optional per-URL): Detects changes to extracted page text content, text colors, and emoji usage. Text colors are quantized to 4096 distinct values to balance sensitivity with stability. More efficient for text-heavy pages and e-ink displays. Enable with `use_text_based_crc32: true` in URL configuration.
 - **Use Case**: E-ink devices can download this tiny file to check if screenshot has changed before downloading the full image
 
 ### Health Check

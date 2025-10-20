@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.23.0] - 2025-10-20
+
+### Added
+- **Text-based SimHash now includes text color and emoji awareness** (Issue #73)
+  - Text color information is now included in checksum calculation to detect color changes (e.g., black text → gray text)
+  - Color values are quantized to 4096 distinct colors (16 levels per RGB channel) to balance sensitivity with stability against minor fluctuations
+  - Emojis are now properly included in text-based checksums with their associated colors
+  - Detects status indicator color changes (e.g., green → red for offline states)
+  - Format: Each text node captured as `"text::#rrggbb"` before SimHash calculation
+  - Handles inherited colors, CSS variables, and alpha transparency (alpha < 0.1 treated as invisible)
+  - Performance impact: ~0.5-0.8s additional overhead for typical HA dashboards (~247 text nodes), acceptable on Raspberry Pi
+
+### Changed
+- Text-based SimHash checksum algorithm enhanced to be color-aware without requiring configuration changes
+- Documentation updated in WEBSERVER.md, EINK.md, and ADVANCED_CONFIG.md to reflect color and emoji awareness
+
+### Fixed
+- **Screenshot history functionality** (`enableScreenshotHistory` config option)
+  - Fixed regex pattern in `historyLogger.js` cleanup function to match new filename format with URL index prefix
+  - Fixed regex pattern in `webServer.js` history page parser to correctly display history files
+  - History files are now properly retained and displayed at `/history` endpoint
+
+### Notes
+- After upgrading, the first screenshot will show as "changed" because checksums are calculated with the enhanced algorithm
+- This is expected behavior and checksums will stabilize after the first run
+
 ## [1.22.0] - 2025-10-20
 
 ### Changed

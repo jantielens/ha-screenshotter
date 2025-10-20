@@ -68,6 +68,44 @@ async function extractVisibleText(page, options = {}) {
         let textNodeCount = 0;
         
         /**
+         * Quantize RGB color component to 4 bits per channel (16 levels)
+         * Reduces sensitivity to minor color fluctuations while preserving major differences
+         * @param {number} value - RGB component (0-255)
+         * @returns {number} Quantized value (0-255, in steps of 17)
+         */
+        const quantizeColorComponent = (value) => {
+          // Round to nearest multiple of 17 (256/16 ≈ 17)
+          // Examples: 0→0, 64→68, 128→136, 192→204, 255→255
+          return Math.round(value / 17) * 17;
+        };
+        
+        /**
+         * Parse any CSS color format to quantized hex #RRGGBB
+         * Handles: rgb(), rgba(), #hex, named colors
+         * @param {string} cssColor - Computed CSS color string
+         * @returns {string} Quantized hex color (e.g., "#000000")
+         */
+        const parseAndQuantizeColor = (cssColor) => {
+          // Parse rgb/rgba format: "rgb(r, g, b)" or "rgba(r, g, b, a)"
+          const match = cssColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+          if (!match) return '#000000'; // fallback to black
+          
+          const r = quantizeColorComponent(parseInt(match[1]));
+          const g = quantizeColorComponent(parseInt(match[2]));
+          const b = quantizeColorComponent(parseInt(match[3]));
+          const alpha = match[4] ? parseFloat(match[4]) : 1.0;
+          
+          // If alpha < 0.1, treat as invisible (use black)
+          if (alpha < 0.1) return '#000000';
+          
+          // Convert to hex
+          return '#' + 
+            r.toString(16).padStart(2, '0') + 
+            g.toString(16).padStart(2, '0') + 
+            b.toString(16).padStart(2, '0');
+        };
+        
+        /**
          * Check if an element is visible
          * Enhanced to properly traverse shadow DOM boundaries
          */
@@ -136,7 +174,19 @@ async function extractVisibleText(page, options = {}) {
             
             const text = node.textContent ? node.textContent.replace(/\s+/g, ' ').trim() : '';
             if (text && text.length > 0) {
-              chunks.push(text);
+              // Get computed text color from parent element
+              let textColor = '#000000'; // default to black
+              try {
+                const computedStyle = window.getComputedStyle(parent);
+                if (computedStyle && computedStyle.color) {
+                  textColor = parseAndQuantizeColor(computedStyle.color);
+                }
+              } catch (e) {
+                // If color extraction fails, use default black
+              }
+              
+              // Store text with color annotation: "text::#rrggbb"
+              chunks.push(`${text}::${textColor}`);
               textNodeCount++;
             }
             return;
