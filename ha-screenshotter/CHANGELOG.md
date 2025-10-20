@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.22.0] - 2025-10-20
+
+### Changed
+- History files are now prefixed with the URL index (e.g., url001-YYYYMMDD-HHMMSS-...) for easier tracking and debugging.
+- The /history web page now sorts files by filename in descending order, showing the newest/highest-indexed files first.
+
+### Fixed
+- Fixed SimHash text extraction for Home Assistant dashboards by reverting to the robust extraction algorithm from v1.20.4 (dedicated textExtractor.js).
 
 ## [1.21.1] - 2025-10-20
 
