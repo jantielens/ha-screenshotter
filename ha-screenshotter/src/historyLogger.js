@@ -37,6 +37,8 @@ async function saveScreenshotHistory(originalBuffer, processedBuffer, metadata) 
   const ts = formatDate(date);
   const crc32 = metadata.crc32_value || 'nocrc';
   const base = `${ts}-${crc32}`;
+  // Ensure the history folder exists
+  await fs.ensureDir(SCREENSHOT_HISTORY_PATH);
   const files = [
     { name: `${base}-original.png`, data: originalBuffer },
     { name: `${base}-processed.png`, data: processedBuffer },

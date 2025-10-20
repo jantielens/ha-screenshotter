@@ -2,6 +2,7 @@
 ha-screenshotter/data/
 ha-screenshotter/share/
 share/
+data/
 
 # Node.js
 node_modules/

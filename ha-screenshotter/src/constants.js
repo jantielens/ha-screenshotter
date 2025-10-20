@@ -9,8 +9,8 @@ const CONFIG_PATH = '/data/options.json';
 // Write screenshots to the Home Assistant media folder so files are available at /media/
 const WWW_PATH = '/media';
 
-// History folder for extra screenshot logging
-const SCREENSHOT_HISTORY_PATH = path.join(WWW_PATH, 'screenshot-history');
+// History folder for extra screenshot logging (internal, not mapped)
+const SCREENSHOT_HISTORY_PATH = '/data/screenshot-history';
 const SCREENSHOTS_PATH = path.join(WWW_PATH, 'ha-screenshotter');
 
 module.exports = {

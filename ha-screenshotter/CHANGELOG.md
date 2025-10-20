@@ -6,10 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [1.21.1] - 2025-10-20
+
+### Changed
+- **Screenshot history folder is now internal**
+  - History files are now stored in `/data/screenshot-history` instead of `/media/screenshot-history` for improved reliability and Home Assistant add-on compatibility.
+  - Fixes ENOENT errors caused by missing or incorrectly mapped folders in Docker/HA environments.
+  - History folder is automatically created if missing.
+
+
 ## [1.21.0] - 2025-10-19
 
 ### Added
-- **Screenshot history logging and download**
   - New config option `enableScreenshotHistory` (default: false) to log original/processed screenshots, CRC32 values, and extracted text for simhash
   - History files stored in `/media/screenshot-history` with 48-hour retention
   - Metadata saved as JSON alongside images for easy debugging
