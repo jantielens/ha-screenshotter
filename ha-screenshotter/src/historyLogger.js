@@ -59,10 +59,10 @@ async function cleanupOldHistory() {
   const entries = await fs.readdir(SCREENSHOT_HISTORY_PATH);
   for (const entry of entries) {
     const entryPath = path.join(SCREENSHOT_HISTORY_PATH, entry);
-    // Match YYYYMMDD-HHMMSS-crc32value-...
-    const match = entry.match(/^(\d{8}-\d{6})-(.+?)-(original|processed|metadata)\.(png|json)$/);
+    // Match url{index}-YYYYMMDD-HHMMSS-crc32value-(original|processed|metadata).(png|json)
+    const match = entry.match(/^url\d+-(\d{8}-\d{6})-(.+?)-(original|processed|metadata)\.(png|json)$/);
     if (match) {
-      // Parse date from filename
+      // Parse date from filename (match[1] contains YYYYMMDD-HHMMSS)
       const dateStr = match[1];
       const year = parseInt(dateStr.slice(0, 4));
       const month = parseInt(dateStr.slice(4, 6)) - 1;
